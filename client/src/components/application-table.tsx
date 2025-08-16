@@ -136,12 +136,12 @@ export function ApplicationTable({
               />
             </div>
             
-            <Select value={filters.status || ""} onValueChange={(value) => updateFilter("status", value)}>
+            <Select value={filters.status || "all"} onValueChange={(value) => updateFilter("status", value === "all" ? "" : value)}>
               <SelectTrigger className="w-40" data-testid="select-status">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Applied">Applied</SelectItem>
                 <SelectItem value="Screening">Screening</SelectItem>
                 <SelectItem value="Interview">Interview</SelectItem>
@@ -153,12 +153,12 @@ export function ApplicationTable({
             </Select>
 
             {showEmployeeColumn && (
-              <Select value={filters.employeeId || ""} onValueChange={(value) => updateFilter("employeeId", value)}>
+              <Select value={filters.employeeId || "all"} onValueChange={(value) => updateFilter("employeeId", value === "all" ? "" : value)}>
                 <SelectTrigger className="w-40" data-testid="select-employee">
                   <SelectValue placeholder="All Employees" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Employees</SelectItem>
+                  <SelectItem value="all">All Employees</SelectItem>
                   {employees.filter(u => u.role === "EMPLOYEE").map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.name}
@@ -169,12 +169,12 @@ export function ApplicationTable({
             )}
 
             {showClientColumn && (
-              <Select value={filters.clientId || ""} onValueChange={(value) => updateFilter("clientId", value)}>
+              <Select value={filters.clientId || "all"} onValueChange={(value) => updateFilter("clientId", value === "all" ? "" : value)}>
                 <SelectTrigger className="w-40" data-testid="select-client">
                   <SelectValue placeholder="All Clients" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Clients</SelectItem>
+                  <SelectItem value="all">All Clients</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}

@@ -1,6 +1,7 @@
 import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 
 export interface IStorage {
@@ -171,15 +172,18 @@ export class DatabaseStorage implements IStorage {
     const limit = filters?.limit || 10;
     const offset = (page - 1) * limit;
 
+    const clientUsers = alias(users, 'client_users');
+    const employeeUsers = alias(users, 'employee_users');
+    
     const baseQuery = db
       .select({
         application: jobApplications,
-        client: users,
-        employee: users,
+        client: clientUsers,
+        employee: employeeUsers,
       })
       .from(jobApplications)
-      .leftJoin(users, eq(jobApplications.clientId, users.id))
-      .leftJoin(users, eq(jobApplications.employeeId, users.id));
+      .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
+      .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id));
 
     const conditions = [];
 
