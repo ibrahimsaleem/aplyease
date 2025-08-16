@@ -116,7 +116,9 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications).om
   id: true,
   createdAt: true,
   updatedAt: true,
+  appliedByName: true, // Will be set automatically on server
 }).extend({
+  employeeId: z.string().optional(), // Optional for employees, required for admin submissions
   jobLink: z.string().url().optional().or(z.literal("")),
   jobPage: z.string().url().optional().or(z.literal("")),
   resumeUrl: z.string().url().optional().or(z.literal("")),

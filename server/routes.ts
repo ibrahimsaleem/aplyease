@@ -155,13 +155,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationData = insertJobApplicationSchema.parse(req.body);
       const user = req.session.user!;
 
-      // For employees, ensure they can only create applications for themselves
+      // Set appliedByName and employeeId based on user role
+      let finalApplicationData: any = { ...applicationData };
+      
       if (user.role === "EMPLOYEE") {
-        applicationData.employeeId = user.id;
-        applicationData.appliedByName = user.name;
+        finalApplicationData.employeeId = user.id;
+        finalApplicationData.appliedByName = user.name;
+      } else if (user.role === "ADMIN") {
+        // Admin needs to specify employeeId, get employee name from storage
+        if (!applicationData.employeeId) {
+          return res.status(400).json({ message: "Employee ID is required for admin submissions" });
+        }
+        const employee = await storage.getUser(applicationData.employeeId);
+        if (!employee) {
+          return res.status(400).json({ message: "Invalid employee ID" });
+        }
+        finalApplicationData.appliedByName = employee.name;
       }
 
-      const application = await storage.createJobApplication(applicationData);
+      const application = await storage.createJobApplication(finalApplicationData);
       res.status(201).json(application);
     } catch (error) {
       if (error instanceof ZodError) {
