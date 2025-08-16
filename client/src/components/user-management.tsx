@@ -134,9 +134,9 @@ export function UserManagement() {
   const onSubmit = (data: UserFormData) => {
     if (editingUser) {
       // Remove password from update if it's empty
-      const updateData = { ...data };
+      const updateData: Partial<UserFormData> = { ...data };
       if (!updateData.password) {
-        delete updateData.password;
+        delete (updateData as any).password;
       }
       updateUser.mutate({ id: editingUser.id, data: updateData });
     } else {

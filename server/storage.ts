@@ -111,7 +111,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(and(...conditions));
     }
 
-    return query.orderBy(desc(users.createdAt));
+    return await query.orderBy(desc(users.createdAt));
   }
 
   async getJobApplication(id: string): Promise<JobApplicationWithUsers | undefined> {
@@ -171,7 +171,7 @@ export class DatabaseStorage implements IStorage {
     const limit = filters?.limit || 10;
     const offset = (page - 1) * limit;
 
-    let query = db
+    const baseQuery = db
       .select({
         application: jobApplications,
         client: users,
@@ -209,8 +209,9 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`${jobApplications.dateApplied} <= ${filters.dateTo}`);
     }
 
+    let query = baseQuery;
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = baseQuery.where(and(...conditions));
     }
 
     // Sorting
@@ -225,9 +226,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get total count
-    let countQuery = db.select({ count: count() }).from(jobApplications);
+    const baseCountQuery = db.select({ count: count() }).from(jobApplications);
+    let countQuery = baseCountQuery;
     if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions));
+      countQuery = baseCountQuery.where(and(...conditions));
     }
     const [{ count: total }] = await countQuery;
 
