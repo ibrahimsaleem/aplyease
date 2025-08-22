@@ -98,6 +98,6 @@ npm run check
 - Added this README
 
 ## Troubleshooting
-- 401 on `/api/auth/user` pre-login is expected.
-- 500 on `/api/auth/login`: verify `DATABASE_URL` is valid and reachable.
-- Seed duplicate errors: indicates data already inserted; safe to ignore.
+ - 401 on `/api/auth/user` pre-login is expected.
+ - 500 on `/api/auth/login`: verify `DATABASE_URL` is valid and reachable.
+ - Seed duplicate errors: indicates data already inserted; safe to ignore.
