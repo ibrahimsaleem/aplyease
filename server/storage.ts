@@ -176,7 +176,6 @@ export class DatabaseStorage implements IStorage {
         ...(applicationData.clientId !== undefined ? { clientId: applicationData.clientId } : {}),
         ...(applicationData.employeeId !== undefined ? { employeeId: applicationData.employeeId } : {}),
         ...(applicationData.dateApplied !== undefined ? { dateApplied: applicationData.dateApplied } : {}),
-        ...(applicationData.appliedByName !== undefined ? { appliedByName: applicationData.appliedByName } : {}),
         ...(applicationData.jobTitle !== undefined ? { jobTitle: applicationData.jobTitle } : {}),
         ...(applicationData.companyName !== undefined ? { companyName: applicationData.companyName } : {}),
         ...(applicationData.location !== undefined ? { location: applicationData.location } : {}),
