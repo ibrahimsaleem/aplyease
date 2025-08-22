@@ -22,5 +22,5 @@
     "strict": false
   },
   "include": ["../server/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "../client", "../dist", "../server/vite.ts"]
+  "exclude": ["node_modules", "../client", "../dist"]
 }
