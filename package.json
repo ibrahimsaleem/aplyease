@@ -4,7 +4,7 @@
     "node": ">=18 <20"
   },
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "license": "MIT",
   "scripts": {
     "dev:server": "cross-env NODE_ENV=development tsx watch server/index.ts",
