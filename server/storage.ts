@@ -69,9 +69,12 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .insert(users)
       .values({
-        ...userData,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role as any,
+        company: userData.company,
         passwordHash,
-        updatedAt: new Date(),
+        isActive: userData.isActive ?? true,
       })
       .returning();
     return user;
@@ -80,7 +83,13 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: string, userData: UpdateUser): Promise<User | undefined> {
     const [user] = await db
       .update(users)
-      .set({ ...userData, updatedAt: new Date() })
+      .set({
+        ...(userData.name !== undefined ? { name: userData.name } : {}),
+        ...(userData.email !== undefined ? { email: userData.email } : {}),
+        ...(userData.role !== undefined ? { role: userData.role as any } : {}),
+        ...(userData.company !== undefined ? { company: userData.company } : {}),
+        ...(userData.isActive !== undefined ? { isActive: userData.isActive } : {}),
+      })
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -155,8 +164,6 @@ export class DatabaseStorage implements IStorage {
         status: applicationData.status || "Applied",
         mailSent: applicationData.mailSent || false,
         notes: applicationData.notes,
-        updatedAt: new Date(),
-        createdAt: new Date(),
       })
       .returning();
     return application;
@@ -165,7 +172,22 @@ export class DatabaseStorage implements IStorage {
   async updateJobApplication(id: string, applicationData: UpdateJobApplication): Promise<JobApplication | undefined> {
     const [application] = await db
       .update(jobApplications)
-      .set({ ...applicationData, updatedAt: new Date() })
+      .set({
+        ...(applicationData.clientId !== undefined ? { clientId: applicationData.clientId } : {}),
+        ...(applicationData.employeeId !== undefined ? { employeeId: applicationData.employeeId } : {}),
+        ...(applicationData.dateApplied !== undefined ? { dateApplied: applicationData.dateApplied } : {}),
+        ...(applicationData.appliedByName !== undefined ? { appliedByName: applicationData.appliedByName } : {}),
+        ...(applicationData.jobTitle !== undefined ? { jobTitle: applicationData.jobTitle } : {}),
+        ...(applicationData.companyName !== undefined ? { companyName: applicationData.companyName } : {}),
+        ...(applicationData.location !== undefined ? { location: applicationData.location } : {}),
+        ...(applicationData.portalName !== undefined ? { portalName: applicationData.portalName } : {}),
+        ...(applicationData.jobLink !== undefined ? { jobLink: applicationData.jobLink } : {}),
+        ...(applicationData.jobPage !== undefined ? { jobPage: applicationData.jobPage } : {}),
+        ...(applicationData.resumeUrl !== undefined ? { resumeUrl: applicationData.resumeUrl } : {}),
+        ...(applicationData.status !== undefined ? { status: applicationData.status as any } : {}),
+        ...(applicationData.mailSent !== undefined ? { mailSent: applicationData.mailSent } : {}),
+        ...(applicationData.notes !== undefined ? { notes: applicationData.notes } : {}),
+      })
       .where(eq(jobApplications.id, id))
       .returning();
     return application;
