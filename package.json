@@ -11,7 +11,7 @@
     "dev:client": "vite",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build && tsc -p server/tsconfig.json",
-    "start": "node dist/server/index.js",
+    "start": "node dist/server/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "diagrams:build": "mmdc -i docs/diagrams/system-flow.mmd -o docs/diagrams/system-flow.png -b transparent && mmdc -i docs/diagrams/usecases-admin.mmd -o docs/diagrams/usecases-admin.png -b transparent && mmdc -i docs/diagrams/usecases-employee.mmd -o docs/diagrams/usecases-employee.png -b transparent && mmdc -i docs/diagrams/usecases-client.mmd -o docs/diagrams/usecases-client.png -b transparent"
