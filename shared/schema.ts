@@ -97,28 +97,34 @@ export const jobApplicationsRelations = relations(jobApplications, ({ one }) => 
 }));
 
 // Schemas for validation
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  passwordHash: true, // Exclude passwordHash since we'll handle it in the backend
-} as const).extend({
+export const insertUserSchema = createInsertSchema(users)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    passwordHash: true, // Exclude passwordHash since we'll handle it in the backend
+  } as any)
+  .extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export const updateUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  passwordHash: true,
-} as const).partial();
+export const updateUserSchema = createInsertSchema(users)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    passwordHash: true,
+  } as any)
+  .partial();
 
-export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  appliedByName: true, // Will be set automatically on server
-} as const).extend({
+export const insertJobApplicationSchema = createInsertSchema(jobApplications)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    appliedByName: true, // Will be set automatically on server
+  } as any)
+  .extend({
   employeeId: z.string().optional(), // Optional for employees, required for admin submissions
   jobLink: z.string().url().optional().or(z.literal("")),
   jobPage: z.string().url().optional().or(z.literal("")),

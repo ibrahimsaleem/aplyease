@@ -1,8 +1,8 @@
-import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema.js";
-import { db } from "./db.js";
+import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "@shared/schema";
+import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { hashPassword } from "./auth.js";
+import { hashPassword } from "./auth";
 
 export interface IStorage {
   // User operations
@@ -69,13 +69,14 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .insert(users)
       .values({
-        name: userData.name,
-        email: userData.email,
-        role: userData.role as any,
-        company: userData.company,
+        // Cast due to drizzle insert type narrowness vs Zod-derived type
+        name: (userData as any).name,
+        email: (userData as any).email,
+        role: (userData as any).role,
+        company: (userData as any).company,
         passwordHash,
-        isActive: userData.isActive ?? true,
-      })
+        isActive: (userData as any).isActive ?? true,
+      } as any)
       .returning();
     return user;
   }
@@ -84,12 +85,12 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({
-        ...(userData.name !== undefined ? { name: userData.name } : {}),
-        ...(userData.email !== undefined ? { email: userData.email } : {}),
-        ...(userData.role !== undefined ? { role: userData.role as any } : {}),
-        ...(userData.company !== undefined ? { company: userData.company } : {}),
-        ...(userData.isActive !== undefined ? { isActive: userData.isActive } : {}),
-      })
+        ...((userData as any).name !== undefined ? { name: (userData as any).name } : {}),
+        ...((userData as any).email !== undefined ? { email: (userData as any).email } : {}),
+        ...((userData as any).role !== undefined ? { role: (userData as any).role } : {}),
+        ...((userData as any).company !== undefined ? { company: (userData as any).company } : {}),
+        ...((userData as any).isActive !== undefined ? { isActive: (userData as any).isActive } : {}),
+      } as any)
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -98,7 +99,7 @@ export class DatabaseStorage implements IStorage {
   async disableUser(id: string): Promise<void> {
     await db
       .update(users)
-      .set({ isActive: false, updatedAt: new Date() })
+      .set({ isActive: false, updatedAt: new Date() } as any)
       .where(eq(users.id, id));
   }
 
@@ -150,21 +151,21 @@ export class DatabaseStorage implements IStorage {
     const [application] = await db
       .insert(jobApplications)
       .values({
-        clientId: applicationData.clientId,
-        employeeId: applicationData.employeeId!,
-        dateApplied: applicationData.dateApplied,
-        appliedByName: applicationData.appliedByName,
-        jobTitle: applicationData.jobTitle,
-        companyName: applicationData.companyName,
-        location: applicationData.location,
-        portalName: applicationData.portalName,
-        jobLink: applicationData.jobLink,
-        jobPage: applicationData.jobPage,
-        resumeUrl: applicationData.resumeUrl,
-        status: applicationData.status || "Applied",
-        mailSent: applicationData.mailSent || false,
-        notes: applicationData.notes,
-      })
+        clientId: (applicationData as any).clientId,
+        employeeId: (applicationData as any).employeeId!,
+        dateApplied: (applicationData as any).dateApplied,
+        appliedByName: (applicationData as any).appliedByName,
+        jobTitle: (applicationData as any).jobTitle,
+        companyName: (applicationData as any).companyName,
+        location: (applicationData as any).location,
+        portalName: (applicationData as any).portalName,
+        jobLink: (applicationData as any).jobLink,
+        jobPage: (applicationData as any).jobPage,
+        resumeUrl: (applicationData as any).resumeUrl,
+        status: (applicationData as any).status || "Applied",
+        mailSent: (applicationData as any).mailSent || false,
+        notes: (applicationData as any).notes,
+      } as any)
       .returning();
     return application;
   }
@@ -173,20 +174,20 @@ export class DatabaseStorage implements IStorage {
     const [application] = await db
       .update(jobApplications)
       .set({
-        ...(applicationData.clientId !== undefined ? { clientId: applicationData.clientId } : {}),
-        ...(applicationData.employeeId !== undefined ? { employeeId: applicationData.employeeId } : {}),
-        ...(applicationData.dateApplied !== undefined ? { dateApplied: applicationData.dateApplied } : {}),
-        ...(applicationData.jobTitle !== undefined ? { jobTitle: applicationData.jobTitle } : {}),
-        ...(applicationData.companyName !== undefined ? { companyName: applicationData.companyName } : {}),
-        ...(applicationData.location !== undefined ? { location: applicationData.location } : {}),
-        ...(applicationData.portalName !== undefined ? { portalName: applicationData.portalName } : {}),
-        ...(applicationData.jobLink !== undefined ? { jobLink: applicationData.jobLink } : {}),
-        ...(applicationData.jobPage !== undefined ? { jobPage: applicationData.jobPage } : {}),
-        ...(applicationData.resumeUrl !== undefined ? { resumeUrl: applicationData.resumeUrl } : {}),
-        ...(applicationData.status !== undefined ? { status: applicationData.status as any } : {}),
-        ...(applicationData.mailSent !== undefined ? { mailSent: applicationData.mailSent } : {}),
-        ...(applicationData.notes !== undefined ? { notes: applicationData.notes } : {}),
-      })
+        ...((applicationData as any).clientId !== undefined ? { clientId: (applicationData as any).clientId } : {}),
+        ...((applicationData as any).employeeId !== undefined ? { employeeId: (applicationData as any).employeeId } : {}),
+        ...((applicationData as any).dateApplied !== undefined ? { dateApplied: (applicationData as any).dateApplied } : {}),
+        ...((applicationData as any).jobTitle !== undefined ? { jobTitle: (applicationData as any).jobTitle } : {}),
+        ...((applicationData as any).companyName !== undefined ? { companyName: (applicationData as any).companyName } : {}),
+        ...((applicationData as any).location !== undefined ? { location: (applicationData as any).location } : {}),
+        ...((applicationData as any).portalName !== undefined ? { portalName: (applicationData as any).portalName } : {}),
+        ...((applicationData as any).jobLink !== undefined ? { jobLink: (applicationData as any).jobLink } : {}),
+        ...((applicationData as any).jobPage !== undefined ? { jobPage: (applicationData as any).jobPage } : {}),
+        ...((applicationData as any).resumeUrl !== undefined ? { resumeUrl: (applicationData as any).resumeUrl } : {}),
+        ...((applicationData as any).status !== undefined ? { status: (applicationData as any).status } : {}),
+        ...((applicationData as any).mailSent !== undefined ? { mailSent: (applicationData as any).mailSent } : {}),
+        ...((applicationData as any).notes !== undefined ? { notes: (applicationData as any).notes } : {}),
+      } as any)
       .where(eq(jobApplications.id, id))
       .returning();
     return application;
