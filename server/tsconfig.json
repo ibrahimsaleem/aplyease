@@ -11,8 +11,8 @@
     "allowJs": true,
     "noEmit": false,
     "allowImportingTsExtensions": false,
-    "outDir": "../dist/server",
-    "rootDir": ".",
+    "outDir": "../dist",
+    "rootDir": "..",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../shared/*"]
@@ -21,6 +21,6 @@
     "isolatedModules": false,
     "strict": false
   },
-  "include": ["./**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "../client", "dist"]
+  "include": ["../server/**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "../client", "../dist"]
 }
