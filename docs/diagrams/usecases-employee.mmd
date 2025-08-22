@@ -1,0 +1,27 @@
+flowchart TD
+  subgraph Employee
+    E["Employee"]
+  end
+
+  subgraph "My Applications"
+    EU2["List / Filter My Applications"]
+    EU3["Create Application<br/>(auto employeeId)"]
+    EU4["Update My Application"]
+    EU7["Export My Applications (CSV)"]
+  end
+
+  subgraph Insights
+    EU5["View My Stats"]
+    EU6["List Active Clients"]
+  end
+
+  EU1["Login / Logout"]
+
+  %% Links
+  E --> EU1
+  E --> EU2
+  E --> EU3
+  E --> EU4
+  E --> EU5
+  E --> EU6
+  E --> EU7

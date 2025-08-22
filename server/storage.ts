@@ -1,6 +1,6 @@
 import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, ilike, desc, asc, count, sql } from "drizzle-orm";
+import { eq, and, like, ilike, desc, asc, count, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 
@@ -94,9 +94,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listUsers(filters?: { role?: string; search?: string }): Promise<User[]> {
-    let query = db.select().from(users);
-
-    const conditions = [];
+    const conditions: SQL[] = [];
     
     if (filters?.role) {
       conditions.push(eq(users.role, filters.role as any));
@@ -108,36 +106,57 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    return await query.orderBy(desc(users.createdAt));
+    return await db
+      .select()
+      .from(users)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(users.createdAt));
   }
 
   async getJobApplication(id: string): Promise<JobApplicationWithUsers | undefined> {
-    const [application] = await db
-      .select()
+    const clientUsers = alias(users, 'client_users_single');
+    const employeeUsers = alias(users, 'employee_users_single');
+
+    const [result] = await db
+      .select({
+        application: jobApplications,
+        client: clientUsers,
+        employee: employeeUsers,
+      })
       .from(jobApplications)
-      .leftJoin(users, eq(jobApplications.clientId, users.id))
-      .leftJoin(users, eq(jobApplications.employeeId, users.id))
+      .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
+      .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
       .where(eq(jobApplications.id, id));
 
-    if (!application) return undefined;
+    if (!result || !result.client || !result.employee) return undefined;
 
     return {
-      ...application.job_applications,
-      client: application.users!,
-      employee: application.users!,
+      ...result.application,
+      client: result.client,
+      employee: result.employee,
     };
   }
 
-  async createJobApplication(applicationData: InsertJobApplication): Promise<JobApplication> {
+  async createJobApplication(applicationData: InsertJobApplication & { appliedByName: string }): Promise<JobApplication> {
     const [application] = await db
       .insert(jobApplications)
       .values({
-        ...applicationData,
+        clientId: applicationData.clientId,
+        employeeId: applicationData.employeeId!,
+        dateApplied: applicationData.dateApplied,
+        appliedByName: applicationData.appliedByName,
+        jobTitle: applicationData.jobTitle,
+        companyName: applicationData.companyName,
+        location: applicationData.location,
+        portalName: applicationData.portalName,
+        jobLink: applicationData.jobLink,
+        jobPage: applicationData.jobPage,
+        resumeUrl: applicationData.resumeUrl,
+        status: applicationData.status || "Applied",
+        mailSent: applicationData.mailSent || false,
+        notes: applicationData.notes,
         updatedAt: new Date(),
+        createdAt: new Date(),
       })
       .returning();
     return application;
@@ -213,38 +232,32 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`${jobApplications.dateApplied} <= ${filters.dateTo}`);
     }
 
-    let query = baseQuery;
-    if (conditions.length > 0) {
-      query = baseQuery.where(and(...conditions));
-    }
-
-    // Sorting
-    const sortBy = filters?.sortBy || "dateApplied";
-    const sortOrder = filters?.sortOrder || "desc";
-    const orderByColumn = sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt;
-    
-    if (sortOrder === "asc") {
-      query = query.orderBy(asc(orderByColumn));
-    } else {
-      query = query.orderBy(desc(orderByColumn));
-    }
+    // Build the final query
+    const finalQuery = baseQuery
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(filters?.sortOrder === "asc" 
+        ? asc(filters?.sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt)
+        : desc(filters?.sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt)
+      );
 
     // Get total count
-    const baseCountQuery = db.select({ count: count() }).from(jobApplications);
-    let countQuery = baseCountQuery;
-    if (conditions.length > 0) {
-      countQuery = baseCountQuery.where(and(...conditions));
-    }
-    const [{ count: total }] = await countQuery;
+    const [{ count: total }] = await db
+      .select({ count: count() })
+      .from(jobApplications)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     // Get paginated results
-    const results = await query.limit(limit).offset(offset);
+    const results = await finalQuery.limit(limit).offset(offset);
 
-    const applications: JobApplicationWithUsers[] = results.map((result) => ({
-      ...result.application,
-      client: result.client!,
-      employee: result.employee!,
-    }));
+    const applications: JobApplicationWithUsers[] = results
+      .filter((result): result is typeof result & { client: User; employee: User } => 
+        result.client !== null && result.employee !== null
+      )
+      .map(result => ({
+        ...result.application,
+        client: result.client,
+        employee: result.employee,
+      }));
 
     return { applications, total };
   }

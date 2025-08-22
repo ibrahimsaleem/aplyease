@@ -24,25 +24,23 @@ declare global {
 
 export function setupAuth(app: express.Express) {
   // Session configuration
-  const sessionStore = new PgSession({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    tableName: "sessions",
-  });
+  const sessionConfig: session.SessionOptions = {
+    secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    name: 'sessionId',
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: "lax" as const,
+      path: '/',
+      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
+    }
+  };
 
-  app.use(
-    session({
-      store: sessionStore,
-      secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === "production",
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      },
-    })
-  );
+  app.use(session(sessionConfig));
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -55,21 +53,33 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export async function authenticateUser(email: string, password: string): Promise<AuthenticatedUser | null> {
   try {
+    console.log("Attempting authentication for:", email);
+    
     const [user] = await db
       .select()
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
 
-    if (!user || !user.isActive) {
+    if (!user) {
+      console.log("User not found:", email);
       return null;
     }
 
+    if (!user.isActive) {
+      console.log("User is not active:", email);
+      return null;
+    }
+
+    console.log("Verifying password for:", email);
     const isValid = await verifyPassword(password, user.passwordHash);
+    
     if (!isValid) {
+      console.log("Invalid password for:", email);
       return null;
     }
 
+    console.log("Authentication successful for:", email);
     return {
       id: user.id,
       name: user.name,
@@ -79,7 +89,10 @@ export async function authenticateUser(email: string, password: string): Promise
     };
   } catch (error) {
     console.error("Authentication error:", error);
-    return null;
+    if (error instanceof Error) {
+      console.error("Error details:", error.message, error.stack);
+    }
+    throw error; // Let the route handler deal with the error
   }
 }
 

@@ -12,15 +12,27 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Use the current domain for API calls
+  const apiUrl = process.env.NODE_ENV === 'production' 
+    ? window.location.origin
+    : 'http://localhost:5000';
+  try {
+    const res = await fetch(`${apiUrl}${url}`, {
+      method,
+      headers: {
+        ...(data ? { "Content-Type": "application/json" } : {}),
+        "Accept": "application/json"
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error('API Request Error:', error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

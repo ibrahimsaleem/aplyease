@@ -101,6 +101,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  passwordHash: true, // Exclude passwordHash since we'll handle it in the backend
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });

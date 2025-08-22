@@ -11,22 +11,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("Login attempt received:", req.body);
       const { email, password } = req.body;
 
       if (!email || !password) {
+        console.log("Missing credentials:", { email: !!email, password: !!password });
         return res.status(400).json({ message: "Email and password are required" });
       }
 
       const user = await authenticateUser(email, password);
       if (!user) {
+        console.log("Authentication failed for:", email);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log("Setting session for user:", email);
       req.session.user = user;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      console.log("Login successful for:", email);
       res.json({ user });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      if (error instanceof Error) {
+        console.error("Error details:", error.message, error.stack);
+      }
+      res.status(500).json({ 
+        message: "Internal server error",
+        details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
     }
   });
 
