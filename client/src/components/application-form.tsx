@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { User } from "@/types";
 
 const applicationSchema = z.object({
@@ -24,6 +25,7 @@ const applicationSchema = z.object({
   jobPage: z.string().url("Invalid URL").optional().or(z.literal("")),
   resumeUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   notes: z.string().optional(),
+  mailSent: z.boolean().default(false),
 });
 
 type ApplicationFormData = z.infer<typeof applicationSchema>;
@@ -45,6 +47,7 @@ export function ApplicationForm() {
       jobPage: "",
       resumeUrl: "",
       notes: "",
+      mailSent: false,
     },
   });
 
@@ -243,6 +246,24 @@ export function ApplicationForm() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Mail Sent */}
+            <div className="md:col-span-2 lg:col-span-3">
+              <FormField
+                control={form.control}
+                name="mailSent"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Mail sent</FormLabel>
+                    </div>
                   </FormItem>
                 )}
               />
