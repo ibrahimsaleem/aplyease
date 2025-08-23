@@ -6,6 +6,7 @@ import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { UserManagement } from "@/components/user-management";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
 
 export default function AdminDashboard() {
@@ -15,15 +16,8 @@ export default function AdminDashboard() {
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/stats/dashboard"],
     queryFn: async () => {
-      const response = await fetch("/api/stats/dashboard", {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch dashboard stats");
-      }
-      
-      return response.json();
+      const res = await apiRequest("GET", "/api/stats/dashboard");
+      return res.json();
     },
   });
 
