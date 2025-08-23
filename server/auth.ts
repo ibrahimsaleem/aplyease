@@ -28,6 +28,7 @@ export function setupAuth(app: express.Express) {
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid', // Explicitly set the cookie name
     cookie: {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -131,7 +132,11 @@ export function requireAuth(req: express.Request, res: express.Response, next: e
     const cookieParts = req.headers.cookie.split(';');
     const sessionCookie = cookieParts.find(c => c.trim().startsWith('connect.sid='));
     if (sessionCookie) {
+      const cookieSessionId = sessionCookie.trim().split('=')[1];
       console.log('Session cookie found:', sessionCookie.trim());
+      console.log('Cookie session ID:', cookieSessionId);
+      console.log('Middleware session ID:', req.sessionID);
+      console.log('Session ID match:', cookieSessionId === req.sessionID);
     } else {
       console.log('No session cookie found in cookies');
     }

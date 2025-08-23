@@ -48,32 +48,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userEmail: req.session.user?.email
       });
 
-      // Debug cookie setting
-      console.log("Setting cookie for session:", req.sessionID);
-      console.log("Cookie settings:", {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: '/',
-        domain: undefined
-      });
-
-      // Explicitly set the session cookie
-      res.cookie('connect.sid', req.sessionID, {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: '/'
-      });
-
-      // Debug response headers
-      console.log("Response headers after setting cookie:", {
-        'Set-Cookie': res.getHeaders()['set-cookie'],
-        'Content-Type': res.getHeaders()['content-type']
-      });
-
       console.log("Login successful for:", email);
       res.json({ user });
     } catch (error) {
