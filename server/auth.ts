@@ -44,6 +44,7 @@ export function setupAuth(app: express.Express) {
   // Use PostgreSQL session store in production, MemoryStore in development
   if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
     try {
+      console.log("Attempting to initialize PostgreSQL session store...");
       sessionConfig.store = new PgSession({
         conObject: {
           connectionString: process.env.DATABASE_URL,
@@ -53,7 +54,7 @@ export function setupAuth(app: express.Express) {
         },
         tableName: 'sessions'
       });
-      console.log("Using PostgreSQL session store");
+      console.log("PostgreSQL session store initialized successfully");
     } catch (error) {
       console.error("Failed to initialize PostgreSQL session store:", error);
       console.log("Falling back to MemoryStore");
