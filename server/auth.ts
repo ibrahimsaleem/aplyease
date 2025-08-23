@@ -25,16 +25,14 @@ declare global {
 export function setupAuth(app: express.Express) {
   // Session configuration
   const sessionConfig: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+    secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
-    rolling: true,
-    name: 'sessionId',
     cookie: {
-      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production", // Must be true for sameSite: none
       path: '/',
       // Remove domain restriction for production
       domain: undefined
@@ -126,6 +124,18 @@ export function requireAuth(req: express.Request, res: express.Response, next: e
     sessionId: req.sessionID,
     cookies: req.headers.cookie ? 'present' : 'missing'
   });
+  
+  // Debug cookie details
+  if (req.headers.cookie) {
+    console.log('Cookie header:', req.headers.cookie);
+    const cookieParts = req.headers.cookie.split(';');
+    const sessionCookie = cookieParts.find(c => c.trim().startsWith('connect.sid='));
+    if (sessionCookie) {
+      console.log('Session cookie found:', sessionCookie.trim());
+    } else {
+      console.log('No session cookie found in cookies');
+    }
+  }
   
   if (!req.session || !req.session.user) {
     return res.status(401).json({ message: "Authentication required" });
