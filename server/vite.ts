@@ -58,7 +58,7 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist");
-  const indexPath = path.resolve(process.cwd(), "client", "index.html");
+  const indexPath = path.resolve(distPath, "index.html");
 
   if (!fs.existsSync(indexPath)) {
     throw new Error(
@@ -66,8 +66,8 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Serve static files from dist directory
   app.use(express.static(distPath));
-  app.use(express.static(path.resolve(process.cwd(), "client")));
 
   // Serve index.html for all routes
   app.get("*", (_req, res) => {

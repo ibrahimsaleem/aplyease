@@ -11,4 +11,7 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: PORT
+        value: 10000
     healthCheckPath: /api/auth/user
+    autoDeploy: true

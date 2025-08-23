@@ -2,7 +2,7 @@ import express from "express";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { db } from "./db";
-import { users } from "@shared/schema";
+import { users } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 

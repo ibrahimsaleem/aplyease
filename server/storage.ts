@@ -1,4 +1,4 @@
-import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "@shared/schema";
+import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";

@@ -1,5 +1,4 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
     "moduleResolution": "Node",
@@ -12,14 +11,13 @@
     "noEmit": false,
     "allowImportingTsExtensions": false,
     "outDir": "../dist/server",
-    "rootDir": "..",
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["../shared/*"]
-    },
+    "rootDir": "../",
+    "baseUrl": "..",
     "resolveJsonModule": true,
     "isolatedModules": false,
-    "strict": false
+    "strict": false,
+    "declaration": false,
+    "sourceMap": false
   },
   "include": ["../server/**/*", "../shared/**/*"],
   "exclude": ["node_modules", "../client", "../dist"]
