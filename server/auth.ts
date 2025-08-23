@@ -36,9 +36,30 @@ export function setupAuth(app: express.Express) {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: "lax" as const,
       path: '/',
-      domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined
+      domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined
     }
   };
+
+  // Use PostgreSQL session store in production, MemoryStore in development
+  if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
+    try {
+      sessionConfig.store = new PgSession({
+        conObject: {
+          connectionString: process.env.DATABASE_URL,
+          ssl: {
+            rejectUnauthorized: false
+          }
+        },
+        tableName: 'sessions'
+      });
+      console.log("Using PostgreSQL session store");
+    } catch (error) {
+      console.error("Failed to initialize PostgreSQL session store:", error);
+      console.log("Falling back to MemoryStore");
+    }
+  } else {
+    console.log("Using MemoryStore for sessions");
+  }
 
   app.use(session(sessionConfig));
 }
