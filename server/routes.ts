@@ -226,14 +226,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationData = updateJobApplicationSchema.parse(req.body);
       const user = (req.user ?? req.session.user)!;
 
-      // Check permissions
+      const existing = await storage.getJobApplication(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Permission checks and field restrictions
       if (user.role === "EMPLOYEE") {
-        const existing = await storage.getJobApplication(id);
-        if (!existing || existing.employeeId !== user.id) {
+        if (existing.employeeId !== user.id) {
           return res.status(403).json({ message: "You can only edit your own applications" });
         }
+        // Employees can update any allowed fields from schema
       } else if (user.role === "CLIENT") {
-        return res.status(403).json({ message: "Clients cannot edit applications" });
+        if (existing.clientId !== user.id) {
+          return res.status(403).json({ message: "You can only update your own applications" });
+        }
+        // Clients can only update status
+        if (!("status" in applicationData) || !applicationData.status) {
+          return res.status(400).json({ message: "Clients can only update application status" });
+        }
+        // Reduce payload to status only
+        (Object.keys(applicationData) as Array<keyof typeof applicationData>).forEach((k) => {
+          if (k !== "status") {
+            delete (applicationData as any)[k];
+          }
+        });
+      } else if (user.role !== "ADMIN") {
+        return res.status(403).json({ message: "Insufficient permissions" });
       }
 
       const application = await storage.updateJobApplication(id, applicationData);

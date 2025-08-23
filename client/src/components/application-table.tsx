@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { exportApplicationsCSV } from "@/lib/csv-export";
 import { getInitials, getStatusColor } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
 import type { JobApplication, User, ApplicationFilters } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ApplicationTableProps {
   title?: string;
@@ -37,6 +38,8 @@ export function ApplicationTable({
   onDelete,
 }: ApplicationTableProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [filters, setFilters] = useState<ApplicationFilters>({
     page: 1,
     limit: 10,
@@ -70,6 +73,20 @@ export function ApplicationTable({
       const res = await apiRequest("GET", `/api/applications?${params.toString()}`);
       return res.json();
     },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: JobApplication["status"] }) => {
+      const res = await apiRequest("PATCH", `/api/applications/${id}`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Updated", description: "Application status updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message || "Failed to update status", variant: "destructive" });
+    }
   });
 
   const updateFilter = (key: keyof ApplicationFilters, value: any) => {
@@ -107,6 +124,13 @@ export function ApplicationTable({
       </Card>
     );
   }
+
+  const canUpdate = (app: JobApplication) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "EMPLOYEE") return app.employeeId === currentUser.id;
+    if (currentUser.role === "CLIENT") return app.clientId === currentUser.id;
+    return currentUser.role === "ADMIN";
+  };
 
   return (
     <Card>
@@ -242,9 +266,29 @@ export function ApplicationTable({
                   <TableCell data-testid="text-portal">{application.portalName || "-"}</TableCell>
                   
                   <TableCell>
-                    <Badge className={getStatusColor(application.status)} data-testid="badge-status">
-                      {application.status}
-                    </Badge>
+                    {canUpdate(application) ? (
+                      <Select
+                        value={application.status}
+                        onValueChange={(value) => updateStatus.mutate({ id: application.id, status: value as any })}
+                      >
+                        <SelectTrigger className="w-40" data-testid={`select-status-${application.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Applied">Applied</SelectItem>
+                          <SelectItem value="Screening">Screening</SelectItem>
+                          <SelectItem value="Interview">Interview</SelectItem>
+                          <SelectItem value="Offer">Offer</SelectItem>
+                          <SelectItem value="Hired">Hired</SelectItem>
+                          <SelectItem value="Rejected">Rejected</SelectItem>
+                          <SelectItem value="On Hold">On Hold</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge className={getStatusColor(application.status)} data-testid="badge-status">
+                        {application.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   
                   <TableCell>
