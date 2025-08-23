@@ -74,6 +74,7 @@ export class DatabaseStorage implements IStorage {
         email: (userData as any).email,
         role: (userData as any).role,
         company: (userData as any).company,
+        applicationsRemaining: (userData as any).applicationsRemaining ?? 0,
         passwordHash,
         isActive: (userData as any).isActive ?? true,
       } as any)
@@ -89,6 +90,7 @@ export class DatabaseStorage implements IStorage {
         ...((userData as any).email !== undefined ? { email: (userData as any).email } : {}),
         ...((userData as any).role !== undefined ? { role: (userData as any).role } : {}),
         ...((userData as any).company !== undefined ? { company: (userData as any).company } : {}),
+        ...((userData as any).applicationsRemaining !== undefined ? { applicationsRemaining: (userData as any).applicationsRemaining } : {}),
         ...((userData as any).isActive !== undefined ? { isActive: (userData as any).isActive } : {}),
       } as any)
       .where(eq(users.id, id))
@@ -167,19 +169,6 @@ export class DatabaseStorage implements IStorage {
         notes: (applicationData as any).notes,
       } as any)
       .returning();
-
-    // Decrement client's remaining quota (not below 0)
-    try {
-      const [client] = await db.select().from(users).where(eq(users.id, application.clientId));
-      if (client && client.applicationsRemaining > 0) {
-        await db
-          .update(users)
-          .set({ applicationsRemaining: client.applicationsRemaining - 1 } as any)
-          .where(eq(users.id, application.clientId));
-      }
-    } catch (err) {
-      console.warn("Failed to decrement client applicationsRemaining:", err);
-    }
     return application;
   }
 

@@ -175,6 +175,26 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
   const clientStats = stats as ClientStats;
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {/* Applications Left - First card for clients */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Applications Left</p>
+              <p className="text-3xl font-bold text-slate-900" data-testid="text-applications-left">
+                {clientStats.applicationsRemaining ?? 0}
+              </p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <FileText className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+          <p className="text-sm text-slate-600 mt-2">
+            Remaining applications
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">

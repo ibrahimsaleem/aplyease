@@ -8,7 +8,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", ["ADMIN", "CLIENT", "EMPLOYEE"]);
 export const statusEnum = pgEnum("status", [
   "Applied",
-  "Screening",
+  "Screening", 
   "Interview",
   "Offer",
   "Hired",
@@ -36,8 +36,8 @@ export const users = pgTable(
     email: text("email").notNull().unique(),
     role: roleEnum("role").notNull(),
     company: text("company"),
+    applicationsRemaining: integer("applications_remaining").notNull().default(sql`0`),
     isActive: boolean("is_active").default(sql`true`).notNull(),
-    applicationsRemaining: integer("applications_remaining").default(0).notNull(),
     passwordHash: text("password_hash").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

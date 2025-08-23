@@ -2,10 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT } from "./auth";
-import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, users } from "../shared/schema";
+import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema } from "../shared/schema";
 import { ZodError } from "zod";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -212,6 +210,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const application = await storage.createJobApplication(finalApplicationData);
+      // Decrement client's applicationsRemaining (min 0) - only for CLIENT users
+      try {
+        const client = await storage.getUser(application.clientId);
+        if (client && client.role === "CLIENT") {
+          const currentLeft = (client as any).applicationsRemaining ?? 0;
+          const newLeft = Math.max(0, currentLeft - 1);
+          if (newLeft !== currentLeft) {
+            await storage.updateUser(client.id, { applicationsRemaining: newLeft } as any);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to decrement applicationsRemaining:", e);
+      }
       res.status(201).json(application);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -324,9 +335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stats = await storage.getClientStats(id);
-      // include applicationsRemaining for client
-      const [client] = await db.select().from(users).where(eq(users.id, id));
-      res.json({ ...stats, applicationsRemaining: client ? client.applicationsRemaining : 0 });
+      const client = await storage.getUser(id);
+      res.json({ ...stats, applicationsRemaining: client ? (client as any).applicationsRemaining ?? 0 : 0 });
     } catch (error) {
       console.error("Error fetching client stats:", error);
       res.status(500).json({ message: "Failed to fetch client stats" });

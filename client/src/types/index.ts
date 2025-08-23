@@ -49,6 +49,7 @@ export type ClientStats = {
   inProgress: number;
   interviews: number;
   hired: number;
+  applicationsRemaining?: number;
 };
 
 export type ApplicationFilters = {
