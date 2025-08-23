@@ -1,12 +1,14 @@
 import express from "express";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { db } from "./db";
 import { users } from "../shared/schema";
 import { eq } from "drizzle-orm";
-import connectPg from "connect-pg-simple";
 
 const PgSession = connectPg(session);
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "fallback-secret";
 
 export interface AuthenticatedUser {
   id: string;
@@ -22,20 +24,28 @@ declare global {
   }
 }
 
-export function setupAuth(app: express.Express) {
-  // Session configuration
+declare module "express-session" {
+  interface SessionData {
+    user?: AuthenticatedUser;
+  }
+}
+
+export function setupAuth(app: express.Application) {
+  // JWT-based authentication middleware
+  app.use(express.json());
+  
+  // Optional: Keep session for backward compatibility but don't rely on it
   const sessionConfig: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid', // Explicitly set the cookie name
+    name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production", // Must be true for sameSite: none
+      secure: process.env.NODE_ENV === "production",
       path: '/',
-      // Remove domain restriction for production
       domain: undefined
     }
   };
@@ -65,38 +75,23 @@ export function setupAuth(app: express.Express) {
   app.use(session(sessionConfig));
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
 export async function authenticateUser(email: string, password: string): Promise<AuthenticatedUser | null> {
   try {
     console.log("Attempting authentication for:", email);
     
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email)
+    });
 
     if (!user) {
       console.log("User not found:", email);
       return null;
     }
 
-    if (!user.isActive) {
-      console.log("User is not active:", email);
-      return null;
-    }
-
     console.log("Verifying password for:", email);
-    const isValid = await verifyPassword(password, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     
-    if (!isValid) {
+    if (!isValidPassword) {
       console.log("Invalid password for:", email);
       return null;
     }
@@ -104,21 +99,56 @@ export async function authenticateUser(email: string, password: string): Promise
     console.log("Authentication successful for:", email);
     return {
       id: user.id,
-      name: user.name,
       email: user.email,
+      name: user.name,
       role: user.role,
-      company: user.company || undefined,
+      company: user.company || undefined
     };
   } catch (error) {
     console.error("Authentication error:", error);
-    if (error instanceof Error) {
-      console.error("Error details:", error.message, error.stack);
-    }
-    throw error; // Let the route handler deal with the error
+    return null;
+  }
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
+
+export function generateJWT(user: AuthenticatedUser) {
+  return jwt.sign(
+    { 
+      id: user.id, 
+      email: user.email, 
+      name: user.name, 
+      role: user.role 
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+export function verifyJWT(token: string): AuthenticatedUser | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
+  } catch (error) {
+    console.error("JWT verification failed:", error);
+    return null;
   }
 }
 
 export function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  // Try JWT first
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const user = verifyJWT(token);
+    if (user) {
+      req.user = user;
+      return next();
+    }
+  }
+
+  // Fallback to session (for backward compatibility)
   console.log('Session check:', {
     hasSession: !!req.session,
     hasUser: !!(req.session && req.session.user),
@@ -126,7 +156,6 @@ export function requireAuth(req: express.Request, res: express.Response, next: e
     cookies: req.headers.cookie ? 'present' : 'missing'
   });
   
-  // Debug cookie details
   if (req.headers.cookie) {
     console.log('Cookie header:', req.headers.cookie);
     const cookieParts = req.headers.cookie.split(';');
@@ -145,25 +174,21 @@ export function requireAuth(req: express.Request, res: express.Response, next: e
   if (!req.session || !req.session.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
+  
+  req.user = req.session.user;
   next();
 }
 
 export function requireRole(roles: string[]) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (!req.session?.user) {
+    if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    if (!roles.includes(req.session.user.role)) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 
     next();
   };
-}
-
-declare module "express-session" {
-  interface SessionData {
-    user?: AuthenticatedUser;
-  }
 }

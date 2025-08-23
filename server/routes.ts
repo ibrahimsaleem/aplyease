@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, requireAuth, requireRole, authenticateUser } from "./auth";
+import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT } from "./auth";
 import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema } from "../shared/schema";
 import { ZodError } from "zod";
 
@@ -48,8 +48,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userEmail: req.session.user?.email
       });
 
+      // Generate JWT token
+      const token = generateJWT(user);
+      console.log("Generated JWT token for:", email);
+
       console.log("Login successful for:", email);
-      res.json({ user });
+      res.json({ user, token });
     } catch (error) {
       console.error("Login error:", error);
       if (error instanceof Error) {
