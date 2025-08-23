@@ -34,9 +34,10 @@ export function setupAuth(app: express.Express) {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: "lax" as const,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: '/',
-      domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined
+      // Remove domain restriction for production
+      domain: undefined
     }
   };
 
@@ -118,6 +119,13 @@ export async function authenticateUser(email: string, password: string): Promise
 }
 
 export function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  console.log('Session check:', {
+    hasSession: !!req.session,
+    hasUser: !!(req.session && req.session.user),
+    sessionId: req.sessionID,
+    cookies: req.headers.cookie ? 'present' : 'missing'
+  });
+  
   if (!req.session || !req.session.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
