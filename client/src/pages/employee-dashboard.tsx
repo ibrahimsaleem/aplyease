@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/stats-cards";
 import { ApplicationForm } from "@/components/application-form";
 import { ApplicationTable } from "@/components/application-table";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import type { EmployeeStats } from "@/types";
 
 export default function EmployeeDashboard() {
@@ -12,15 +13,8 @@ export default function EmployeeDashboard() {
   const { data: stats } = useQuery<EmployeeStats>({
     queryKey: ["/api/stats/employee", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/stats/employee/${user?.id}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch employee stats");
-      }
-      
-      return response.json();
+      const res = await apiRequest("GET", `/api/stats/employee/${user?.id}`);
+      return res.json();
     },
     enabled: !!user?.id,
   });

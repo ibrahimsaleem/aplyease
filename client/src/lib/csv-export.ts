@@ -1,3 +1,4 @@
+import { apiRequest } from "@/lib/queryClient";
 import type { ApplicationFilters } from "@/types";
 
 export async function exportApplicationsCSV(filters: ApplicationFilters) {
@@ -9,9 +10,7 @@ export async function exportApplicationsCSV(filters: ApplicationFilters) {
     }
   });
 
-  const response = await fetch(`/api/applications/export?${params.toString()}`, {
-    credentials: "include",
-  });
+  const response = await apiRequest("GET", `/api/applications/export?${params.toString()}`);
 
   if (!response.ok) {
     throw new Error("Failed to export CSV");

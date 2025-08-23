@@ -3,6 +3,7 @@ import { NavigationHeader } from "@/components/navigation-header";
 import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import type { ClientStats } from "@/types";
 
 export default function ClientDashboard() {
@@ -11,15 +12,8 @@ export default function ClientDashboard() {
   const { data: stats } = useQuery<ClientStats>({
     queryKey: ["/api/stats/client", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/stats/client/${user?.id}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch client stats");
-      }
-      
-      return response.json();
+      const res = await apiRequest("GET", `/api/stats/client/${user?.id}`);
+      return res.json();
     },
     enabled: !!user?.id,
   });

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
 import { getInitials, getStatusColor } from "@/lib/auth-utils";
+import { apiRequest } from "@/lib/queryClient";
 import type { JobApplication, User, ApplicationFilters } from "@/types";
 
 interface ApplicationTableProps {
@@ -66,16 +67,8 @@ export function ApplicationTable({
           params.append(key, value.toString());
         }
       });
-      
-      const response = await fetch(`/api/applications?${params.toString()}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch applications");
-      }
-      
-      return response.json();
+      const res = await apiRequest("GET", `/api/applications?${params.toString()}`);
+      return res.json();
     },
   });
 
