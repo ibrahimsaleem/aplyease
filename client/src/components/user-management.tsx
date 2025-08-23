@@ -50,16 +50,8 @@ export function UserManagement() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
-      
-      const response = await fetch(`/api/users?${params.toString()}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
-      
-      return response.json();
+      const res = await apiRequest("GET", `/api/users?${params.toString()}`);
+      return res.json();
     },
   });
 

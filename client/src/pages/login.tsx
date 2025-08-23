@@ -83,7 +83,7 @@ export default function LoginPage() {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="admin@aplyease.com"
+                          placeholder="you@example.com"
                           {...field}
                           data-testid="input-email"
                         />
@@ -164,18 +164,6 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
-          </CardContent>
-        </Card>
-
-        {/* Demo Credentials */}
-        <Card className="mt-6 border border-slate-200">
-          <CardContent className="p-4">
-            <h3 className="font-medium text-slate-900 mb-3">Demo Credentials:</h3>
-            <div className="space-y-2 text-sm">
-              <div><strong>Admin:</strong> admin@aplyease.com / admin123</div>
-              <div><strong>Employee:</strong> employee@aplyease.com / emp123</div>
-              <div><strong>Client:</strong> arshad@client.com / client123</div>
-            </div>
           </CardContent>
         </Card>
       </div>

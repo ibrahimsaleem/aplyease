@@ -59,10 +59,7 @@ $env:NODE_ENV='development'; $env:DATABASE_URL='<YOUR_POSTGRES_URL>'; $env:SESSI
 - Client: `http://localhost:5173`
 - API (proxied): `http://localhost:5000`
 
-Login with demo users:
-- Admin: `admin@aplyease.com` / `admin123`
-- Employee: `employee@aplyease.com` / `emp123`
-- Client: `arshad@client.com` / `client123`
+Demo login credentials are no longer displayed in the UI. For local testing, you can keep sample credentials in a file named `local-credentials.txt` at the project root. This file is ignored by git.
 
 ## Production Build & Run
 1) Build:

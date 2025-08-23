@@ -9,6 +9,7 @@ vite.config.ts.*
 .env
 .env.*
 *.env
+local-credentials.txt
 build/
 .turbo/
 *.log
