@@ -284,7 +284,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stats = await storage.getEmployeeStats(id);
-      res.json(stats);
+      const earningsUsd = Number(((stats.myApplications || 0) * 0.2).toFixed(2));
+      res.json({ ...stats, earningsUsd });
     } catch (error) {
       console.error("Error fetching employee stats:", error);
       res.status(500).json({ message: "Failed to fetch employee stats" });

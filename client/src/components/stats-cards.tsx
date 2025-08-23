@@ -94,8 +94,9 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
 
   if (type === "employee") {
     const empStats = stats as EmployeeStats;
+    const earnings = (empStats as any).earningsUsd ?? (empStats.myApplications * 0.2);
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -147,6 +148,23 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
               </div>
             </div>
             <p className="text-sm text-green-600 mt-2">Above average</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Earnings</p>
+                <p className="text-3xl font-bold text-emerald-700" data-testid="text-earnings">
+                  ${earnings.toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-emerald-100 p-3 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-sm text-emerald-600 mt-2">$0.20 per application</p>
           </CardContent>
         </Card>
       </div>
