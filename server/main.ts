@@ -6,6 +6,13 @@ import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import cors from "cors";
 
+// Log environment variables for debugging (remove sensitive info)
+console.log('Environment check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('- SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
+console.log('- PORT:', process.env.PORT);
+
 const app = express();
 
 // Enable CORS for all environments

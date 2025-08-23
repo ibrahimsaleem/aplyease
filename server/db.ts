@@ -1,17 +1,20 @@
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { Pool } from '@neondatabase/serverless';
+import { neonConfig, Pool } from '@neondatabase/serverless';
 import * as schema from '../shared/schema';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// Create connection pool with proper SSL configuration for production
+// Configure neon for serverless environment
+neonConfig.fetchConnectionCache = true;
+
+// Create connection pool with proper configuration for serverless
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
+  max: 1, // Single connection for serverless
+  idleTimeoutMillis: 0,
   connectionTimeoutMillis: 10000,
-  maxUses: 1,  // Create new connection for each request
-  idleTimeoutMillis: 0, // Disable connection pooling for serverless
   ssl: process.env.NODE_ENV === "production" ? {
     rejectUnauthorized: false
   } : {
