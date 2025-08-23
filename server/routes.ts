@@ -76,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/user", requireAuth, (req, res) => {
-    res.json({ user: req.session.user });
+    res.json({ user: (req.user ?? req.session.user) });
   });
 
   // User management routes (Admin only)
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sortOrder = "desc"
       } = req.query;
 
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
       let filters: any = {
         status: status as string,
         search: search as string,
@@ -189,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/applications", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const applicationData = insertJobApplicationSchema.parse(req.body);
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
 
       // Set appliedByName and employeeId based on user role
       let finalApplicationData: any = { ...applicationData };
@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const applicationData = updateJobApplicationSchema.parse(req.body);
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
 
       // Check permissions
       if (user.role === "EMPLOYEE") {
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats/employee/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
 
       // Employees can only see their own stats
       if (user.role === "EMPLOYEE" && user.id !== id) {
@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats/client/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
 
       // Clients can only see their own stats
       if (user.role === "CLIENT" && user.id !== id) {
@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateTo,
       } = req.query;
 
-      const user = req.session.user!;
+      const user = (req.user ?? req.session.user)!;
       let filters: any = {
         status: status as string,
         search: search as string,
