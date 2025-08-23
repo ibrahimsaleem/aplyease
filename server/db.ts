@@ -9,6 +9,17 @@ if (!process.env.DATABASE_URL) {
 // Configure neon for serverless environment
 neonConfig.fetchConnectionCache = true;
 
+// Configure WebSocket constructor for serverless environments
+if (typeof globalThis.WebSocket === 'undefined') {
+  // For Node.js environments where WebSocket is not available globally
+  try {
+    const ws = require('ws');
+    neonConfig.webSocketConstructor = ws;
+  } catch (error) {
+    console.warn('WebSocket library not available, some features may not work');
+  }
+}
+
 // Create connection pool with proper configuration for serverless
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
