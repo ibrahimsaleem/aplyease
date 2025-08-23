@@ -59,6 +59,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         domain: undefined
       });
 
+      // Explicitly set the session cookie
+      res.cookie('connect.sid', req.sessionID, {
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: '/'
+      });
+
+      // Debug response headers
+      console.log("Response headers after setting cookie:", {
+        'Set-Cookie': res.getHeaders()['set-cookie'],
+        'Content-Type': res.getHeaders()['content-type']
+      });
+
       console.log("Login successful for:", email);
       res.json({ user });
     } catch (error) {
