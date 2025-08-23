@@ -167,6 +167,19 @@ export class DatabaseStorage implements IStorage {
         notes: (applicationData as any).notes,
       } as any)
       .returning();
+
+    // Decrement client's remaining quota (not below 0)
+    try {
+      const [client] = await db.select().from(users).where(eq(users.id, application.clientId));
+      if (client && client.applicationsRemaining > 0) {
+        await db
+          .update(users)
+          .set({ applicationsRemaining: client.applicationsRemaining - 1 } as any)
+          .where(eq(users.id, application.clientId));
+      }
+    } catch (err) {
+      console.warn("Failed to decrement client applicationsRemaining:", err);
+    }
     return application;
   }
 

@@ -23,6 +23,8 @@ const userSchema = z.object({
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  // @ts-ignore optional at runtime
+  applicationsRemaining: z.number().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -42,6 +44,8 @@ export function UserManagement() {
       role: "EMPLOYEE",
       company: "",
       password: "",
+      // @ts-ignore optional at runtime
+      applicationsRemaining: 0,
     },
   });
 
@@ -144,6 +148,8 @@ export function UserManagement() {
       role: user.role,
       company: user.company || "",
       password: "", // Don't populate password for editing
+      // @ts-ignore
+      applicationsRemaining: (user as any).applicationsRemaining ?? 0,
     });
     setIsDialogOpen(true);
   };
@@ -265,6 +271,23 @@ export function UserManagement() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Applications quota for CLIENT */}
+                    {form.watch("role") === "CLIENT" && (
+                      <FormField
+                        control={form.control as any}
+                        name={"applicationsRemaining" as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Applications quota (remaining)</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} data-testid="input-user-quota" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     <FormField
                       control={form.control}

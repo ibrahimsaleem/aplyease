@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, uuid, text, varchar, timestamp, date, boolean, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, timestamp, date, boolean, pgEnum, index, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", ["ADMIN", "CLIENT", "EMPLOYEE"]);
 export const statusEnum = pgEnum("status", [
   "Applied",
-  "Screening", 
+  "Screening",
   "Interview",
   "Offer",
   "Hired",
@@ -37,6 +37,7 @@ export const users = pgTable(
     role: roleEnum("role").notNull(),
     company: text("company"),
     isActive: boolean("is_active").default(sql`true`).notNull(),
+    applicationsRemaining: integer("applications_remaining").default(0).notNull(),
     passwordHash: text("password_hash").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -106,6 +107,7 @@ export const insertUserSchema = createInsertSchema(users)
   } as any)
   .extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
+  applicationsRemaining: z.number().int().min(0).optional(),
 });
 
 export const updateUserSchema = createInsertSchema(users)
