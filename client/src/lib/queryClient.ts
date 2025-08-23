@@ -7,6 +7,21 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Get JWT token from localStorage
+function getAuthToken(): string | null {
+  return localStorage.getItem('authToken');
+}
+
+// Set JWT token in localStorage
+export function setAuthToken(token: string): void {
+  localStorage.setItem('authToken', token);
+}
+
+// Remove JWT token from localStorage
+export function removeAuthToken(): void {
+  localStorage.removeItem('authToken');
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -16,13 +31,22 @@ export async function apiRequest(
   const apiUrl = process.env.NODE_ENV === 'production' 
     ? window.location.origin
     : 'http://localhost:5000';
+  
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+    "Accept": "application/json"
+  };
+
+  // Add JWT token to Authorization header if available
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   try {
     const res = await fetch(`${apiUrl}${url}`, {
       method,
-      headers: {
-        ...(data ? { "Content-Type": "application/json" } : {}),
-        "Accept": "application/json"
-      },
+      headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
     });
@@ -41,7 +65,16 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    
+    // Add JWT token to Authorization header if available
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
+      headers,
       credentials: "include",
     });
 
