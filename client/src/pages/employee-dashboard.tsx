@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NavigationHeader } from "@/components/navigation-header";
 import { StatsCards } from "@/components/stats-cards";
 import { ApplicationForm } from "@/components/application-form";
 import { ApplicationTable } from "@/components/application-table";
+import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeeStats } from "@/types";
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("applications");
 
   const { data: stats } = useQuery<EmployeeStats>({
     queryKey: ["/api/stats/employee", user?.id],
@@ -31,19 +35,37 @@ export default function EmployeeDashboard() {
         {/* Employee Stats */}
         {stats && <StatsCards stats={stats} type="employee" />}
 
-        {/* Quick Add Application */}
-        <ApplicationForm />
+        {/* Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="applications" data-testid="tab-applications">
+              My Applications
+            </TabsTrigger>
+            <TabsTrigger value="client-analytics" data-testid="tab-client-analytics">
+              Client Analytics
+            </TabsTrigger>
+          </TabsList>
 
-        {/* My Applications Table */}
-        <ApplicationTable
-          title="My Applications"
-          description="Applications you have submitted"
-          showEmployeeColumn={false}
-          showClientColumn={true}
-          showActions={true}
-          readonly={false}
-          filters={{ employeeId: user.id }}
-        />
+          <TabsContent value="applications" className="space-y-6">
+            {/* Quick Add Application */}
+            <ApplicationForm />
+
+            {/* My Applications Table */}
+            <ApplicationTable
+              title="My Applications"
+              description="Applications you have submitted"
+              showEmployeeColumn={false}
+              showClientColumn={true}
+              showActions={true}
+              readonly={false}
+              filters={{ employeeId: user.id }}
+            />
+          </TabsContent>
+
+          <TabsContent value="client-analytics" className="space-y-6">
+            <ClientPerformanceAnalytics />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
