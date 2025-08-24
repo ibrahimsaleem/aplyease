@@ -283,14 +283,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/applications/:id", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+  app.delete("/api/applications/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const user = (req.user ?? req.session.user)!;
+      
+      // Get the application to check permissions
+      const application = await storage.getJobApplication(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Check if user can delete this application
+      const canDelete = 
+        user.role === "ADMIN" ||
+        (user.role === "EMPLOYEE" && application.employeeId === user.id) ||
+        (user.role === "CLIENT" && application.clientId === user.id);
+
+      if (!canDelete) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       await storage.deleteJobApplication(id);
       res.json({ message: "Application deleted successfully" });
     } catch (error) {
       console.error("Error deleting application:", error);
       res.status(500).json({ message: "Failed to delete application" });
+    }
+  });
+
+  // Bulk delete applications endpoint
+  app.delete("/api/applications/bulk", requireAuth, async (req, res) => {
+    try {
+      const { ids } = req.body;
+      const user = (req.user ?? req.session.user)!;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty ids array" });
+      }
+
+      // Get all applications to check permissions
+      const applications = [];
+      for (const id of ids) {
+        const application = await storage.getJobApplication(id);
+        if (!application) {
+          return res.status(404).json({ message: `Application ${id} not found` });
+        }
+        applications.push(application);
+      }
+
+      // Check if user can delete all applications
+      const canDeleteAll = applications.every(application => 
+        user.role === "ADMIN" ||
+        (user.role === "EMPLOYEE" && application.employeeId === user.id) ||
+        (user.role === "CLIENT" && application.clientId === user.id)
+      );
+
+      if (!canDeleteAll) {
+        return res.status(403).json({ message: "Access denied for one or more applications" });
+      }
+
+      // Delete all applications (this will automatically update client quotas)
+      for (const id of ids) {
+        await storage.deleteJobApplication(id);
+      }
+
+      res.json({ message: `${ids.length} application${ids.length > 1 ? 's' : ''} deleted successfully` });
+    } catch (error) {
+      console.error("Error bulk deleting applications:", error);
+      res.status(500).json({ message: "Failed to delete applications" });
     }
   });
 

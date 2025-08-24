@@ -38,6 +38,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const reqPath = req.path;
@@ -66,11 +67,65 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global error handler for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process, just log the error
+});
+
+// Global error handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Only exit if it's a critical error
+  if (error.message.includes('Connection terminated unexpectedly')) {
+    console.error('Database connection error detected, attempting to restart...');
+    // Don't exit immediately, let the application try to recover
+  }
+});
+
 (async () => {
   const server = await registerRoutes(app);
 
+  // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error('Error:', err);
+    
+    // Handle specific database connection errors
+    if (err.message?.includes('Connection terminated unexpectedly') || 
+        err.message?.includes('connection') ||
+        err.code === 'ECONNRESET' ||
+        err.code === 'ENOTFOUND') {
+      console.error('Database connection error detected');
+      return res.status(503).json({ 
+        error: {
+          code: '503',
+          message: 'Database temporarily unavailable. Please try again in a moment.',
+          retryAfter: 30
+        }
+      });
+    }
+
+    // Handle validation errors
+    if (err.name === 'ZodError') {
+      return res.status(400).json({
+        error: {
+          code: '400',
+          message: 'Validation error',
+          details: err.errors
+        }
+      });
+    }
+
+    // Handle authentication errors
+    if (err.status === 401 || err.status === 403) {
+      return res.status(err.status).json({
+        error: {
+          code: String(err.status),
+          message: err.message || 'Authentication required'
+        }
+      });
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     const error = {
@@ -98,13 +153,13 @@ app.use((req, res, next) => {
     }
   });
 
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  const port = process.env.PORT || 5000;
+  server.listen(port, () => {
+    console.log(`🚀 Server running on port ${port}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-})();
+})().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});
 

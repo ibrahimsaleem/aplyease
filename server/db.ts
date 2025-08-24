@@ -20,12 +20,15 @@ if (typeof globalThis.WebSocket === 'undefined') {
   }
 }
 
-// Create connection pool with proper configuration for serverless
+// Create connection pool with improved configuration
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 1, // Single connection for serverless
-  idleTimeoutMillis: 0,
+  max: 5, // Increased from 1 to handle more concurrent requests
+  min: 1, // Keep at least one connection alive
+  idleTimeoutMillis: 30000, // 30 seconds idle timeout
   connectionTimeoutMillis: 10000,
+  maxUses: 7500, // Recycle connections after 7500 uses
+  allowExitOnIdle: false, // Don't exit when idle
   ssl: process.env.NODE_ENV === "production" ? {
     rejectUnauthorized: false
   } : {
@@ -33,26 +36,57 @@ const pool = new Pool({
   }
 });
 
+// Add connection error handling
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+// Add connection acquire error handling
+pool.on('acquire', (client) => {
+  console.log('Client acquired from pool');
+});
+
+pool.on('connect', (client) => {
+  console.log('New client connected to database');
+});
+
 // Export the drizzle instance
 export const db = drizzle(pool, { schema });
 
-// Export a function to test the connection
-export async function testConnection() {
-  try {
-    const client = await pool.connect();
+// Enhanced connection test with retry logic
+export async function testConnection(retries = 3): Promise<boolean> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      await client.query('SELECT 1');
-      console.log('Database connection test successful');
-      return true;
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT 1');
+        console.log(`Database connection test successful (attempt ${attempt}/${retries})`);
+        return true;
+      } catch (error) {
+        console.error(`Database test connection failed (attempt ${attempt}/${retries}):`, error);
+        if (attempt === retries) return false;
+      } finally {
+        client.release();
+      }
     } catch (error) {
-      console.error('Database test connection failed:', error);
-      return false;
-    } finally {
-      client.release();
+      console.error(`Failed to connect to database (attempt ${attempt}/${retries}):`, error);
+      if (attempt === retries) return false;
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
+  }
+  return false;
+}
+
+// Graceful shutdown function
+export async function closeDatabase() {
+  try {
+    await pool.end();
+    console.log('Database pool closed successfully');
   } catch (error) {
-    console.error('Failed to connect to database:', error);
-    return false;
+    console.error('Error closing database pool:', error);
   }
 }
 
@@ -62,7 +96,20 @@ if (process.env.NODE_ENV === "production") {
     if (success) {
       console.log('Database connection established successfully');
     } else {
-      console.error('Failed to establish database connection');
+      console.error('Failed to establish database connection after retries');
     }
   });
 }
+
+// Handle process termination gracefully
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT, closing database connections...');
+  await closeDatabase();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, closing database connections...');
+  await closeDatabase();
+  process.exit(0);
+});

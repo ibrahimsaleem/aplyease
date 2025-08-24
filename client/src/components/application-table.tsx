@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
 import { getInitials, getStatusColor } from "@/lib/auth-utils";
@@ -47,6 +49,7 @@ export function ApplicationTable({
     sortOrder: "desc",
     ...initialFilters,
   });
+  const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
 
   const { data: clients = [] } = useQuery<User[]>({
     queryKey: ["/api/clients"],
@@ -89,6 +92,43 @@ export function ApplicationTable({
     }
   });
 
+  const deleteApplication = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/applications/${id}`);
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: "Deleted", description: "Application deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      // Remove from selected applications
+      setSelectedApplications(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables);
+        return newSet;
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message || "Failed to delete application", variant: "destructive" });
+    }
+  });
+
+  const deleteMultipleApplications = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // Use the bulk delete endpoint
+      const res = await apiRequest("DELETE", "/api/applications/bulk", { ids });
+      return res.json();
+    },
+    onSuccess: () => {
+      const count = selectedApplications.size;
+      toast({ title: "Deleted", description: `${count} application${count > 1 ? 's' : ''} deleted successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      setSelectedApplications(new Set());
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message || "Failed to delete applications", variant: "destructive" });
+    }
+  });
+
   const updateFilter = (key: keyof ApplicationFilters, value: any) => {
     setFilters(prev => ({
       ...prev,
@@ -113,7 +153,45 @@ export function ApplicationTable({
     }
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(data?.applications.map(app => app.id) || []);
+      setSelectedApplications(allIds);
+    } else {
+      setSelectedApplications(new Set());
+    }
+  };
+
+  const handleSelectApplication = (id: string, checked: boolean) => {
+    setSelectedApplications(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  const canDelete = (app: JobApplication) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "ADMIN") return true;
+    if (currentUser.role === "EMPLOYEE") return app.employeeId === currentUser.id;
+    if (currentUser.role === "CLIENT") return app.clientId === currentUser.id;
+    return false;
+  };
+
+  const canUpdate = (app: JobApplication) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "EMPLOYEE") return app.employeeId === currentUser.id;
+    if (currentUser.role === "CLIENT") return app.clientId === currentUser.id;
+    return currentUser.role === "ADMIN";
+  };
+
   const totalPages = Math.ceil((data?.total || 0) / (filters.limit || 10));
+  const allSelected = (data?.applications?.length || 0) > 0 && selectedApplications.size === (data?.applications?.length || 0);
+  const someSelected = selectedApplications.size > 0 && selectedApplications.size < (data?.applications?.length || 0);
 
   if (isLoading) {
     return (
@@ -125,13 +203,6 @@ export function ApplicationTable({
     );
   }
 
-  const canUpdate = (app: JobApplication) => {
-    if (!currentUser) return false;
-    if (currentUser.role === "EMPLOYEE") return app.employeeId === currentUser.id;
-    if (currentUser.role === "CLIENT") return app.clientId === currentUser.id;
-    return currentUser.role === "ADMIN";
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -142,6 +213,39 @@ export function ApplicationTable({
           </div>
           
           <div className="flex flex-wrap gap-3">
+            {selectedApplications.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">
+                  {selectedApplications.size} selected
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Applications</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete {selectedApplications.size} application{selectedApplications.size > 1 ? 's' : ''}? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMultipleApplications.mutate(Array.from(selectedApplications))}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
@@ -214,6 +318,14 @@ export function ApplicationTable({
           <Table>
             <TableHeader>
               <TableRow>
+                {showActions && !readonly && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => {
                   const newOrder = filters.sortBy === "dateApplied" && filters.sortOrder === "desc" ? "asc" : "desc";
                   updateFilter("sortBy", "dateApplied");
@@ -237,6 +349,14 @@ export function ApplicationTable({
             <TableBody>
               {data?.applications.map((application) => (
                 <TableRow key={application.id} data-testid={`row-application-${application.id}`}>
+                  {showActions && !readonly && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedApplications.has(application.id)}
+                        onCheckedChange={(checked) => handleSelectApplication(application.id, checked as boolean)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium" data-testid="text-date-applied">
                     {new Date(application.dateApplied).toLocaleDateString()}
                   </TableCell>
@@ -351,16 +471,36 @@ export function ApplicationTable({
                             <Edit className="w-4 h-4" />
                           </Button>
                         )}
-                        {onDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onDelete(application.id)}
-                            className="text-red-600 hover:text-red-900"
-                            data-testid="button-delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        {canDelete(application) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-900"
+                                data-testid="button-delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Application</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this application? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteApplication.mutate(application.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     </TableCell>
@@ -370,7 +510,7 @@ export function ApplicationTable({
               
               {!data?.applications.length && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={showActions && !readonly ? 11 : 10} className="text-center py-8">
                     <div className="text-slate-500" data-testid="text-no-applications">
                       No applications found. Try adjusting your filters.
                     </div>
