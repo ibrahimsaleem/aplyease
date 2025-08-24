@@ -386,11 +386,7 @@ export class DatabaseStorage implements IStorage {
     pendingReview: number;
   }> {
     return retryOperation(async () => {
-      // Only count applications that are not rejected or on hold
-      const [totalApps] = await db
-        .select({ count: count() })
-        .from(jobApplications)
-        .where(sql`${jobApplications.status} NOT IN ('Rejected', 'On Hold')`);
+      const [totalApps] = await db.select({ count: count() }).from(jobApplications);
       
       const [activeEmps] = await db
         .select({ count: count() })
@@ -470,16 +466,10 @@ export class DatabaseStorage implements IStorage {
     hired: number;
   }> {
     return retryOperation(async () => {
-      // Only count applications that are not rejected or on hold
       const [totalApps] = await db
         .select({ count: count() })
         .from(jobApplications)
-        .where(
-          and(
-            eq(jobApplications.clientId, clientId),
-            sql`${jobApplications.status} NOT IN ('Rejected', 'On Hold')`
-          )
-        );
+        .where(eq(jobApplications.clientId, clientId));
 
       const [inProgress] = await db
         .select({ count: count() })
@@ -549,16 +539,11 @@ export class DatabaseStorage implements IStorage {
 
       const employeeStats = await Promise.all(
         activeEmployees.map(async (employee) => {
-          // Get total applications for this employee (excluding rejected and on hold)
+          // Get total applications for this employee
           const [totalApps] = await db
             .select({ count: count() })
             .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                sql`${jobApplications.status} NOT IN ('Rejected', 'On Hold')`
-              )
-            );
+            .where(eq(jobApplications.employeeId, employee.id));
 
           // Get interviews for this employee
           const [interviews] = await db
