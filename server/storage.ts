@@ -90,6 +90,19 @@ export interface IStorage {
     interviews: number;
     hired: number;
   }>;
+
+  getEmployeePerformanceAnalytics(): Promise<{
+    totalPayout: number;
+    employees: Array<{
+      id: string;
+      name: string;
+      applicationsSubmitted: number;
+      successRate: number;
+      earnings: number;
+      interviews: number;
+      totalApplications: number;
+    }>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -493,6 +506,83 @@ export class DatabaseStorage implements IStorage {
         inProgress: inProgress.count,
         interviews: interviews.count,
         hired: hired.count,
+      };
+    });
+  }
+
+  async getEmployeePerformanceAnalytics(): Promise<{
+    totalPayout: number;
+    employees: Array<{
+      id: string;
+      name: string;
+      applicationsSubmitted: number;
+      successRate: number;
+      earnings: number;
+      interviews: number;
+      totalApplications: number;
+    }>;
+  }> {
+    return retryOperation(async () => {
+      // Get all active employees
+      const activeEmployees = await db
+        .select({
+          id: users.id,
+          name: users.name,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "EMPLOYEE"),
+            eq(users.isActive, true)
+          )
+        );
+
+      const employeeStats = await Promise.all(
+        activeEmployees.map(async (employee) => {
+          // Get total applications for this employee
+          const [totalApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(eq(jobApplications.employeeId, employee.id));
+
+          // Get interviews for this employee
+          const [interviews] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                eq(jobApplications.status, "Interview")
+              )
+            );
+
+          // Calculate success rate (interviews/total)
+          const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
+          
+          // Calculate earnings ($0.20 per application)
+          const earnings = totalApps.count * 0.2;
+
+          return {
+            id: employee.id,
+            name: employee.name,
+            applicationsSubmitted: totalApps.count,
+            successRate: Math.round(successRate * 100) / 100, // Round to 2 decimal places
+            earnings: Math.round(earnings * 100) / 100, // Round to 2 decimal places
+            interviews: interviews.count,
+            totalApplications: totalApps.count,
+          };
+        })
+      );
+
+      // Calculate total payout
+      const totalPayout = employeeStats.reduce((sum, employee) => sum + employee.earnings, 0);
+
+      // Sort employees by applications submitted (descending)
+      const sortedEmployees = employeeStats.sort((a, b) => b.applicationsSubmitted - a.applicationsSubmitted);
+
+      return {
+        totalPayout: Math.round(totalPayout * 100) / 100,
+        employees: sortedEmployees,
       };
     });
   }
