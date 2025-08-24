@@ -586,6 +586,125 @@ export class DatabaseStorage implements IStorage {
       };
     });
   }
+
+  async getClientPerformanceAnalytics(): Promise<{
+    totalClients: number;
+    clients: Array<{
+      id: string;
+      name: string;
+      company?: string;
+      applicationsRemaining: number;
+      totalApplications: number;
+      inProgress: number;
+      interviews: number;
+      hired: number;
+      successRate: number;
+      priority: "High" | "Medium" | "Low";
+    }>;
+  }> {
+    return retryOperation(async () => {
+      // Get all active clients
+      const activeClients = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          company: users.company,
+          applicationsRemaining: users.applicationsRemaining,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "CLIENT"),
+            eq(users.isActive, true)
+          )
+        );
+
+      const clientStats = await Promise.all(
+        activeClients.map(async (client) => {
+          // Get total applications for this client
+          const [totalApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(eq(jobApplications.clientId, client.id));
+
+          // Get in progress applications
+          const [inProgress] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.clientId, client.id),
+                sql`${jobApplications.status} IN ('Applied', 'Screening')`
+              )
+            );
+
+          // Get interviews for this client
+          const [interviews] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.clientId, client.id),
+                eq(jobApplications.status, "Interview")
+              )
+            );
+
+          // Get hired applications
+          const [hired] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.clientId, client.id),
+                eq(jobApplications.status, "Hired")
+              )
+            );
+
+          // Calculate success rate (hired/total)
+          const successRate = totalApps.count > 0 ? (hired.count / totalApps.count) * 100 : 0;
+          
+          // Determine priority based on applications remaining and activity
+          let priority: "High" | "Medium" | "Low";
+          const appsRemaining = (client as any).applicationsRemaining ?? 0;
+          
+          if (appsRemaining <= 2 || (totalApps.count === 0 && appsRemaining <= 5)) {
+            priority = "High";
+          } else if (appsRemaining <= 5 || totalApps.count === 0) {
+            priority = "Medium";
+          } else {
+            priority = "Low";
+          }
+
+          return {
+            id: client.id,
+            name: client.name,
+            company: client.company || undefined,
+            applicationsRemaining: appsRemaining,
+            totalApplications: totalApps.count,
+            inProgress: inProgress.count,
+            interviews: interviews.count,
+            hired: hired.count,
+            successRate: Math.round(successRate * 100) / 100,
+            priority,
+          };
+        })
+      );
+
+      // Sort clients by priority (High first) then by applications remaining (ascending)
+      const sortedClients = clientStats.sort((a, b) => {
+        const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }
+        return a.applicationsRemaining - b.applicationsRemaining;
+      });
+
+      return {
+        totalClients: sortedClients.length,
+        clients: sortedClients,
+      };
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();

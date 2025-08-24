@@ -80,3 +80,21 @@ export type EmployeePerformanceAnalytics = {
   totalPayout: number;
   employees: EmployeePerformanceData[];
 };
+
+export type ClientPerformanceData = {
+  id: string;
+  name: string;
+  company?: string;
+  applicationsRemaining: number;
+  totalApplications: number;
+  inProgress: number;
+  interviews: number;
+  hired: number;
+  successRate: number;
+  priority: "High" | "Medium" | "Low";
+};
+
+export type ClientPerformanceAnalytics = {
+  totalClients: number;
+  clients: ClientPerformanceData[];
+};
