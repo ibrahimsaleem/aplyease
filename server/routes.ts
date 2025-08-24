@@ -505,6 +505,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client analytics (Admin only)
+  app.get("/api/analytics/client-performance", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const analytics = await storage.getClientPerformanceAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching client performance analytics:", error);
+      res.status(500).json({ message: "Failed to fetch client performance analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
