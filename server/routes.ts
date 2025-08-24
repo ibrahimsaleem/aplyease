@@ -505,8 +505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client analytics (Admin only)
-  app.get("/api/analytics/client-performance", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+  // Client analytics (Admin and Employee)
+  app.get("/api/analytics/client-performance", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const analytics = await storage.getClientPerformanceAnalytics();
       res.json(analytics);
