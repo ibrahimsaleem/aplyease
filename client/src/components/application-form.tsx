@@ -24,6 +24,7 @@ const applicationSchema = z.object({
   jobLink: z.string().url("Invalid URL").optional().or(z.literal("")),
   jobPage: z.string().url("Invalid URL").optional().or(z.literal("")),
   resumeUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  additionalLink: z.string().url("Invalid URL").optional().or(z.literal("")),
   notes: z.string().optional(),
   mailSent: z.boolean().default(false),
 });
@@ -46,6 +47,7 @@ export function ApplicationForm() {
       jobLink: "",
       jobPage: "",
       resumeUrl: "",
+      additionalLink: "",
       notes: "",
       mailSent: false,
     },
@@ -224,6 +226,25 @@ export function ApplicationForm() {
                   <FormLabel>Resume URL</FormLabel>
                   <FormControl>
                     <Input type="url" placeholder="Google Drive link" {...field} data-testid="input-resume-url" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="additionalLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional Link (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="url" 
+                      placeholder="Screenshot, PDF, or other link" 
+                      {...field} 
+                      data-testid="input-additional-link" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

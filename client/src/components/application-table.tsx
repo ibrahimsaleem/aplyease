@@ -455,6 +455,18 @@ export function ApplicationTable({
                           <FileText className="w-4 h-4" />
                         </a>
                       )}
+                      {application.additionalLink && (
+                        <a
+                          href={application.additionalLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Additional Link"
+                          data-testid="link-additional"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </a>
+                      )}
                     </div>
                   </TableCell>
                   

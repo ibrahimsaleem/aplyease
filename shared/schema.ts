@@ -64,6 +64,7 @@ export const jobApplications = pgTable(
     jobLink: text("job_link"),
     jobPage: text("job_page"),
     resumeUrl: text("resume_url"),
+    additionalLink: text("additional_link"),
     status: statusEnum("status").default("Applied").notNull(),
     mailSent: boolean("mail_sent").default(sql`false`).notNull(),
     notes: text("notes"),
@@ -131,6 +132,7 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications)
   jobLink: z.string().url().optional().or(z.literal("")),
   jobPage: z.string().url().optional().or(z.literal("")),
   resumeUrl: z.string().url().optional().or(z.literal("")),
+  additionalLink: z.string().url().optional().or(z.literal("")),
 });
 
 export const updateJobApplicationSchema = insertJobApplicationSchema.partial();

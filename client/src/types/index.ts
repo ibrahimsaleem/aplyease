@@ -22,6 +22,7 @@ export type JobApplication = {
   jobLink?: string;
   jobPage?: string;
   resumeUrl?: string;
+  additionalLink?: string;
   status: "Applied" | "Screening" | "Interview" | "Offer" | "Hired" | "Rejected" | "On Hold";
   mailSent: boolean;
   notes?: string;
