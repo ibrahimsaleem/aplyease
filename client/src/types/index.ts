@@ -65,3 +65,18 @@ export type ApplicationFilters = {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 };
+
+export type EmployeePerformanceData = {
+  id: string;
+  name: string;
+  applicationsSubmitted: number;
+  successRate: number;
+  earnings: number;
+  interviews: number;
+  totalApplications: number;
+};
+
+export type EmployeePerformanceAnalytics = {
+  totalPayout: number;
+  employees: EmployeePerformanceData[];
+};

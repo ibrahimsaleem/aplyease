@@ -5,6 +5,7 @@ import { NavigationHeader } from "@/components/navigation-header";
 import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { UserManagement } from "@/components/user-management";
+import { EmployeePerformanceAnalytics } from "@/components/employee-performance-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
@@ -62,10 +63,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Analytics Dashboard</h3>
-              <p className="text-slate-600">Advanced analytics and reporting features coming soon.</p>
-            </div>
+            <EmployeePerformanceAnalytics />
           </TabsContent>
         </Tabs>
       </div>

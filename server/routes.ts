@@ -494,6 +494,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee performance analytics (Admin only)
+  app.get("/api/analytics/employee-performance", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const analytics = await storage.getEmployeePerformanceAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching employee performance analytics:", error);
+      res.status(500).json({ message: "Failed to fetch employee performance analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
