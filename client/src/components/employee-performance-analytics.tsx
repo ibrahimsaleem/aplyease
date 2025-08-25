@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Users, Target } from "lucide-react";
+import { DollarSign, TrendingUp, Users, Target, Calendar, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics } from "@/types";
 
@@ -52,25 +52,88 @@ export function EmployeePerformanceAnalytics() {
 
   return (
     <div className="space-y-6">
-      {/* Total Payout Card */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-emerald-600">Total Payout to Employees</p>
-              <p className="text-4xl font-bold text-emerald-900" data-testid="text-total-payout">
-                ${analytics.totalPayout.toFixed(2)}
-              </p>
-              <p className="text-sm text-emerald-600 mt-1">
-                Based on {analytics.employees.length} active employees
-              </p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Payout Card */}
+        <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Total Payout</p>
+                <p className="text-3xl font-bold text-emerald-900" data-testid="text-total-payout">
+                  ${analytics.totalPayout.toFixed(2)}
+                </p>
+                <p className="text-sm text-emerald-600 mt-1">
+                  {analytics.employees.length} active employees
+                </p>
+              </div>
+              <div className="bg-emerald-100 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
             </div>
-            <div className="bg-emerald-100 p-4 rounded-lg">
-              <DollarSign className="w-8 h-8 text-emerald-600" />
+          </CardContent>
+        </Card>
+
+        {/* This Week Applications */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600">This Week</p>
+                <p className="text-3xl font-bold text-blue-900" data-testid="text-this-week">
+                  {analytics.weeklyPerformance[analytics.weeklyPerformance.length - 1]?.applications || 0}
+                </p>
+                <p className="text-sm text-blue-600 mt-1">
+                  applications submitted
+                </p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Today's Applications */}
+        <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600">Today</p>
+                <p className="text-3xl font-bold text-purple-900" data-testid="text-today">
+                  {analytics.dailyPerformance[analytics.dailyPerformance.length - 1]?.applications || 0}
+                </p>
+                <p className="text-sm text-purple-600 mt-1">
+                  applications submitted
+                </p>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-lg">
+                <Clock className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Average Daily Applications */}
+        <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600">Daily Average</p>
+                <p className="text-3xl font-bold text-orange-900" data-testid="text-daily-avg">
+                  {Math.round(analytics.dailyPerformance.reduce((sum, day) => sum + day.applications, 0) / analytics.dailyPerformance.length)}
+                </p>
+                <p className="text-sm text-orange-600 mt-1">
+                  applications per day
+                </p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Performance Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -134,6 +197,112 @@ export function EmployeePerformanceAnalytics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Weekly Performance Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-purple-600" />
+            Weekly Performance (Last 8 Weeks)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={analytics.weeklyPerformance}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="week" 
+                fontSize={12}
+              />
+              <YAxis />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  value, 
+                  name === "applications" ? "Applications" : "Active Employees"
+                ]}
+                labelFormatter={(label) => `Week: ${label}`}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="applications" 
+                stroke="#3b82f6" 
+                strokeWidth={3}
+                name="Applications"
+                dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="employees" 
+                stroke="#10b981" 
+                strokeWidth={3}
+                name="Active Employees"
+                dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Daily Performance Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-orange-600" />
+            Daily Performance (Last 30 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={analytics.dailyPerformance}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  value, 
+                  name === "applications" ? "Applications" : "Active Employees"
+                ]}
+                labelFormatter={(label) => {
+                  const date = new Date(label);
+                  return date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  });
+                }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="applications" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+                name="Applications"
+                dot={{ fill: "#3b82f6", strokeWidth: 1, r: 2 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="employees" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                name="Active Employees"
+                dot={{ fill: "#10b981", strokeWidth: 1, r: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Earnings Chart */}
       <Card>
