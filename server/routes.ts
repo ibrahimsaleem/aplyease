@@ -494,8 +494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Employee performance analytics (Admin only)
-  app.get("/api/analytics/employee-performance", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+  // Employee performance analytics (Admin and Employee - Full transparency)
+  app.get("/api/analytics/employee-performance", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const analytics = await storage.getEmployeePerformanceAnalytics();
       res.json(analytics);

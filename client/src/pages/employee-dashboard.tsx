@@ -6,6 +6,7 @@ import { StatsCards } from "@/components/stats-cards";
 import { ApplicationForm } from "@/components/application-form";
 import { ApplicationTable } from "@/components/application-table";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
+import { EmployeePerformanceAnalytics } from "@/components/employee-performance-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeeStats } from "@/types";
@@ -37,9 +38,12 @@ export default function EmployeeDashboard() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="applications" data-testid="tab-applications">
               My Applications
+            </TabsTrigger>
+            <TabsTrigger value="employee-analytics" data-testid="tab-employee-analytics">
+              Employee Analytics
             </TabsTrigger>
             <TabsTrigger value="client-analytics" data-testid="tab-client-analytics">
               Client Analytics
@@ -60,6 +64,10 @@ export default function EmployeeDashboard() {
               readonly={false}
               filters={{ employeeId: user.id }}
             />
+          </TabsContent>
+
+          <TabsContent value="employee-analytics" className="space-y-6">
+            <EmployeePerformanceAnalytics />
           </TabsContent>
 
           <TabsContent value="client-analytics" className="space-y-6">
