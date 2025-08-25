@@ -79,6 +79,16 @@ export type EmployeePerformanceData = {
 export type EmployeePerformanceAnalytics = {
   totalPayout: number;
   employees: EmployeePerformanceData[];
+  weeklyPerformance: Array<{
+    week: string;
+    applications: number;
+    employees: number;
+  }>;
+  dailyPerformance: Array<{
+    date: string;
+    applications: number;
+    employees: number;
+  }>;
 };
 
 export type ClientPerformanceData = {
