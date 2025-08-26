@@ -1,6 +1,6 @@
 import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, like, ilike, desc, asc, count, sql, gte, lte, type SQL } from "drizzle-orm";
+import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 
@@ -101,6 +101,25 @@ export interface IStorage {
       earnings: number;
       interviews: number;
       totalApplications: number;
+    }>;
+  }>;
+
+  getDailyEmployeeApplicationAnalytics(): Promise<{
+    totalApplicationsToday: number;
+    totalApplicationsYesterday: number;
+    totalApplicationsLast3Days: number;
+    totalApplicationsLast7Days: number;
+    employees: Array<{
+      id: string;
+      name: string;
+      applicationsToday: number;
+      applicationsYesterday: number;
+      applicationsLast3Days: number;
+      applicationsLast7Days: number;
+      totalApplications: number;
+      successRate: number;
+      earnings: number;
+      interviews: number;
     }>;
   }>;
 }
@@ -724,6 +743,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+<<<<<<< Updated upstream
   private async getWeeklyPerformance(): Promise<Array<{
     week: string;
     applications: number;
@@ -816,6 +836,155 @@ export class DatabaseStorage implements IStorage {
       }
 
       return days;
+=======
+  async getDailyEmployeeApplicationAnalytics(): Promise<{
+    totalApplicationsToday: number;
+    totalApplicationsYesterday: number;
+    totalApplicationsLast3Days: number;
+    totalApplicationsLast7Days: number;
+    employees: Array<{
+      id: string;
+      name: string;
+      applicationsToday: number;
+      applicationsYesterday: number;
+      applicationsLast3Days: number;
+      applicationsLast7Days: number;
+      totalApplications: number;
+      successRate: number;
+      earnings: number;
+      interviews: number;
+    }>;
+  }> {
+    return retryOperation(async () => {
+      // Get all active employees
+      const activeEmployees = await db
+        .select({
+          id: users.id,
+          name: users.name,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "EMPLOYEE"),
+            eq(users.isActive, true)
+          )
+        );
+
+      // Calculate date ranges
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const employeeStats = await Promise.all(
+        activeEmployees.map(async (employee) => {
+          // Get applications for today
+          const [todayApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, today.toISOString().split('T')[0])
+              )
+            );
+
+          // Get applications for yesterday
+          const [yesterdayApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, yesterday.toISOString().split('T')[0]),
+                lt(jobApplications.dateApplied, today.toISOString().split('T')[0])
+              )
+            );
+
+          // Get applications for last 3 days
+          const [last3DaysApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, threeDaysAgo.toISOString().split('T')[0])
+              )
+            );
+
+          // Get applications for last 7 days
+          const [last7DaysApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, sevenDaysAgo.toISOString().split('T')[0])
+              )
+            );
+
+          // Get total applications for this employee
+          const [totalApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(eq(jobApplications.employeeId, employee.id));
+
+          // Get interviews for this employee
+          const [interviews] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                eq(jobApplications.status, "Interview")
+              )
+            );
+
+          // Calculate success rate (interviews/total)
+          const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
+          
+          // Calculate earnings ($0.20 per application)
+          const earnings = totalApps.count * 0.2;
+
+          return {
+            id: employee.id,
+            name: employee.name,
+            applicationsToday: todayApps.count,
+            applicationsYesterday: yesterdayApps.count,
+            applicationsLast3Days: last3DaysApps.count,
+            applicationsLast7Days: last7DaysApps.count,
+            totalApplications: totalApps.count,
+            successRate: Math.round(successRate * 100) / 100,
+            earnings: Math.round(earnings * 100) / 100,
+            interviews: interviews.count,
+          };
+        })
+      );
+
+      // Calculate totals
+      const totalApplicationsToday = employeeStats.reduce((sum, emp) => sum + emp.applicationsToday, 0);
+      const totalApplicationsYesterday = employeeStats.reduce((sum, emp) => sum + emp.applicationsYesterday, 0);
+      const totalApplicationsLast3Days = employeeStats.reduce((sum, emp) => sum + emp.applicationsLast3Days, 0);
+      const totalApplicationsLast7Days = employeeStats.reduce((sum, emp) => sum + emp.applicationsLast7Days, 0);
+
+      // Sort employees by applications today (descending)
+      const sortedEmployees = employeeStats.sort((a, b) => b.applicationsToday - a.applicationsToday);
+
+      return {
+        totalApplicationsToday,
+        totalApplicationsYesterday,
+        totalApplicationsLast3Days,
+        totalApplicationsLast7Days,
+        employees: sortedEmployees,
+      };
+>>>>>>> Stashed changes
     });
   }
 }

@@ -91,6 +91,27 @@ export type EmployeePerformanceAnalytics = {
   }>;
 };
 
+export type DailyEmployeeApplicationData = {
+  id: string;
+  name: string;
+  applicationsToday: number;
+  applicationsYesterday: number;
+  applicationsLast3Days: number;
+  applicationsLast7Days: number;
+  totalApplications: number;
+  successRate: number;
+  earnings: number;
+  interviews: number;
+};
+
+export type DailyEmployeeAnalytics = {
+  totalApplicationsToday: number;
+  totalApplicationsYesterday: number;
+  totalApplicationsLast3Days: number;
+  totalApplicationsLast7Days: number;
+  employees: DailyEmployeeApplicationData[];
+};
+
 export type ClientPerformanceData = {
   id: string;
   name: string;
