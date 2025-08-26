@@ -1,6 +1,6 @@
 import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, type SQL } from "drizzle-orm";
+import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 
@@ -743,100 +743,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-<<<<<<< Updated upstream
-  private async getWeeklyPerformance(): Promise<Array<{
-    week: string;
-    applications: number;
-    employees: number;
-  }>> {
-    return retryOperation(async () => {
-      const weeks: Array<{ week: string; applications: number; employees: number }> = [];
-      
-      // Get data for last 8 weeks
-      for (let i = 7; i >= 0; i--) {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - (i * 7));
-        startDate.setHours(0, 0, 0, 0);
-        
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
 
-        // Get applications for this week
-        const [applications] = await db
-          .select({ count: count() })
-          .from(jobApplications)
-          .where(
-            and(
-              gte(jobApplications.dateApplied, startDate.toISOString().split('T')[0]),
-              lte(jobApplications.dateApplied, endDate.toISOString().split('T')[0])
-            )
-          );
-
-        // Get unique employees who submitted applications this week
-        const uniqueEmployees = await db
-          .select({ employeeId: jobApplications.employeeId })
-          .from(jobApplications)
-          .where(
-            and(
-              gte(jobApplications.dateApplied, startDate.toISOString().split('T')[0]),
-              lte(jobApplications.dateApplied, endDate.toISOString().split('T')[0])
-            )
-          );
-        
-        // Count unique employee IDs
-        const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
-
-        const weekLabel = `Week ${8 - i}`;
-        weeks.push({
-          week: weekLabel,
-          applications: applications.count,
-          employees: uniqueEmployeeIds.size,
-        });
-      }
-
-      return weeks;
-    });
-  }
-
-  private async getDailyPerformance(): Promise<Array<{
-    date: string;
-    applications: number;
-    employees: number;
-  }>> {
-    return retryOperation(async () => {
-      const days: Array<{ date: string; applications: number; employees: number }> = [];
-      
-      // Get data for last 30 days
-      for (let i = 29; i >= 0; i--) {
-        const targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() - i);
-        const dateString = targetDate.toISOString().split('T')[0];
-
-        // Get applications for this day
-        const [applications] = await db
-          .select({ count: count() })
-          .from(jobApplications)
-          .where(eq(jobApplications.dateApplied, dateString));
-
-        // Get unique employees who submitted applications this day
-        const uniqueEmployees = await db
-          .select({ employeeId: jobApplications.employeeId })
-          .from(jobApplications)
-          .where(eq(jobApplications.dateApplied, dateString));
-        
-        // Count unique employee IDs
-        const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
-
-        days.push({
-          date: dateString,
-          applications: applications.count,
-          employees: uniqueEmployeeIds.size,
-        });
-      }
-
-      return days;
-=======
   async getDailyEmployeeApplicationAnalytics(): Promise<{
     totalApplicationsToday: number;
     totalApplicationsYesterday: number;
@@ -984,7 +891,102 @@ export class DatabaseStorage implements IStorage {
         totalApplicationsLast7Days,
         employees: sortedEmployees,
       };
->>>>>>> Stashed changes
+
+    });
+  }
+
+  private async getWeeklyPerformance(): Promise<Array<{
+    week: string;
+    applications: number;
+    employees: number;
+  }>> {
+    return retryOperation(async () => {
+      const weeks: Array<{ week: string; applications: number; employees: number }> = [];
+      
+      // Get data for last 8 weeks
+      for (let i = 7; i >= 0; i--) {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - (i * 7));
+        startDate.setHours(0, 0, 0, 0);
+        
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+
+        // Get applications for this week
+        const [applications] = await db
+          .select({ count: count() })
+          .from(jobApplications)
+          .where(
+            and(
+              gte(jobApplications.dateApplied, startDate.toISOString().split('T')[0]),
+              lt(jobApplications.dateApplied, endDate.toISOString().split('T')[0])
+            )
+          );
+
+        // Get unique employees who submitted applications this week
+        const uniqueEmployees = await db
+          .select({ employeeId: jobApplications.employeeId })
+          .from(jobApplications)
+          .where(
+            and(
+              gte(jobApplications.dateApplied, startDate.toISOString().split('T')[0]),
+              lt(jobApplications.dateApplied, endDate.toISOString().split('T')[0])
+            )
+          );
+        
+        // Count unique employee IDs
+        const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
+
+        const weekLabel = `Week ${8 - i}`;
+        weeks.push({
+          week: weekLabel,
+          applications: applications.count,
+          employees: uniqueEmployeeIds.size,
+        });
+      }
+
+      return weeks;
+    });
+  }
+
+  private async getDailyPerformance(): Promise<Array<{
+    date: string;
+    applications: number;
+    employees: number;
+  }>> {
+    return retryOperation(async () => {
+      const days: Array<{ date: string; applications: number; employees: number }> = [];
+      
+      // Get data for last 30 days
+      for (let i = 29; i >= 0; i--) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() - i);
+        const dateString = targetDate.toISOString().split('T')[0];
+
+        // Get applications for this day
+        const [applications] = await db
+          .select({ count: count() })
+          .from(jobApplications)
+          .where(eq(jobApplications.dateApplied, dateString));
+
+        // Get unique employees who submitted applications this day
+        const uniqueEmployees = await db
+          .select({ employeeId: jobApplications.employeeId })
+          .from(jobApplications)
+          .where(eq(jobApplications.dateApplied, dateString));
+        
+        // Count unique employee IDs
+        const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
+
+        days.push({
+          date: dateString,
+          applications: applications.count,
+          employees: uniqueEmployeeIds.size,
+        });
+      }
+
+      return days;
     });
   }
 }
