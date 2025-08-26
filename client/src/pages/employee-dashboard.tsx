@@ -39,7 +39,7 @@ export default function EmployeeDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="applications" data-testid="tab-applications">
-              My Applications
+              All Applications
             </TabsTrigger>
             <TabsTrigger value="client-analytics" data-testid="tab-client-analytics">
               Client Analytics
@@ -50,15 +50,14 @@ export default function EmployeeDashboard() {
             {/* Quick Add Application */}
             <ApplicationForm />
 
-            {/* My Applications Table */}
+            {/* All Applications Table */}
             <ApplicationTable
-              title="My Applications"
-              description="Applications you have submitted"
-              showEmployeeColumn={false}
+              title="All Applications"
+              description="View all applications to prevent duplicates and coordinate with other employees"
+              showEmployeeColumn={true}
               showClientColumn={true}
               showActions={true}
               readonly={false}
-              filters={{ employeeId: user.id }}
             />
           </TabsContent>
 

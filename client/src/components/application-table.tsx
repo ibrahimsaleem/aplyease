@@ -177,7 +177,6 @@ export function ApplicationTable({
   const canDelete = (app: JobApplication) => {
     if (!currentUser) return false;
     if (currentUser.role === "ADMIN") return true;
-    if (currentUser.role === "EMPLOYEE") return app.employeeId === currentUser.id;
     if (currentUser.role === "CLIENT") return app.clientId === currentUser.id;
     return false;
   };
@@ -218,13 +217,14 @@ export function ApplicationTable({
                 <span className="text-sm text-slate-600">
                   {selectedApplications.size} selected
                 </span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Selected
-                    </Button>
-                  </AlertDialogTrigger>
+                {(currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Selected
+                      </Button>
+                    </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Applications</AlertDialogTitle>
@@ -243,6 +243,7 @@ export function ApplicationTable({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                )}
               </div>
             )}
 
@@ -280,6 +281,7 @@ export function ApplicationTable({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Employees</SelectItem>
+                  {currentUser?.id && <SelectItem value={currentUser.id}>My Applications</SelectItem>}
                   {employees.filter(u => u.role === "EMPLOYEE").map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.name}
@@ -318,7 +320,7 @@ export function ApplicationTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {showActions && !readonly && (
+                {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
                   <TableHead className="w-12">
                     <Checkbox
                       checked={allSelected}
@@ -347,9 +349,15 @@ export function ApplicationTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.applications.map((application) => (
-                <TableRow key={application.id} data-testid={`row-application-${application.id}`}>
-                  {showActions && !readonly && (
+              {data?.applications.map((application) => {
+                const isMyApplication = currentUser?.id === application.employeeId;
+                return (
+                <TableRow 
+                  key={application.id} 
+                  data-testid={`row-application-${application.id}`}
+                  className={isMyApplication ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
+                >
+                  {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
                     <TableCell>
                       <Checkbox
                         checked={selectedApplications.has(application.id)}
@@ -369,9 +377,16 @@ export function ApplicationTable({
                             {getInitials(application.employee.name)}
                           </span>
                         </div>
-                        <span className="text-sm font-medium" data-testid="text-employee-name">
-                          {application.employee.name}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium" data-testid="text-employee-name">
+                            {application.employee.name}
+                          </span>
+                          {isMyApplication && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              My Application
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                   )}
@@ -518,7 +533,8 @@ export function ApplicationTable({
                     </TableCell>
                   )}
                 </TableRow>
-              ))}
+              );
+              })}
               
               {!data?.applications.length && (
                 <TableRow>

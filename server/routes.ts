@@ -171,7 +171,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.role === "CLIENT") {
         filters.clientId = user.id;
       } else if (user.role === "EMPLOYEE") {
-        filters.employeeId = user.id;
+        // Employees can see all applications to prevent duplicates
+        // They can still filter by specific clientId or employeeId if provided
+        if (clientId) filters.clientId = clientId as string;
+        if (employeeId) filters.employeeId = employeeId as string;
       } else if (user.role === "ADMIN") {
         // Admin can specify filters
         if (clientId) filters.clientId = clientId as string;
@@ -297,7 +300,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user can delete this application
       const canDelete = 
         user.role === "ADMIN" ||
-        (user.role === "EMPLOYEE" && application.employeeId === user.id) ||
         (user.role === "CLIENT" && application.clientId === user.id);
 
       if (!canDelete) {
@@ -335,7 +337,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user can delete all applications
       const canDeleteAll = applications.every(application => 
         user.role === "ADMIN" ||
-        (user.role === "EMPLOYEE" && application.employeeId === user.id) ||
         (user.role === "CLIENT" && application.clientId === user.id)
       );
 
@@ -502,6 +503,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching employee performance analytics:", error);
       res.status(500).json({ message: "Failed to fetch employee performance analytics" });
+    }
+  });
+
+  // Daily employee application analytics (Admin only)
+  app.get("/api/analytics/daily-employee-applications", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const analytics = await storage.getDailyEmployeeApplicationAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching daily employee application analytics:", error);
+      res.status(500).json({ message: "Failed to fetch daily employee application analytics" });
     }
   });
 

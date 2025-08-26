@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, TrendingUp, Users, Target, Calendar, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics } from "@/types";
+import { DailyEmployeeAnalytics } from "./daily-employee-analytics";
 
 export function EmployeePerformanceAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<EmployeePerformanceAnalytics>({
@@ -386,6 +387,12 @@ export function EmployeePerformanceAnalytics() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Daily Employee Application Analytics */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Daily Application Analytics</h2>
+        <DailyEmployeeAnalytics />
+      </div>
     </div>
   );
 }
