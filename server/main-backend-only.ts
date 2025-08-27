@@ -2,8 +2,7 @@ import "dotenv/config";
 import "module-alias/register";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import path from "path";
+import { log } from "./vite";
 import cors from "cors";
 
 // Log environment variables for debugging (remove sensitive info)
@@ -15,7 +14,7 @@ console.log('- PORT:', process.env.PORT);
 
 const app = express();
 
-// Enable CORS for all environments
+// Enable CORS for Firebase frontend
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -72,16 +71,13 @@ app.use((req, res, next) => {
 // Global error handler for unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit the process, just log the error
 });
 
 // Global error handler for uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  // Only exit if it's a critical error
   if (error.message.includes('Connection terminated unexpectedly')) {
     console.error('Database connection error detected, attempting to restart...');
-    // Don't exit immediately, let the application try to recover
   }
 });
 
@@ -100,68 +96,36 @@ process.on('uncaughtException', (error) => {
       console.error('Database connection error detected');
       return res.status(503).json({ 
         error: {
-          code: '503',
-          message: 'Database temporarily unavailable. Please try again in a moment.',
-          retryAfter: 30
+          message: 'Database connection error',
+          code: 'DB_CONNECTION_ERROR'
         }
       });
     }
-
-    // Handle validation errors
-    if (err.name === 'ZodError') {
-      return res.status(400).json({
+    
+    // Handle CORS errors
+    if (err.message?.includes('Not allowed by CORS')) {
+      return res.status(403).json({ 
         error: {
-          code: '400',
-          message: 'Validation error',
-          details: err.errors
+          message: 'CORS error: Origin not allowed',
+          code: 'CORS_ERROR'
         }
       });
     }
-
-    // Handle authentication errors
-    if (err.status === 401 || err.status === 403) {
-      return res.status(err.status).json({
-        error: {
-          code: String(err.status),
-          message: err.message || 'Authentication required'
-        }
-      });
-    }
-
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    const error = {
-      code: String(status),
-      message: process.env.NODE_ENV === 'production' ? 'A server error has occurred' : message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    };
-    res.status(status).json({ error });
-  });
-
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  app.use((req, res) => {
-    if (req.path.startsWith('/api/')) {
-      res.status(404).json({ message: "API endpoint not found" });
-    } else {
-      const indexPath = process.env.NODE_ENV === "production"
-        ? path.join(process.cwd(), "dist", "index.html")
-        : path.join(process.cwd(), "client", "index.html");
-      res.sendFile(indexPath);
-    }
+    
+    // Default error response
+    res.status(500).json({ 
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_ERROR'
+      }
+    });
   });
 
   const port = process.env.PORT || 5000;
+  
   server.listen(port, () => {
-    console.log(`🚀 Server running on port ${port}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 AplyEase Backend API running on port ${port}`);
+    console.log(`📊 Health check: http://localhost:${port}/api/auth/user`);
+    console.log(`🔗 API Base URL: http://localhost:${port}/api`);
   });
-})().catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
-
+})();

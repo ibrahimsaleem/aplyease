@@ -1,9 +1,13 @@
 services:
   - type: web
-    name: aplyease-portal
+    name: aplyease-backend
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: |
+      # Use backend-only package.json for smaller build
+      cp package-backend.json package.json
+      npm install --production
+      npm run build:backend
+    startCommand: npm run start:backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,5 +17,5 @@ services:
         generateValue: true
       - key: PORT
         value: 10000
-    healthCheckPath: /api/auth/user
+    healthCheckPath: /api/health
     autoDeploy: true

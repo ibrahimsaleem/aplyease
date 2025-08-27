@@ -528,6 +528,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
+  // API documentation endpoint
+  app.get("/api", (req, res) => {
+    res.json({
+      name: "AplyEase API",
+      version: "1.0.0",
+      description: "Job Application Management API",
+      endpoints: {
+        auth: {
+          "POST /api/auth/login": "User login",
+          "POST /api/auth/logout": "User logout",
+          "GET /api/auth/user": "Get current user",
+          "POST /api/auth/register": "Register new user (Admin only)"
+        },
+        users: {
+          "GET /api/users": "Get all users (Admin only)",
+          "POST /api/users": "Create new user (Admin only)",
+          "PUT /api/users/:id": "Update user (Admin only)",
+          "DELETE /api/users/:id": "Delete user (Admin only)"
+        },
+        applications: {
+          "GET /api/applications": "Get applications (filtered by role)",
+          "POST /api/applications": "Create new application (Employee only)",
+          "PUT /api/applications/:id": "Update application",
+          "DELETE /api/applications/:id": "Delete application"
+        },
+        analytics: {
+          "GET /api/analytics/dashboard": "Get dashboard analytics",
+          "GET /api/analytics/export": "Export data as CSV",
+          "GET /api/analytics/employee-performance": "Employee performance (Admin only)",
+          "GET /api/analytics/client-performance": "Client performance analytics"
+        },
+        system: {
+          "GET /api/health": "Health check",
+          "GET /api": "This API documentation"
+        }
+      },
+      baseUrl: `${req.protocol}://${req.get('host')}`,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
