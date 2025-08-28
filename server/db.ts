@@ -9,6 +9,7 @@ if (!process.env.DATABASE_URL) {
 // Using node-postgres Pool for Supabase/Postgres
 
 // Create connection pool with improved configuration
+const isSupabase = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 5,
@@ -16,9 +17,7 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   allowExitOnIdle: false,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com')
-    ? { rejectUnauthorized: false }
-    : (process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined)
+  ssl: { rejectUnauthorized: false }
 });
 
 // Add connection error handling
