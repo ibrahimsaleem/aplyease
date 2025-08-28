@@ -6,7 +6,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// Using node-postgres Pool for Supabase/Postgres
+// Using node-postgres Pool for Supabase/Postgres with SSL
 
 // Create connection pool with improved configuration
 const isSupabase = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com');
