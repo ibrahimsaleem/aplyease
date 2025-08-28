@@ -1,4 +1,4 @@
-const { Pool } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 async function testDatabaseConnection() {
@@ -9,11 +9,12 @@ async function testDatabaseConnection() {
     process.exit(1);
   }
 
+  const isSupabase = process.env.DATABASE_URL.includes('supabase.com');
   const pool = new Pool({ 
     connectionString: process.env.DATABASE_URL,
     max: 1,
     connectionTimeoutMillis: 10000,
-    ssl: { rejectUnauthorized: true }
+    ssl: isSupabase ? { rejectUnauthorized: false } : undefined
   });
 
   try {

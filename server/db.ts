@@ -1,39 +1,24 @@
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { neonConfig, Pool } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from '../shared/schema';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// Configure neon for serverless environment
-neonConfig.fetchConnectionCache = true;
-
-// Configure WebSocket constructor for serverless environments
-if (typeof globalThis.WebSocket === 'undefined') {
-  // For Node.js environments where WebSocket is not available globally
-  try {
-    const ws = require('ws');
-    neonConfig.webSocketConstructor = ws;
-  } catch (error) {
-    console.warn('WebSocket library not available, some features may not work');
-  }
-}
+// Using node-postgres Pool for Supabase/Postgres
 
 // Create connection pool with improved configuration
-const pool = new Pool({ 
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 5, // Increased from 1 to handle more concurrent requests
-  min: 1, // Keep at least one connection alive
-  idleTimeoutMillis: 30000, // 30 seconds idle timeout
+  max: 5,
+  min: 1,
+  idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  maxUses: 7500, // Recycle connections after 7500 uses
-  allowExitOnIdle: false, // Don't exit when idle
-  ssl: process.env.NODE_ENV === "production" ? {
-    rejectUnauthorized: false
-  } : {
-    rejectUnauthorized: true
-  }
+  allowExitOnIdle: false,
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com')
+    ? { rejectUnauthorized: false }
+    : (process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined)
 });
 
 // Add connection error handling

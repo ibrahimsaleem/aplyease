@@ -1,4 +1,4 @@
-const { Pool } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 async function testQuotaUpdate() {
