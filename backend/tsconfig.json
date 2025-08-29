@@ -19,6 +19,6 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["../server/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "../client", "../dist"]
+  "include": ["../backend/**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "../frontend", "../dist"]
 }
