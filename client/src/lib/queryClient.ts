@@ -27,10 +27,10 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Use the current domain for API calls
-  const apiUrl = process.env.NODE_ENV === 'production' 
-    ? window.location.origin
-    : 'http://localhost:5000';
+  // Compute API base URL
+  // Prefer Vite env var for split deployments (e.g., Firebase + Render)
+  const apiUrl = (import.meta as any).env?.VITE_API_URL
+    || (process.env.NODE_ENV === 'production' ? 'https://aplyeaseportal.onrender.com' : 'http://localhost:5000');
   
   const token = getAuthToken();
   const headers: Record<string, string> = {
@@ -67,13 +67,19 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const token = getAuthToken();
     const headers: Record<string, string> = {};
+
+    // Compute API base URL similar to apiRequest
+    const apiUrl = (import.meta as any).env?.VITE_API_URL
+      || (process.env.NODE_ENV === 'production' ? 'https://aplyeaseportal.onrender.com' : 'http://localhost:5000');
     
     // Add JWT token to Authorization header if available
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(queryKey.join("/") as string, {
+    const path = queryKey.join("/") as string;
+    const url = path.startsWith("/") ? `${apiUrl}${path}` : `${apiUrl}/${path}`;
+    const res = await fetch(url, {
       headers,
       credentials: "include",
     });

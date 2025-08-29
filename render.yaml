@@ -2,7 +2,7 @@ services:
   - type: web
     name: aplyease-portal
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build:server
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -10,6 +10,8 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET
+        generateValue: true
+      - key: JWT_SECRET
         generateValue: true
       - key: PORT
         value: 10000

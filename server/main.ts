@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import cors from "cors";
+import fs from "fs";
 
 // Log environment variables for debugging (remove sensitive info)
 console.log('Environment check:');
@@ -22,6 +23,8 @@ app.use(cors({
     if (
       origin.endsWith('.vercel.app') ||
       origin.endsWith('.onrender.com') ||
+      origin.endsWith('.web.app') ||
+      origin.endsWith('.firebaseapp.com') ||
       origin === 'http://localhost:5173' ||
       origin === 'http://localhost:5000' ||
       process.env.NODE_ENV === 'development'
@@ -139,7 +142,12 @@ process.on('uncaughtException', (error) => {
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    const distIndex = path.join(process.cwd(), "dist", "index.html");
+    if (fs.existsSync(distIndex)) {
+      serveStatic(app);
+    } else {
+      log("Skipping static file serving: dist/index.html not found", "server");
+    }
   }
 
   app.use((req, res) => {
