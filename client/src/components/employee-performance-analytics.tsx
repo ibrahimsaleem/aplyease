@@ -82,7 +82,11 @@ export function EmployeePerformanceAnalytics() {
               <div>
                 <p className="text-sm font-medium text-blue-600">This Week</p>
                 <p className="text-3xl font-bold text-blue-900" data-testid="text-this-week">
-                  {analytics.weeklyPerformance[analytics.weeklyPerformance.length - 1]?.applications || 0}
+                  {(() => {
+                    // Calculate this week's total from daily performance (last 7 days)
+                    const last7Days = analytics.dailyPerformance.slice(-7);
+                    return last7Days.reduce((sum, day) => sum + day.applications, 0);
+                  })()}
                 </p>
                 <p className="text-sm text-blue-600 mt-1">
                   applications submitted
