@@ -156,7 +156,7 @@ process.on('uncaughtException', (error) => {
     } else {
       const indexPath = process.env.NODE_ENV === "production"
         ? path.join(process.cwd(), "dist", "index.html")
-        : path.join(process.cwd(), "frontend", "index.html");
+        : path.join(process.cwd(), "AplyeEase Portal", "frontend", "index.html");
       res.sendFile(indexPath);
     }
   });

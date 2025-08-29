@@ -8,17 +8,17 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "frontend", "src"),
+      "@": path.resolve(import.meta.dirname, "AplyeEase Portal", "frontend", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
-  root: path.resolve(import.meta.dirname, "frontend"),
+  root: path.resolve(import.meta.dirname, "AplyeEase Portal", "frontend"),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     rollupOptions: {
-      input: path.resolve(import.meta.dirname, "frontend", "index.html")
+      input: path.resolve(import.meta.dirname, "AplyeEase Portal", "frontend", "index.html")
     }
   },
   server: {
