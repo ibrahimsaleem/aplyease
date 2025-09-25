@@ -38,7 +38,7 @@ export default function EmployeeDashboard() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="w-full overflow-x-auto">
             <TabsTrigger value="applications" data-testid="tab-applications">
               All Applications
             </TabsTrigger>
