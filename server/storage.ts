@@ -989,6 +989,226 @@ export class DatabaseStorage implements IStorage {
       return days;
     });
   }
+
+  async getMonthlyPayoutAnalytics(month?: string, year?: string): Promise<Array<{
+    employeeId: string;
+    employeeName: string;
+    applicationsThisMonth: number;
+    totalPayout: number;
+    baseRate: number;
+    belowTargetRate: number;
+    dailyTarget: number;
+    isAboveTarget: boolean;
+  }>> {
+    return retryOperation(async () => {
+      try {
+        const now = new Date();
+        const targetYear = year ? parseInt(year) : now.getFullYear();
+        const targetMonth = month ? parseInt(month) - 1 : now.getMonth(); // month is 0-indexed
+        const startOfMonth = new Date(targetYear, targetMonth, 1);
+        const endOfMonth = new Date(targetYear, targetMonth + 1, 0);
+        
+        const startDate = startOfMonth.toISOString().split('T')[0];
+        const endDate = endOfMonth.toISOString().split('T')[0];
+
+        console.log(`Fetching monthly payout data from ${startDate} to ${endDate}`);
+
+        // Get all employees
+        const allEmployees = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email
+          })
+          .from(users)
+          .where(eq(users.role, 'EMPLOYEE'));
+
+        console.log(`Found ${allEmployees.length} employees`);
+
+      // Get rates from environment variables
+      const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
+      const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
+      const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '20');
+      const monthlyTarget = dailyTarget * 30; // Approximate monthly target
+
+      // Calculate daily payouts for each employee this month
+      const employeeStats = await Promise.all(
+        allEmployees.map(async (employee) => {
+          let totalApplications = 0;
+          let totalPayout = 0;
+          let daysMetTarget = 0;
+
+          // Get all days in the month and calculate daily payouts
+          for (let day = 1; day <= endOfMonth.getDate(); day++) {
+            const currentDate = new Date(targetYear, targetMonth, day);
+            const dateString = currentDate.toISOString().split('T')[0];
+
+            // Get applications for this specific day
+            const [dailyApplicationCount] = await db
+              .select({ count: count() })
+              .from(jobApplications)
+              .where(
+                and(
+                  eq(jobApplications.employeeId, employee.id),
+                  eq(jobApplications.dateApplied, dateString)
+                )
+              );
+
+            const dailyApplications = dailyApplicationCount.count;
+            totalApplications += dailyApplications;
+
+            // Calculate daily payout based on daily target
+            // If employee applied >= 20 applications on this day: $0.20 per application
+            // If employee applied < 20 applications on this day: $0.15 per application
+            const dailyMetTarget = dailyApplications >= dailyTarget;
+            if (dailyMetTarget) daysMetTarget++;
+            
+            const dailyRate = dailyMetTarget ? baseRate : belowTargetRate;
+            const dailyPayout = dailyApplications * dailyRate;
+            totalPayout += dailyPayout;
+          }
+
+          const isAboveTarget = daysMetTarget > (endOfMonth.getDate() / 2); // More than half the days met target
+
+          return {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            applicationsThisMonth: totalApplications,
+            totalPayout,
+            baseRate,
+            belowTargetRate,
+            dailyTarget,
+            isAboveTarget
+          };
+        })
+      );
+
+        return employeeStats;
+      } catch (error) {
+        console.error("Error in getMonthlyPayoutAnalytics:", error);
+        throw error;
+      }
+    });
+  }
+
+  async getEmployeeDailyPayoutBreakdown(employeeId: string, month?: string, year?: string): Promise<{
+    employeeName: string;
+    monthYear: string;
+    dailyBreakdown: Array<{
+      date: string;
+      dayOfWeek: string;
+      applicationsCount: number;
+      metTarget: boolean;
+      dailyTarget: number;
+      rateApplied: number;
+      dailyPayout: number;
+    }>;
+    monthlyTotal: {
+      totalApplications: number;
+      totalPayout: number;
+      daysMetTarget: number;
+      totalWorkingDays: number;
+    };
+    rates: {
+      baseRate: number;
+      belowTargetRate: number;
+      dailyTarget: number;
+    };
+  }> {
+    return retryOperation(async () => {
+      try {
+        const now = new Date();
+        const targetYear = year ? parseInt(year) : now.getFullYear();
+        const targetMonth = month ? parseInt(month) - 1 : now.getMonth(); // month is 0-indexed
+        const startOfMonth = new Date(targetYear, targetMonth, 1);
+        const endOfMonth = new Date(targetYear, targetMonth + 1, 0);
+        
+        const startDate = startOfMonth.toISOString().split('T')[0];
+        const endDate = endOfMonth.toISOString().split('T')[0];
+
+        // Get employee info
+        const [employee] = await db
+          .select({
+            id: users.id,
+            name: users.name,
+          })
+          .from(users)
+          .where(eq(users.id, employeeId));
+
+        if (!employee) {
+          throw new Error("Employee not found");
+        }
+
+        // Get rates from environment variables
+        const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
+        const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
+        const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '20');
+
+        const dailyBreakdown = [];
+        let totalApplications = 0;
+        let totalPayout = 0;
+        let daysMetTarget = 0;
+
+        // Get all days in the month
+        for (let day = 1; day <= endOfMonth.getDate(); day++) {
+          const currentDate = new Date(targetYear, targetMonth, day);
+          const dateString = currentDate.toISOString().split('T')[0];
+          const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+          // Get applications for this day
+          const [applicationCount] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employeeId),
+                eq(jobApplications.dateApplied, dateString)
+              )
+            );
+
+          const applicationsCount = applicationCount.count;
+          // Daily payout logic: >= 20 applications = $0.20/app, < 20 applications = $0.15/app
+          const metTarget = applicationsCount >= dailyTarget;
+          const rateApplied = metTarget ? baseRate : belowTargetRate;
+          const dailyPayout = applicationsCount * rateApplied;
+
+          if (metTarget) daysMetTarget++;
+          totalApplications += applicationsCount;
+          totalPayout += dailyPayout;
+
+          dailyBreakdown.push({
+            date: dateString,
+            dayOfWeek,
+            applicationsCount,
+            metTarget,
+            dailyTarget,
+            rateApplied,
+            dailyPayout
+          });
+        }
+
+        return {
+          employeeName: employee.name,
+          monthYear: `${targetMonth + 1}/${targetYear}`,
+          dailyBreakdown,
+          monthlyTotal: {
+            totalApplications,
+            totalPayout,
+            daysMetTarget,
+            totalWorkingDays: endOfMonth.getDate()
+          },
+          rates: {
+            baseRate,
+            belowTargetRate,
+            dailyTarget
+          }
+        };
+      } catch (error) {
+        console.error("Error in getEmployeeDailyPayoutBreakdown:", error);
+        throw error;
+      }
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();

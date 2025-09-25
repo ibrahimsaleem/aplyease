@@ -7,6 +7,7 @@ import { ApplicationTable } from "@/components/application-table";
 import { UserManagement } from "@/components/user-management";
 import { EmployeePerformanceAnalytics } from "@/components/employee-performance-analytics";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
+import { MonthlyPayoutAnalytics } from "@/components/monthly-payout-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
@@ -37,7 +38,7 @@ export default function AdminDashboard() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="applications" data-testid="tab-applications">
               All Applications
             </TabsTrigger>
@@ -49,6 +50,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="client-analytics" data-testid="tab-client-analytics">
               Client Analytics
+            </TabsTrigger>
+            <TabsTrigger value="monthly-payout" data-testid="tab-monthly-payout">
+              Monthly Payout
             </TabsTrigger>
           </TabsList>
 
@@ -72,6 +76,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="client-analytics" className="space-y-6">
             <ClientPerformanceAnalytics />
+          </TabsContent>
+
+          <TabsContent value="monthly-payout" className="space-y-6">
+            <MonthlyPayoutAnalytics />
           </TabsContent>
         </Tabs>
       </div>

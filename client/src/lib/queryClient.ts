@@ -30,7 +30,7 @@ export async function apiRequest(
   // Compute API base URL
   // Prefer Vite env var for split deployments (e.g., Firebase + Render)
   const apiUrl = (import.meta as any).env?.VITE_API_URL
-    || (process.env.NODE_ENV === 'production' ? 'https://aplyeaseportal.onrender.com' : 'http://localhost:5000');
+    || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://aplyeaseportal.onrender.com');
   
   const token = getAuthToken();
   const headers: Record<string, string> = {
@@ -70,7 +70,7 @@ export const getQueryFn: <T>(options: {
 
     // Compute API base URL similar to apiRequest
     const apiUrl = (import.meta as any).env?.VITE_API_URL
-      || (process.env.NODE_ENV === 'production' ? 'https://aplyeaseportal.onrender.com' : 'http://localhost:5000');
+      || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://aplyeaseportal.onrender.com');
     
     // Add JWT token to Authorization header if available
     if (token) {

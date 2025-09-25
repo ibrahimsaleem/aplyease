@@ -11,11 +11,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
-      console.log("Login attempt received:", req.body);
+      // Login attempt for user: ${email}
       const { email, password } = req.body;
 
       if (!email || !password) {
-        console.log("Missing credentials:", { email: !!email, password: !!password });
+        // Missing credentials for login attempt
         return res.status(400).json({ message: "Email and password are required" });
       }
 
@@ -527,6 +527,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch client performance analytics" });
     }
   });
+
+  // Monthly payout analytics (Admin only)
+  app.get("/api/analytics/monthly-payout", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const month = req.query.month as string;
+      const year = req.query.year as string;
+      const analytics = await storage.getMonthlyPayoutAnalytics(month, year);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching monthly payout analytics:", error);
+      res.status(500).json({ message: "Failed to fetch monthly payout analytics" });
+    }
+  });
+
+  // Employee daily payout breakdown
+  app.get("/api/analytics/employee-daily-payout/:employeeId", requireAuth, async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const month = req.query.month as string;
+      const year = req.query.year as string;
+      
+      // Check if user is admin or the employee themselves
+      if (req.user?.role !== "ADMIN" && req.user?.id !== employeeId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const analytics = await storage.getEmployeeDailyPayoutBreakdown(employeeId, month, year);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching employee daily payout breakdown:", error);
+      res.status(500).json({ message: "Failed to fetch employee daily payout breakdown" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

@@ -6,6 +6,7 @@ import { StatsCards } from "@/components/stats-cards";
 import { ApplicationForm } from "@/components/application-form";
 import { ApplicationTable } from "@/components/application-table";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
+import { MyMonthlyPayout } from "@/components/my-monthly-payout";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeeStats } from "@/types";
@@ -37,12 +38,15 @@ export default function EmployeeDashboard() {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="applications" data-testid="tab-applications">
               All Applications
             </TabsTrigger>
             <TabsTrigger value="client-analytics" data-testid="tab-client-analytics">
               Client Analytics
+            </TabsTrigger>
+            <TabsTrigger value="my-payout" data-testid="tab-my-payout">
+              My Payout
             </TabsTrigger>
           </TabsList>
 
@@ -63,6 +67,10 @@ export default function EmployeeDashboard() {
 
           <TabsContent value="client-analytics" className="space-y-6">
             <ClientPerformanceAnalytics />
+          </TabsContent>
+
+          <TabsContent value="my-payout" className="space-y-6">
+            <MyMonthlyPayout />
           </TabsContent>
         </Tabs>
       </div>
