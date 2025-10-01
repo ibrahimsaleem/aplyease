@@ -60,6 +60,7 @@ export interface IStorage {
   listJobApplications(filters?: {
     clientId?: string;
     employeeId?: string;
+    applid?: string;
     status?: string;
     search?: string;
     dateFrom?: string;
@@ -211,6 +212,7 @@ export class DatabaseStorage implements IStorage {
   async getJobApplication(id: string): Promise<JobApplicationWithUsers | undefined> {
     const clientUsers = alias(users, 'client_users_single');
     const employeeUsers = alias(users, 'employee_users_single');
+    const appliedForUsers = alias(users, 'applied_for_users_single');
 
     return retryOperation(async () => {
       const [result] = await db
@@ -218,18 +220,21 @@ export class DatabaseStorage implements IStorage {
           application: jobApplications,
           client: clientUsers,
           employee: employeeUsers,
+          appliedFor: appliedForUsers,
         })
         .from(jobApplications)
         .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
         .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
+        .leftJoin(appliedForUsers, eq(jobApplications.applid, appliedForUsers.id))
         .where(eq(jobApplications.id, id));
 
-      if (!result || !result.client || !result.employee) return undefined;
+      if (!result || !result.client || !result.employee || !result.appliedFor) return undefined;
 
       return {
         ...result.application,
         client: result.client,
         employee: result.employee,
+        appliedFor: result.appliedFor,
       };
     });
   }
@@ -312,6 +317,7 @@ export class DatabaseStorage implements IStorage {
   async listJobApplications(filters?: {
     clientId?: string;
     employeeId?: string;
+    applid?: string;
     status?: string;
     search?: string;
     dateFrom?: string;
@@ -327,6 +333,7 @@ export class DatabaseStorage implements IStorage {
 
     const clientUsers = alias(users, 'client_users');
     const employeeUsers = alias(users, 'employee_users');
+    const appliedForUsers = alias(users, 'applied_for_users');
     
     return retryOperation(async () => {
       const baseQuery = db
@@ -334,10 +341,12 @@ export class DatabaseStorage implements IStorage {
           application: jobApplications,
           client: clientUsers,
           employee: employeeUsers,
+          appliedFor: appliedForUsers,
         })
         .from(jobApplications)
         .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
-        .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id));
+        .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
+        .leftJoin(appliedForUsers, eq(jobApplications.applid, appliedForUsers.id));
 
       const conditions = [];
 
@@ -347,6 +356,10 @@ export class DatabaseStorage implements IStorage {
 
       if (filters?.employeeId) {
         conditions.push(eq(jobApplications.employeeId, filters.employeeId));
+      }
+
+      if (filters?.applid) {
+        conditions.push(eq(jobApplications.applid, filters.applid));
       }
 
       if (filters?.status) {
@@ -385,13 +398,14 @@ export class DatabaseStorage implements IStorage {
       const results = await finalQuery.limit(limit).offset(offset);
 
       const applications: JobApplicationWithUsers[] = results
-        .filter((result): result is typeof result & { client: User; employee: User } => 
-          result.client !== null && result.employee !== null
+        .filter((result): result is typeof result & { client: User; employee: User; appliedFor: User } => 
+          result.client !== null && result.employee !== null && result.appliedFor !== null
         )
         .map(result => ({
           ...result.application,
           client: result.client,
           employee: result.employee,
+          appliedFor: result.appliedFor,
         }));
 
       return { applications, total };

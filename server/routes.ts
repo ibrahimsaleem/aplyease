@@ -169,16 +169,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply role-based filtering
       if (user.role === "CLIENT") {
-        filters.clientId = user.id;
+        // Clients can only see jobs applied for them
+        filters.applid = user.id;
       } else if (user.role === "EMPLOYEE") {
         // Employees can see all applications to prevent duplicates
-        // They can still filter by specific clientId or employeeId if provided
+        // They can still filter by specific clientId, employeeId, or applid if provided
         if (clientId) filters.clientId = clientId as string;
         if (employeeId) filters.employeeId = employeeId as string;
+        if (req.query.applid) filters.applid = req.query.applid as string;
       } else if (user.role === "ADMIN") {
-        // Admin can specify filters
+        // Admin can see all applications and specify filters
         if (clientId) filters.clientId = clientId as string;
         if (employeeId) filters.employeeId = employeeId as string;
+        if (req.query.applid) filters.applid = req.query.applid as string;
       }
 
       const result = await storage.listJobApplications(filters);
@@ -194,12 +197,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationData = insertJobApplicationSchema.parse(req.body);
       const user = (req.user ?? req.session.user)!;
 
-      // Set appliedByName and employeeId based on user role
+      // Set appliedByName, employeeId, and applid based on user role
       let finalApplicationData: any = { ...applicationData };
       
       if (user.role === "EMPLOYEE") {
         finalApplicationData.employeeId = user.id;
         finalApplicationData.appliedByName = user.name;
+        finalApplicationData.applid = user.id; // Employee applies for themselves
       } else if (user.role === "ADMIN") {
         // Admin needs to specify employeeId, get employee name from storage
         if (!applicationData.employeeId) {
@@ -210,6 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid employee ID" });
         }
         finalApplicationData.appliedByName = employee.name;
+        // For admin submissions, applid should be the employee ID (who the job is applied for)
+        finalApplicationData.applid = applicationData.employeeId;
       }
 
       const application = await storage.createJobApplication(finalApplicationData);
@@ -428,12 +434,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply role-based filtering
       if (user.role === "CLIENT") {
-        filters.clientId = user.id;
+        // Clients can only see jobs applied for them
+        filters.applid = user.id;
       } else if (user.role === "EMPLOYEE") {
-        filters.employeeId = user.id;
+        // Employees can see all applications to prevent duplicates
+        if (req.query.applid) filters.applid = req.query.applid as string;
       } else if (user.role === "ADMIN") {
         if (clientId) filters.clientId = clientId as string;
         if (employeeId) filters.employeeId = employeeId as string;
+        if (req.query.applid) filters.applid = req.query.applid as string;
       }
 
       const { applications } = await storage.listJobApplications(filters);
@@ -443,6 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Date Applied",
         "Applied By",
         "Client",
+        "Applied For",
         "Job Title",
         "Company",
         "Location",
@@ -459,6 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         app.dateApplied,
         app.appliedByName,
         app.client.name,
+        app.appliedFor.name,
         app.jobTitle,
         app.companyName,
         app.location || "",
