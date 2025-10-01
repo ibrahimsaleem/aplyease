@@ -30,15 +30,14 @@ export default function ClientDashboard() {
         {/* Client Stats */}
         {stats && <StatsCards stats={stats} type="client" />}
 
-        {/* Applications for Me Table */}
+        {/* All Applications Table */}
         <ApplicationTable
-          title="Applications for Me"
-          description="Read-only view of job applications submitted on your behalf"
+          title="All Job Applications"
+          description="Complete view of all job applications with applicant information"
           showEmployeeColumn={true}
-          showClientColumn={false}
+          showClientColumn={true}
           showActions={false}
           readonly={true}
-          filters={{ clientId: user.id }}
         />
       </div>
     </div>
