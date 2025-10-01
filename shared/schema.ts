@@ -55,6 +55,7 @@ export const jobApplications = pgTable(
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     clientId: uuid("client_id").notNull().references(() => users.id),
     employeeId: uuid("employee_id").notNull().references(() => users.id),
+    applid: uuid("applid").notNull().references(() => users.id),
     dateApplied: date("date_applied").notNull(),
     appliedByName: text("applied_by_name").notNull(),
     jobTitle: text("job_title").notNull(),
@@ -74,6 +75,7 @@ export const jobApplications = pgTable(
   (table) => [
     index("idx_job_applications_client").on(table.clientId),
     index("idx_job_applications_employee").on(table.employeeId),
+    index("idx_job_applications_applid").on(table.applid),
     index("idx_job_applications_status").on(table.status),
     index("idx_job_applications_date").on(table.dateApplied),
   ]
@@ -83,6 +85,7 @@ export const jobApplications = pgTable(
 export const usersRelations = relations(users, ({ many }) => ({
   clientApplications: many(jobApplications, { relationName: "client" }),
   employeeApplications: many(jobApplications, { relationName: "employee" }),
+  appliedForApplications: many(jobApplications, { relationName: "appliedFor" }),
 }));
 
 export const jobApplicationsRelations = relations(jobApplications, ({ one }) => ({
@@ -95,6 +98,11 @@ export const jobApplicationsRelations = relations(jobApplications, ({ one }) => 
     fields: [jobApplications.employeeId],
     references: [users.id],
     relationName: "employee",
+  }),
+  appliedFor: one(users, {
+    fields: [jobApplications.applid],
+    references: [users.id],
+    relationName: "appliedFor",
   }),
 }));
 
@@ -129,6 +137,7 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications)
   } as any)
   .extend({
   employeeId: z.string().optional(), // Optional for employees, required for admin submissions
+  applid: z.string().optional(), // Optional, will be set based on user role
   jobLink: z.string().url().optional().or(z.literal("")),
   jobPage: z.string().url().optional().or(z.literal("")),
   resumeUrl: z.string().url().optional().or(z.literal("")),
@@ -154,4 +163,5 @@ export type UserWithApplications = User & {
 export type JobApplicationWithUsers = JobApplication & {
   client: User;
   employee: User;
+  appliedFor: User;
 };

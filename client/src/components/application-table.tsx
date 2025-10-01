@@ -21,6 +21,7 @@ interface ApplicationTableProps {
   description?: string;
   showEmployeeColumn?: boolean;
   showClientColumn?: boolean;
+  showAppliedForColumn?: boolean;
   showActions?: boolean;
   readonly?: boolean;
   filters?: ApplicationFilters;
@@ -33,6 +34,7 @@ export function ApplicationTable({
   description,
   showEmployeeColumn = true,
   showClientColumn = true,
+  showAppliedForColumn = true,
   showActions = true,
   readonly = false,
   filters: initialFilters = {},
@@ -338,6 +340,7 @@ export function ApplicationTable({
                 </TableHead>
                 {showEmployeeColumn && <TableHead>Employee</TableHead>}
                 {showClientColumn && <TableHead>Client</TableHead>}
+                {showAppliedForColumn && <TableHead>Applied For</TableHead>}
                 <TableHead>Job Title</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Location</TableHead>
@@ -393,6 +396,10 @@ export function ApplicationTable({
                   
                   {showClientColumn && (
                     <TableCell data-testid="text-client-name">{application.client.name}</TableCell>
+                  )}
+                  
+                  {showAppliedForColumn && (
+                    <TableCell data-testid="text-applied-for-name">{application.appliedFor.name}</TableCell>
                   )}
                   
                   <TableCell data-testid="text-job-title">{application.jobTitle}</TableCell>
@@ -538,7 +545,7 @@ export function ApplicationTable({
               
               {!data?.applications.length && (
                 <TableRow>
-                  <TableCell colSpan={showActions && !readonly ? 11 : 10} className="text-center py-8">
+                  <TableCell colSpan={showActions && !readonly ? 12 : 11} className="text-center py-8">
                     <div className="text-slate-500" data-testid="text-no-applications">
                       No applications found. Try adjusting your filters.
                     </div>

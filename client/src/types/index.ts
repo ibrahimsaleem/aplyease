@@ -13,6 +13,7 @@ export type JobApplication = {
   id: string;
   clientId: string;
   employeeId: string;
+  applid: string;
   dateApplied: string;
   appliedByName: string;
   jobTitle: string;
@@ -30,6 +31,7 @@ export type JobApplication = {
   updatedAt: string;
   client: User;
   employee: User;
+  appliedFor: User;
 };
 
 export type DashboardStats = {
@@ -56,6 +58,7 @@ export type ClientStats = {
 export type ApplicationFilters = {
   clientId?: string;
   employeeId?: string;
+  applid?: string;
   status?: string;
   search?: string;
   dateFrom?: string;
