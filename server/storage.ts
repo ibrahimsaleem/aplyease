@@ -375,11 +375,15 @@ export class DatabaseStorage implements IStorage {
           : desc(filters?.sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt)
         );
 
-      // Get total count
-      const [{ count: total }] = await db
+      // Get total count - use same query structure as main query
+      const countQuery = db
         .select({ count: count() })
         .from(jobApplications)
+        .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
+        .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined);
+      
+      const [{ count: total }] = await countQuery;
 
       // Get paginated results
       const results = await finalQuery.limit(limit).offset(offset);
