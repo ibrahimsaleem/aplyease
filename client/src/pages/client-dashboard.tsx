@@ -4,7 +4,10 @@ import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import type { ClientStats } from "@/types";
+import type { ClientStats, User } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Users, TrendingUp, CheckCircle } from "lucide-react";
 
 export default function ClientDashboard() {
   const { user } = useAuth();
