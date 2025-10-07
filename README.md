@@ -13,7 +13,7 @@ A comprehensive web application for managing job applications with role-based ac
 
 ### **For Employees**
 - **Submit Applications**: Create new job applications for clients
-- **Track Earnings**: Earn $0.20 per application submitted
+- **Track Earnings**: Earn $0.20 per application (when meeting daily target of 15+ applications)
 - **Application Management**: View and update your submitted applications
 - **Performance Stats**: Monitor your application success rates and progress
 
@@ -35,7 +35,7 @@ A comprehensive web application for managing job applications with role-based ac
 ### **Employee**
 - Submit job applications for clients
 - View and edit own applications
-- Track earnings ($0.20 per application)
+- Track earnings ($0.20 per application when meeting daily target)
 - View personal performance statistics
 
 ### **Client**
@@ -95,7 +95,7 @@ A comprehensive web application for managing job applications with role-based ac
 3. **Submit**: Click "Submit Application"
 
 #### **Earnings Tracking**
-- **Rate**: $0.20 per application submitted
+- **Rate**: $0.20 per application (when meeting daily target of 15+ applications)
 - **Display**: Shown on dashboard as "Earnings" card
 - **Calculation**: Automatically calculated based on total applications
 

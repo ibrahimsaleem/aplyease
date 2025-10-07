@@ -136,11 +136,11 @@ export function MyMonthlyPayout() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 p-2 bg-green-100 rounded">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span><strong>$0.20 per application</strong> when you submit <strong>20 or more</strong> applications in a day</span>
+                    <span><strong>$0.20 per application</strong> when you submit <strong>15 or more</strong> applications in a day</span>
                   </div>
                   <div className="flex items-center gap-2 p-2 bg-orange-100 rounded">
                     <XCircle className="h-4 w-4 text-orange-600" />
-                    <span><strong>$0.15 per application</strong> when you submit <strong>less than 20</strong> applications in a day</span>
+                    <span><strong>$0.15 per application</strong> when you submit <strong>less than 15</strong> applications in a day</span>
                   </div>
                 </div>
               </div>
@@ -150,7 +150,7 @@ export function MyMonthlyPayout() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-blue-600" />
-                    <span>Submit <strong>20+ applications every day</strong></span>
+                    <span>Submit <strong>15+ applications every day</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -188,7 +188,7 @@ export function MyMonthlyPayout() {
                 <div>
                   <h4 className="font-semibold text-yellow-800">Pro Tip:</h4>
                   <p className="text-sm text-yellow-800">
-                    Meeting the 20 application target daily gives you <strong>33% higher pay rate</strong> ($0.20 vs $0.15). 
+                    Meeting the 15 application target daily gives you <strong>33% higher pay rate</strong> ($0.20 vs $0.15). 
                     Focus on consistent daily performance rather than sporadic high-volume days!
                   </p>
                 </div>

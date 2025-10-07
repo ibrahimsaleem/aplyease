@@ -1032,7 +1032,7 @@ export class DatabaseStorage implements IStorage {
       // Get rates from environment variables
       const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
       const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
-      const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '20');
+      const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
       const monthlyTarget = dailyTarget * 30; // Approximate monthly target
 
       // Calculate daily payouts for each employee this month
@@ -1062,8 +1062,8 @@ export class DatabaseStorage implements IStorage {
             totalApplications += dailyApplications;
 
             // Calculate daily payout based on daily target
-            // If employee applied >= 20 applications on this day: $0.20 per application
-            // If employee applied < 20 applications on this day: $0.15 per application
+            // If employee applied >= 15 applications on this day: $0.20 per application
+            // If employee applied < 15 applications on this day: $0.15 per application
             const dailyMetTarget = dailyApplications >= dailyTarget;
             if (dailyMetTarget) daysMetTarget++;
             
@@ -1146,7 +1146,7 @@ export class DatabaseStorage implements IStorage {
         // Get rates from environment variables
         const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
         const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
-        const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '20');
+        const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
 
         const dailyBreakdown = [];
         let totalApplications = 0;
@@ -1171,7 +1171,7 @@ export class DatabaseStorage implements IStorage {
             );
 
           const applicationsCount = applicationCount.count;
-          // Daily payout logic: >= 20 applications = $0.20/app, < 20 applications = $0.15/app
+          // Daily payout logic: >= 15 applications = $0.20/app, < 15 applications = $0.15/app
           const metTarget = applicationsCount >= dailyTarget;
           const rateApplied = metTarget ? baseRate : belowTargetRate;
           const dailyPayout = applicationsCount * rateApplied;

@@ -164,7 +164,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
                 <TrendingUp className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
-            <p className="text-sm text-emerald-600 mt-2">$0.20 per application</p>
+            <p className="text-sm text-emerald-600 mt-2">$0.20 per application (when meeting daily target)</p>
           </CardContent>
         </Card>
       </div>
