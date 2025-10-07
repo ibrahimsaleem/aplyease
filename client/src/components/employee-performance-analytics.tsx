@@ -314,7 +314,7 @@ export function EmployeePerformanceAnalytics() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-emerald-600" />
-            Earnings Generated ($0.20 per application)
+            Earnings Generated ($0.20 per application when meeting daily target)
           </CardTitle>
         </CardHeader>
         <CardContent>

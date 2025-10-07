@@ -121,12 +121,12 @@ export function MonthlyPayoutAnalytics() {
             <div className="text-center p-3 bg-white rounded-lg border">
               <div className="text-lg font-bold text-green-600">$0.20</div>
               <div className="font-semibold">High Rate</div>
-              <div className="text-xs">When employee submits ≥20 applications in a day</div>
+              <div className="text-xs">When employee submits ≥15 applications in a day</div>
             </div>
             <div className="text-center p-3 bg-white rounded-lg border">
               <div className="text-lg font-bold text-orange-600">$0.15</div>
               <div className="font-semibold">Standard Rate</div>
-              <div className="text-xs">When employee submits &lt;20 applications in a day</div>
+              <div className="text-xs">When employee submits &lt;15 applications in a day</div>
             </div>
             <div className="text-center p-3 bg-white rounded-lg border">
               <div className="text-lg font-bold text-blue-600">Daily</div>
