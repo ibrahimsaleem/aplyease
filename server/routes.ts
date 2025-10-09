@@ -488,10 +488,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const clients = await storage.listUsers({ role: "CLIENT" });
-      res.json(clients.filter(user => user.isActive));
+      const activeClients = clients.filter(user => user.isActive);
+      
+      // Log for debugging
+      console.log(`Fetched ${activeClients.length} active clients for dropdown`);
+      
+      res.json(activeClients);
     } catch (error) {
       console.error("Error fetching clients:", error);
-      res.status(500).json({ message: "Failed to fetch clients" });
+      
+      // Provide more specific error messages
+      if (error.message?.includes('Connection terminated unexpectedly') || 
+          error.message?.includes('connection') ||
+          error.code === 'ECONNRESET' ||
+          error.code === 'ENOTFOUND') {
+        res.status(503).json({ 
+          message: "Database connection error. Please try again in a moment.",
+          code: "DB_CONNECTION_ERROR"
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to fetch clients. Please try again.",
+          code: "FETCH_CLIENTS_ERROR"
+        });
+      }
     }
   });
 
