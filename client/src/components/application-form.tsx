@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RefreshCw, Loader2 } from "lucide-react";
 import type { User } from "@/types";
 
 const applicationSchema = z.object({
@@ -53,9 +54,24 @@ export function ApplicationForm() {
     },
   });
 
-  const { data: clients = [] } = useQuery<User[]>({
+  const { data: clients = [], isLoading: clientsLoading, error: clientsError, refetch: refetchClients } = useQuery<User[]>({
     queryKey: ["/api/clients"],
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
   });
+
+  // Debug logging for client dropdown issues
+  useEffect(() => {
+    if (clientsError) {
+      console.error("Client dropdown error:", clientsError);
+    } else if (clients.length > 0) {
+      console.log(`Client dropdown loaded ${clients.length} clients successfully`);
+    }
+  }, [clients, clientsError]);
 
   const createApplication = useMutation({
     mutationFn: async (data: ApplicationFormData) => {
@@ -80,6 +96,25 @@ export function ApplicationForm() {
   });
 
   const onSubmit = (data: ApplicationFormData) => {
+    // Prevent submission if clients are still loading or there's an error
+    if (clientsLoading) {
+      toast({
+        title: "Please wait",
+        description: "Clients are still loading. Please wait and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (clientsError) {
+      toast({
+        title: "Client data unavailable",
+        description: "Unable to load client list. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createApplication.mutate(data);
   };
 
@@ -90,7 +125,21 @@ export function ApplicationForm() {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Add New Application</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Add New Application</CardTitle>
+          {clientsError && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetchClients()}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Clients
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -101,21 +150,66 @@ export function ApplicationForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Client *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} data-testid="select-client">
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value} 
+                    data-testid="select-client"
+                    disabled={clientsLoading || !!clientsError}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Client" />
+                        <div className="flex items-center gap-2">
+                          {clientsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                          <SelectValue 
+                            placeholder={
+                              clientsLoading 
+                                ? "Loading clients..." 
+                                : clientsError 
+                                  ? "Error loading clients" 
+                                  : "Select Client"
+                            } 
+                          />
+                        </div>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
+                      {clientsLoading ? (
+                        <SelectItem value="" disabled>
+                          Loading clients...
                         </SelectItem>
-                      ))}
+                      ) : clientsError ? (
+                        <SelectItem value="" disabled>
+                          Error loading clients. Please try again.
+                        </SelectItem>
+                      ) : clients.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          No clients available
+                        </SelectItem>
+                      ) : (
+                        clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                  {clientsError && (
+                    <div className="flex items-center gap-2 text-sm text-destructive">
+                      <span>Failed to load clients.</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => refetchClients()}
+                        className="h-auto p-1 text-destructive hover:text-destructive/80"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -301,7 +395,7 @@ export function ApplicationForm() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={createApplication.isPending}
+                disabled={createApplication.isPending || clientsLoading || !!clientsError}
                 data-testid="button-submit-application"
               >
                 {createApplication.isPending ? "Adding..." : "Add Application"}
