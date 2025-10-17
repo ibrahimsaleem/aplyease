@@ -8,6 +8,7 @@ import { UserManagement } from "@/components/user-management";
 import { EmployeePerformanceAnalytics } from "@/components/employee-performance-analytics";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
 import { MonthlyPayoutAnalytics } from "@/components/monthly-payout-analytics";
+import { EmailSyncStatus } from "@/components/email-sync-status";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
@@ -35,6 +36,9 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Stats */}
         {stats && <StatsCards stats={stats} type="admin" />}
+
+        {/* Email Sync Status */}
+        <EmailSyncStatus />
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
