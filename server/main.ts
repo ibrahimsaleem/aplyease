@@ -3,6 +3,7 @@ import "module-alias/register";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { SchedulerService } from "./scheduler";
 import path from "path";
 import cors from "cors";
 import fs from "fs";
@@ -88,6 +89,13 @@ process.on('uncaughtException', (error) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Start email sync scheduler if enabled
+  if (process.env.EMAIL_SYNC_ENABLED === 'true') {
+    const scheduler = new SchedulerService();
+    scheduler.start();
+    console.log('📧 Email sync scheduler started');
+  }
 
   // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

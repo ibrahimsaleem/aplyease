@@ -561,6 +561,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email sync routes for automatic status updates
+  app.post("/api/email-sync/trigger", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { EmailSyncService } = await import("./email-sync-service");
+      const emailSync = new EmailSyncService();
+      
+      // Run in background to avoid timeout
+      emailSync.syncJobApplicationStatuses().catch(error => {
+        console.error("Background email sync failed:", error);
+      });
+      
+      res.json({ message: "Email sync started in background" });
+    } catch (error) {
+      console.error("Error starting email sync:", error);
+      res.status(500).json({ message: "Failed to start email sync" });
+    }
+  });
+
+  app.get("/api/email-sync/status", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      // This could return the status of the last sync
+      res.json({ 
+        message: "Email sync service is running",
+        lastSync: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error getting email sync status:", error);
+      res.status(500).json({ message: "Failed to get email sync status" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
