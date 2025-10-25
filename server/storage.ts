@@ -1,6 +1,6 @@
 import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, type SQL } from "drizzle-orm";
+import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 
@@ -354,8 +354,12 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (filters?.search) {
+        const pattern = `%${filters.search}%`;
         conditions.push(
-          sql`${jobApplications.jobTitle} ILIKE ${`%${filters.search}%`} OR ${jobApplications.companyName} ILIKE ${`%${filters.search}%`}`
+          or(
+            ilike(jobApplications.jobTitle, pattern),
+            ilike(jobApplications.companyName, pattern)
+          )
         );
       }
 

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, TrendingUp, Users, Target, Calendar, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics } from "@/types";
-import { DailyEmployeeAnalytics } from "./daily-employee-analytics";
 
 export function EmployeePerformanceAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<EmployeePerformanceAnalytics>({
@@ -203,51 +202,7 @@ export function EmployeePerformanceAnalytics() {
         </Card>
       </div>
 
-      {/* Weekly Performance Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-purple-600" />
-            Weekly Performance (Last 8 Weeks)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={analytics.weeklyPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="week" 
-                fontSize={12}
-              />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number, name: string) => [
-                  value, 
-                  name === "applications" ? "Applications" : "Active Employees"
-                ]}
-                labelFormatter={(label) => `Week: ${label}`}
-              />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="applications" 
-                stroke="#3b82f6" 
-                strokeWidth={3}
-                name="Applications"
-                dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="employees" 
-                stroke="#10b981" 
-                strokeWidth={3}
-                name="Active Employees"
-                dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Weekly Performance Chart removed for performance */}
 
       {/* Daily Performance Chart */}
       <Card>
@@ -392,11 +347,7 @@ export function EmployeePerformanceAnalytics() {
         </CardContent>
       </Card>
 
-      {/* Daily Employee Application Analytics */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Daily Application Analytics</h2>
-        <DailyEmployeeAnalytics />
-      </div>
+      {/* Daily Employee Application Analytics removed (redundant) */}
     </div>
   );
 }

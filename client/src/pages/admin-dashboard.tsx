@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NavigationHeader } from "@/components/navigation-header";
 import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { UserManagement } from "@/components/user-management";
-import { EmployeePerformanceAnalytics } from "@/components/employee-performance-analytics";
-import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
-import { MonthlyPayoutAnalytics } from "@/components/monthly-payout-analytics";
+const EmployeePerformanceAnalytics = lazy(() => import("@/components/employee-performance-analytics").then(m => ({ default: m.EmployeePerformanceAnalytics })));
+const ClientPerformanceAnalytics = lazy(() => import("@/components/client-performance-analytics").then(m => ({ default: m.ClientPerformanceAnalytics })));
+const MonthlyPayoutAnalytics = lazy(() => import("@/components/monthly-payout-analytics").then(m => ({ default: m.MonthlyPayoutAnalytics })));
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
@@ -71,15 +71,21 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="employee-analytics" className="space-y-6">
-            <EmployeePerformanceAnalytics />
+            <Suspense fallback={<div>Loading employee analytics...</div>}>
+              <EmployeePerformanceAnalytics />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="client-analytics" className="space-y-6">
-            <ClientPerformanceAnalytics />
+            <Suspense fallback={<div>Loading client analytics...</div>}>
+              <ClientPerformanceAnalytics />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="monthly-payout" className="space-y-6">
-            <MonthlyPayoutAnalytics />
+            <Suspense fallback={<div>Loading monthly payout...</div>}>
+              <MonthlyPayoutAnalytics />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

@@ -49,6 +49,7 @@ export function ApplicationTable({
     sortOrder: "desc",
     ...initialFilters,
   });
+  const [searchInput, setSearchInput] = useState<string>(initialFilters.search || "");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
 
   const { data: clients = [] } = useQuery<User[]>({
@@ -252,11 +253,20 @@ export function ApplicationTable({
               <Input
                 placeholder="Search jobs, companies..."
                 className="pl-10 w-64"
-                value={filters.search || ""}
-                onChange={(e) => updateFilter("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    updateFilter("search", searchInput);
+                  }
+                }}
                 data-testid="input-search"
               />
             </div>
+            <Button onClick={() => updateFilter("search", searchInput)} data-testid="button-search">
+              <Search className="w-4 h-4 mr-2" />
+              Search
+            </Button>
             
             <Select value={filters.status || "all"} onValueChange={(value) => updateFilter("status", value === "all" ? "" : value)}>
               <SelectTrigger className="w-40" data-testid="select-status">
