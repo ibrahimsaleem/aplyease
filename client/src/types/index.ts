@@ -5,6 +5,7 @@ export type User = {
   role: "ADMIN" | "CLIENT" | "EMPLOYEE";
   company?: string;
   isActive: boolean;
+  geminiApiKey?: string;
   createdAt: string;
   updatedAt: string;
 };

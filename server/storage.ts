@@ -175,6 +175,7 @@ export class DatabaseStorage implements IStorage {
           ...((userData as any).company !== undefined ? { company: (userData as any).company } : {}),
           ...((userData as any).applicationsRemaining !== undefined ? { applicationsRemaining: (userData as any).applicationsRemaining } : {}),
           ...((userData as any).isActive !== undefined ? { isActive: (userData as any).isActive } : {}),
+          ...((userData as any).geminiApiKey !== undefined ? { geminiApiKey: (userData as any).geminiApiKey } : {}),
         } as any)
         .where(eq(users.id, id))
         .returning();

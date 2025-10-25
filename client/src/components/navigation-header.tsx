@@ -1,8 +1,15 @@
-import { Bell, Briefcase, LogOut, User, Users } from "lucide-react";
+import { Bell, Briefcase, LogOut, User, Users, Settings, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useLogout } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { getInitials, getRoleColor } from "@/lib/auth-utils";
+import { apiRequest } from "@/lib/queryClient";
 import type { User as UserType } from "@/types";
 
 interface NavigationHeaderProps {
@@ -12,6 +19,49 @@ interface NavigationHeaderProps {
 export function NavigationHeader({ user }: NavigationHeaderProps) {
   const logout = useLogout();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  const saveApiKey = useMutation({
+    mutationFn: async (key: string) => {
+      const response = await apiRequest("PUT", `/api/users/${user.id}/gemini-key`, {
+        apiKey: key,
+      });
+      return response.json();
+    },
+    onSuccess: async () => {
+      toast({
+        title: "API Key Saved",
+        description: "Your Gemini API key has been saved successfully",
+      });
+      setShowSettings(false);
+      setApiKey("");
+      // Force refetch the user data
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Save",
+        description: error.message || "Failed to save API key",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveApiKey = () => {
+    if (!apiKey.trim()) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter a valid Gemini API key",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveApiKey.mutate(apiKey);
+  };
 
   const handleLogout = () => {
     logout.mutate();
@@ -61,6 +111,82 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
           </div>
           
           <div className="flex items-center space-x-4">
+            {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+              <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" title="Settings">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Settings</DialogTitle>
+                    <DialogDescription>
+                      Configure your Gemini AI API key for resume generation
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="apiKey">Gemini API Key</Label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            id="apiKey"
+                            type={showApiKey ? "text" : "password"}
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
+                            placeholder="Enter your Gemini API key"
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowApiKey(!showApiKey)}
+                          >
+                            {showApiKey ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-500">
+                        Get your API key from{" "}
+                        <a
+                          href="https://makersuite.google.com/app/apikey"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Google AI Studio
+                        </a>
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowSettings(false);
+                          setApiKey("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveApiKey}
+                        disabled={saveApiKey.isPending}
+                      >
+                        {saveApiKey.isPending ? "Saving..." : "Save API Key"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
             <Button variant="ghost" size="sm" data-testid="button-notifications">
               <Bell className="w-4 h-4" />
             </Button>

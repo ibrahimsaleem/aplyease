@@ -39,6 +39,7 @@ export const users = pgTable(
     applicationsRemaining: integer("applications_remaining").notNull().default(sql`0`),
     isActive: boolean("is_active").default(sql`true`).notNull(),
     passwordHash: text("password_hash").notNull(),
+    geminiApiKey: text("gemini_api_key"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

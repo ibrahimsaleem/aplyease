@@ -75,8 +75,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/auth/user", requireAuth, (req, res) => {
-    res.json({ user: (req.user ?? req.session.user) });
+  app.get("/api/auth/user", requireAuth, async (req, res) => {
+    try {
+      const sessionUser = (req.user ?? req.session.user);
+      if (!sessionUser) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Fetch fresh user data from database to get latest fields like geminiApiKey
+      const freshUser = await storage.getUser(sessionUser.id);
+      if (!freshUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ user: freshUser });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
   });
 
   // User management routes (Admin only)
@@ -136,6 +152,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error disabling user:", error);
       res.status(500).json({ message: "Failed to disable user" });
+    }
+  });
+
+  // Gemini API Key management
+  app.put("/api/users/:userId/gemini-key", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { apiKey } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      // Users can only update their own API key
+      if (currentUser.id !== userId) {
+        return res.status(403).json({ message: "You can only update your own API key" });
+      }
+
+      if (!apiKey || typeof apiKey !== 'string') {
+        return res.status(400).json({ message: "API key is required" });
+      }
+
+      await storage.updateUser(userId, { geminiApiKey: apiKey } as any);
+      res.json({ message: "Gemini API key saved successfully" });
+    } catch (error) {
+      console.error("Error saving Gemini API key:", error);
+      res.status(500).json({ message: "Failed to save API key" });
+    }
+  });
+
+  // Resume generation with Gemini AI
+  app.post("/api/generate-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { jobDescription } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (!jobDescription || typeof jobDescription !== 'string') {
+        return res.status(400).json({ message: "Job description is required" });
+      }
+
+      // Get current user's Gemini API key
+      const user = await storage.getUser(currentUser.id);
+      if (!user || !user.geminiApiKey) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Get client's base resume LaTeX
+      const clientProfile = await storage.getClientProfile(clientId);
+      if (!clientProfile || !clientProfile.baseResumeLatex) {
+        return res.status(400).json({ message: "Client hasn't uploaded a LaTeX resume template" });
+      }
+
+      // Initialize Gemini AI
+      const { GoogleGenAI } = await import("@google/genai");
+      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
+
+      // Construct prompt
+      const prompt = `You are an expert resume writer. Given this LaTeX resume template and job description, modify the resume to highlight relevant skills and experience for this specific role. Return only the modified LaTeX code without any explanations or markdown formatting.
+
+Base Resume:
+${clientProfile.baseResumeLatex}
+
+Job Description:
+${jobDescription}
+
+Generate the tailored LaTeX resume:`;
+
+      // Generate content
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      
+      let generatedLatex = response.text;
+
+      // Clean up any markdown code blocks if present
+      generatedLatex = generatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
+
+      res.json({ latex: generatedLatex });
+    } catch (error: any) {
+      console.error("Error generating resume:", error);
+      
+      // Handle specific Gemini API errors
+      if (error.message?.includes('API key')) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes('quota')) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to generate resume", 
+        details: error.message || "Unknown error" 
+      });
     }
   });
 

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NavigationHeader } from "@/components/navigation-header";
+import { ResumeGenerator } from "@/components/resume-generator";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -401,6 +402,15 @@ export default function ClientDetail() {
                 </pre>
               </CardContent>
             </Card>
+          )}
+
+          {/* AI Resume Generator */}
+          {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+            <ResumeGenerator
+              clientId={clientId!}
+              hasBaseResume={!!profile.baseResumeLatex}
+              userHasApiKey={!!user.geminiApiKey}
+            />
           )}
 
           {/* Additional Notes */}
