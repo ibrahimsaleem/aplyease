@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { User } from "@/types";
+import { ExternalLink, Download } from "lucide-react";
+import type { User, ClientProfile } from "@/types";
 
 const applicationSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
@@ -34,6 +37,8 @@ type ApplicationFormData = z.infer<typeof applicationSchema>;
 export function ApplicationForm() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
 
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationSchema),
@@ -56,6 +61,41 @@ export function ApplicationForm() {
   const { data: clients = [] } = useQuery<User[]>({
     queryKey: ["/api/clients"],
   });
+
+  const { data: clientProfile } = useQuery<ClientProfile>({
+    queryKey: ["/api/client-profiles", selectedClientId],
+    queryFn: async () => {
+      if (!selectedClientId) return null;
+      const res = await apiRequest("GET", `/api/client-profiles/${selectedClientId}`);
+      if (res.status === 404) return null;
+      return res.json();
+    },
+    enabled: !!selectedClientId,
+  });
+
+  // Update selected client when form value changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "clientId" && value.clientId) {
+        setSelectedClientId(value.clientId);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  const useProfileData = () => {
+    if (!clientProfile) return;
+    
+    // Auto-fill resume URL and LinkedIn from profile
+    if (clientProfile.resumeUrl) {
+      form.setValue("resumeUrl", clientProfile.resumeUrl);
+    }
+    
+    toast({
+      title: "Profile data loaded",
+      description: "Resume URL has been filled from client profile",
+    });
+  };
 
   const createApplication = useMutation({
     mutationFn: async (data: ApplicationFormData) => {
@@ -91,6 +131,33 @@ export function ApplicationForm() {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle>Add New Application</CardTitle>
+        <CardDescription>
+          {selectedClientId && clientProfile && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline">
+                Profile Available
+              </Badge>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={useProfileData}
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Use Profile Data
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setLocation(`/clients/${selectedClientId}`)}
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                View Profile
+              </Button>
+            </div>
+          )}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

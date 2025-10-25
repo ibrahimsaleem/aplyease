@@ -8,6 +8,9 @@ import LoginPage from "@/pages/login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
+import ClientProfile from "@/pages/client-profile";
+import Clients from "@/pages/clients";
+import ClientDetail from "@/pages/client-detail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +37,15 @@ function Router() {
         {user.role === "ADMIN" && <AdminDashboard />}
         {user.role === "EMPLOYEE" && <EmployeeDashboard />}
         {user.role === "CLIENT" && <ClientDashboard />}
+      </Route>
+      <Route path="/profile">
+        <ClientProfile />
+      </Route>
+      <Route path="/clients">
+        {user.role === "EMPLOYEE" || user.role === "ADMIN" ? <Clients /> : <NotFound />}
+      </Route>
+      <Route path="/clients/:clientId">
+        {user.role === "EMPLOYEE" || user.role === "ADMIN" ? <ClientDetail /> : <NotFound />}
       </Route>
       <Route component={NotFound} />
     </Switch>

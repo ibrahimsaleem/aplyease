@@ -79,10 +79,47 @@ export const jobApplications = pgTable(
   ]
 );
 
+// Client profiles table
+export const clientProfiles = pgTable(
+  "client_profiles",
+  {
+    userId: uuid("user_id").primaryKey().references(() => users.id),
+    fullName: text("full_name").notNull(),
+    contactEmail: text("contact_email"),
+    contactPassword: text("contact_password"),
+    phoneNumber: text("phone_number").notNull(),
+    mailingAddress: text("mailing_address").notNull(),
+    situation: text("situation").notNull(),
+    servicesRequested: text("services_requested").notNull().default(sql`'[]'`), // JSON array as text
+    applicationQuota: integer("application_quota").notNull().default(0),
+    startDate: date("start_date"),
+    searchScope: text("search_scope").notNull().default(sql`'[]'`), // JSON array as text
+    states: text("states").notNull().default(sql`'[]'`), // JSON array as text
+    cities: text("cities").notNull().default(sql`'[]'`), // JSON array as text
+    desiredTitles: text("desired_titles").notNull(),
+    targetCompanies: text("target_companies"),
+    resumeUrl: text("resume_url"),
+    linkedinUrl: text("linkedin_url"),
+    workAuthorization: text("work_authorization").notNull(),
+    sponsorshipAnswer: text("sponsorship_answer").notNull(),
+    additionalNotes: text("additional_notes"),
+    baseResumeLatex: text("base_resume_latex"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_client_profiles_user").on(table.userId),
+  ]
+);
+
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   clientApplications: many(jobApplications, { relationName: "client" }),
   employeeApplications: many(jobApplications, { relationName: "employee" }),
+  clientProfile: one(clientProfiles, {
+    fields: [users.id],
+    references: [clientProfiles.userId],
+  }),
 }));
 
 export const jobApplicationsRelations = relations(jobApplications, ({ one }) => ({
@@ -95,6 +132,13 @@ export const jobApplicationsRelations = relations(jobApplications, ({ one }) => 
     fields: [jobApplications.employeeId],
     references: [users.id],
     relationName: "employee",
+  }),
+}));
+
+export const clientProfilesRelations = relations(clientProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [clientProfiles.userId],
+    references: [users.id],
   }),
 }));
 
@@ -137,6 +181,20 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications)
 
 export const updateJobApplicationSchema = insertJobApplicationSchema.partial();
 
+export const insertClientProfileSchema = createInsertSchema(clientProfiles)
+  .omit({
+    createdAt: true,
+    updatedAt: true,
+  } as any)
+  .extend({
+    servicesRequested: z.array(z.string()).optional(),
+    searchScope: z.array(z.string()).optional(),
+    states: z.array(z.string()).optional(),
+    cities: z.array(z.string()).optional(),
+  });
+
+export const updateClientProfileSchema = insertClientProfileSchema.partial();
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -144,6 +202,9 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type UpdateJobApplication = z.infer<typeof updateJobApplicationSchema>;
+export type ClientProfile = typeof clientProfiles.$inferSelect;
+export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
+export type UpdateClientProfile = z.infer<typeof updateClientProfileSchema>;
 
 // Types with relations
 export type UserWithApplications = User & {
@@ -154,4 +215,8 @@ export type UserWithApplications = User & {
 export type JobApplicationWithUsers = JobApplication & {
   client: User;
   employee: User;
+};
+
+export type ClientProfileWithUser = ClientProfile & {
+  user?: User;
 };

@@ -129,3 +129,30 @@ export type ClientPerformanceAnalytics = {
   totalClients: number;
   clients: ClientPerformanceData[];
 };
+
+export type ClientProfile = {
+  userId: string;
+  fullName: string;
+  contactEmail?: string;
+  contactPassword?: string;
+  phoneNumber: string;
+  mailingAddress: string;
+  situation: string;
+  servicesRequested: string[];
+  applicationQuota: number;
+  startDate?: string;
+  searchScope: string[];
+  states: string[];
+  cities: string[];
+  desiredTitles: string;
+  targetCompanies?: string;
+  resumeUrl?: string;
+  linkedinUrl?: string;
+  workAuthorization: string;
+  sponsorshipAnswer: string;
+  additionalNotes?: string;
+  baseResumeLatex?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+};

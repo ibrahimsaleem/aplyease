@@ -1,4 +1,5 @@
-import { Bell, Briefcase, LogOut, User } from "lucide-react";
+import { Bell, Briefcase, LogOut, User, Users } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/hooks/use-auth";
 import { getInitials, getRoleColor } from "@/lib/auth-utils";
@@ -10,6 +11,7 @@ interface NavigationHeaderProps {
 
 export function NavigationHeader({ user }: NavigationHeaderProps) {
   const logout = useLogout();
+  const [, setLocation] = useLocation();
 
   const handleLogout = () => {
     logout.mutate();
@@ -19,14 +21,43 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <div className="bg-primary text-white p-2 rounded-lg mr-3">
-              <Briefcase className="w-5 h-5" />
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center">
+              <div className="bg-primary text-white p-2 rounded-lg mr-3">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900">AplyEase Portal</h1>
+              <span className={`ml-3 text-xs font-medium px-2.5 py-0.5 rounded-full ${getRoleColor(user.role)}`}>
+                {user.role}
+              </span>
             </div>
-            <h1 className="text-xl font-bold text-slate-900">AplyEase Portal</h1>
-            <span className={`ml-3 text-xs font-medium px-2.5 py-0.5 rounded-full ${getRoleColor(user.role)}`}>
-              {user.role}
-            </span>
+
+            {/* Navigation Links */}
+            <div className="flex items-center space-x-4">
+              {user.role === "CLIENT" && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setLocation("/profile")}
+                  className="text-slate-700"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </Button>
+              )}
+              
+              {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setLocation("/clients")}
+                  className="text-slate-700"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Clients
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center space-x-4">

@@ -1,4 +1,4 @@
-import { users, jobApplications, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers } from "../shared/schema";
+import { users, jobApplications, clientProfiles, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -122,6 +122,11 @@ export interface IStorage {
       interviews: number;
     }>;
   }>;
+
+  // Client profile operations
+  getClientProfile(userId: string): Promise<ClientProfileWithUser | undefined>;
+  upsertClientProfile(userId: string, profile: InsertClientProfile | UpdateClientProfile): Promise<ClientProfile>;
+  listClientProfiles(): Promise<ClientProfileWithUser[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1215,6 +1220,72 @@ export class DatabaseStorage implements IStorage {
         console.error("Error in getEmployeeDailyPayoutBreakdown:", error);
         throw error;
       }
+    });
+  }
+
+  // Client profile operations
+  async getClientProfile(userId: string): Promise<ClientProfileWithUser | undefined> {
+    return retryOperation(async () => {
+      const [profile] = await db
+        .select()
+        .from(clientProfiles)
+        .leftJoin(users, eq(clientProfiles.userId, users.id))
+        .where(eq(clientProfiles.userId, userId));
+
+      if (!profile) return undefined;
+
+      return {
+        ...profile.client_profiles,
+        user: profile.users || undefined,
+      };
+    });
+  }
+
+  async upsertClientProfile(userId: string, profileData: InsertClientProfile | UpdateClientProfile): Promise<ClientProfile> {
+    return retryOperation(async () => {
+      // Convert arrays to JSON strings for storage
+      const dataToStore = {
+        ...profileData,
+        userId,
+        servicesRequested: Array.isArray(profileData.servicesRequested) 
+          ? JSON.stringify(profileData.servicesRequested) 
+          : profileData.servicesRequested || '[]',
+        searchScope: Array.isArray(profileData.searchScope) 
+          ? JSON.stringify(profileData.searchScope) 
+          : profileData.searchScope || '[]',
+        states: Array.isArray(profileData.states) 
+          ? JSON.stringify(profileData.states) 
+          : profileData.states || '[]',
+        cities: Array.isArray(profileData.cities) 
+          ? JSON.stringify(profileData.cities) 
+          : profileData.cities || '[]',
+      };
+
+      const [profile] = await db
+        .insert(clientProfiles)
+        .values(dataToStore as any)
+        .onConflictDoUpdate({
+          target: clientProfiles.userId,
+          set: dataToStore,
+        })
+        .returning();
+
+      return profile;
+    });
+  }
+
+  async listClientProfiles(): Promise<ClientProfileWithUser[]> {
+    return retryOperation(async () => {
+      const profiles = await db
+        .select()
+        .from(clientProfiles)
+        .leftJoin(users, eq(clientProfiles.userId, users.id))
+        .orderBy(desc(clientProfiles.createdAt));
+
+      return profiles.map(p => ({
+        ...p.client_profiles,
+        user: p.users || undefined,
+      }));
     });
   }
 }

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT } from "./auth";
-import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema } from "../shared/schema";
+import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
 import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -561,6 +561,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client profile routes
+  app.get("/api/client-profiles", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+    try {
+      const profiles = await storage.listClientProfiles();
+      // Parse JSON strings back to arrays for frontend
+      const parsedProfiles = profiles.map(p => ({
+        ...p,
+        servicesRequested: JSON.parse(p.servicesRequested || '[]'),
+        searchScope: JSON.parse(p.searchScope || '[]'),
+        states: JSON.parse(p.states || '[]'),
+        cities: JSON.parse(p.cities || '[]'),
+      }));
+      res.json(parsedProfiles);
+    } catch (error) {
+      console.error("Error fetching client profiles:", error);
+      res.status(500).json({ message: "Failed to fetch client profiles" });
+    }
+  });
+
+  app.get("/api/client-profiles/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = (req.user ?? req.session.user)!;
+
+      // Clients can only see their own profile, employees and admins can see any
+      if (user.role === "CLIENT" && user.id !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const profile = await storage.getClientProfile(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+
+      // Parse JSON strings back to arrays for frontend
+      const parsedProfile = {
+        ...profile,
+        servicesRequested: JSON.parse(profile.servicesRequested || '[]'),
+        searchScope: JSON.parse(profile.searchScope || '[]'),
+        states: JSON.parse(profile.states || '[]'),
+        cities: JSON.parse(profile.cities || '[]'),
+      };
+
+      res.json(parsedProfile);
+    } catch (error) {
+      console.error("Error fetching client profile:", error);
+      res.status(500).json({ message: "Failed to fetch client profile" });
+    }
+  });
+
+  app.put("/api/client-profiles/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = (req.user ?? req.session.user)!;
+
+      // Clients can only update their own profile, employees and admins can update any
+      if (user.role === "CLIENT" && user.id !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const profileData = updateClientProfileSchema.parse(req.body);
+      const profile = await storage.upsertClientProfile(userId, profileData);
+
+      // Parse JSON strings back to arrays for frontend
+      const parsedProfile = {
+        ...profile,
+        servicesRequested: JSON.parse(profile.servicesRequested || '[]'),
+        searchScope: JSON.parse(profile.searchScope || '[]'),
+        states: JSON.parse(profile.states || '[]'),
+        cities: JSON.parse(profile.cities || '[]'),
+      };
+
+      res.json(parsedProfile);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating client profile:", error);
+      res.status(500).json({ message: "Failed to update client profile" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
