@@ -155,6 +155,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/users/:id/enable", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.enableUser(id);
+      res.json({ message: "User enabled successfully" });
+    } catch (error) {
+      console.error("Error enabling user:", error);
+      res.status(500).json({ message: "Failed to enable user" });
+    }
+  });
+
   // Gemini API Key management
   app.put("/api/users/:userId/gemini-key", requireAuth, async (req, res) => {
     try {

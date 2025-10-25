@@ -192,6 +192,15 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async enableUser(id: string): Promise<void> {
+    await retryOperation(async () => {
+      await db
+        .update(users)
+        .set({ isActive: true, updatedAt: new Date() } as any)
+        .where(eq(users.id, id));
+    });
+  }
+
   async listUsers(filters?: { role?: string; search?: string }): Promise<User[]> {
     const conditions: SQL[] = [];
     

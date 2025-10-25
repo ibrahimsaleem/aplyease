@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, UserX, Search } from "lucide-react";
+import { Plus, Edit, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials, getRoleColor } from "@/lib/auth-utils";
 import type { User } from "@/types";
 
-const userSchema = z.object({
+// Schema for creating new users - password is required
+const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
@@ -26,7 +28,17 @@ const userSchema = z.object({
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+// Schema for editing existing users - password is optional
+const editUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
+  company: z.string().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
+  applicationsRemaining: z.coerce.number().int().min(0).optional(),
+});
+
+type UserFormData = z.infer<typeof createUserSchema>;
 
 export function UserManagement() {
   const { toast } = useToast();
@@ -36,7 +48,7 @@ export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    // Don't use resolver here - we'll validate manually in onSubmit
     defaultValues: {
       name: "",
       email: "",
@@ -125,16 +137,61 @@ export function UserManagement() {
     },
   });
 
+  const enableUser = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("PATCH", `/api/users/${id}/enable`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User enabled successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enable user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: UserFormData) => {
+    // Validate with the appropriate schema
+    const schema = editingUser ? editUserSchema : createUserSchema;
+    const validation = schema.safeParse(data);
+    
+    if (!validation.success) {
+      // Show validation errors
+      validation.error.errors.forEach((error) => {
+        form.setError(error.path[0] as any, {
+          type: "manual",
+          message: error.message,
+        });
+      });
+      return;
+    }
+
+    // Prepare data with proper types
+    const submitData = {
+      ...data,
+      // Convert applicationsRemaining to number if it exists
+      applicationsRemaining: data.applicationsRemaining 
+        ? Number(data.applicationsRemaining) 
+        : undefined,
+    };
+
     if (editingUser) {
       // Remove password from update if it's empty
-      const updateData: Partial<UserFormData> = { ...data };
+      const updateData: Partial<UserFormData> = { ...submitData };
       if (!updateData.password) {
         delete (updateData as any).password;
       }
       updateUser.mutate({ id: editingUser.id, data: updateData });
     } else {
-      createUser.mutate(data);
+      createUser.mutate(submitData);
     }
   };
 
@@ -151,9 +208,14 @@ export function UserManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleDisable = (id: string) => {
-    if (confirm("Are you sure you want to disable this user?")) {
-      disableUser.mutate(id);
+  const handleToggleStatus = (user: User) => {
+    const action = user.isActive ? "disable" : "enable";
+    if (confirm(`Are you sure you want to ${action} this user?`)) {
+      if (user.isActive) {
+        disableUser.mutate(user.id);
+      } else {
+        enableUser.mutate(user.id);
+      }
     }
   };
 
@@ -393,17 +455,11 @@ export function UserManagement() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      {user.isActive && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDisable(user.id)}
-                          className="text-amber-600 hover:text-amber-900"
-                          data-testid="button-disable-user"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Switch
+                        checked={user.isActive}
+                        onCheckedChange={() => handleToggleStatus(user)}
+                        data-testid="switch-user-status"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
