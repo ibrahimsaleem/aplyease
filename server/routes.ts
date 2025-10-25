@@ -218,8 +218,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
 
       // Construct prompt
-      const prompt = `You are an expert resume writer. Given this LaTeX resume template and job description, modify the resume to highlight relevant skills and experience for this specific role. Return only the modified LaTeX code without any explanations or markdown formatting.
+      const prompt = `Resume Tailoring Prompt
+You are an expert LaTeX resume optimizer with extensive experience in professional resume tailoring. Your task is to transform the provided LaTeX resume to precisely match the job requirements while maintaining perfect LaTeX formatting.
 
+If a job description is included, use it to strategically tailor the resume, ensuring that relevant skills and experiences align with the position’s requirements.
+
+OPTIMIZATION REQUIREMENTS
+
+ONE-PAGE MAXIMUM: Ensure the resume remains within a single page while retaining all user-provided content, including experience and projects.
+
+JOB-SPECIFIC ALIGNMENT:
+
+Integrate key terms and phrases from the job description naturally throughout the resume.
+
+Reorder and prioritize experiences/skills to match job requirements.
+
+Replace generic statements with job-relevant accomplishments.
+
+Adjust section ordering if necessary to emphasize the most relevant qualifications first.
+
+QUANTIFIABLE ACHIEVEMENTS:
+
+Convert general statements into specific, measurable outcomes (e.g., “Increased efficiency by 35%”).
+
+Add metrics and specific results wherever possible.
+
+Emphasize achievements that directly relate to the job requirements.
+
+SPACE OPTIMIZATION (Without Removing Content):
+
+Utilize line space efficiently (avoid lines with just one or two words).
+
+Balance content density while maintaining readability.
+
+Eliminate redundancies and non-essential information.
+
+Use full lines of text rather than leaving white space.
+
+Adjust formatting elements like font size, margin adjustments, and section spacing to fit within one page.
+
+COURSEWORK RELEVANCE:
+
+Adjust coursework listings to showcase an academic background relevant to the position.
+
+Replace less relevant courses with more applicable ones based on the job description.
+
+LANGUAGE ENHANCEMENT:
+
+Use action verbs and impactful language that mirrors job description terminology.
+
+Replace passive voice with active, accomplishment-focused statements.
+
+Eliminate filler words and redundancies for maximum impact.
+
+PERFECT LATEX FORMATTING:
+
+Maintain proper LaTeX syntax and correct escaping of special characters.
+
+Preserve document structure while optimizing content.
+
+Ensure formatting consistency throughout the document.
+
+Output Instructions
+
+Return only the complete, optimized LaTeX code.
+
+Do not include explanations, comments, markdown syntax, or code block markers.
 Base Resume:
 ${clientProfile.baseResumeLatex}
 
