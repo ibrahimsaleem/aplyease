@@ -84,7 +84,7 @@ export default function Clients() {
       client.phoneNumber.toLowerCase().includes(searchLower) ||
       client.desiredTitles.toLowerCase().includes(searchLower)
     );
-  });
+  }).sort((a, b) => (b.applicationsRemaining || 0) - (a.applicationsRemaining || 0));
 
   return (
     <div className="min-h-screen bg-slate-50">
