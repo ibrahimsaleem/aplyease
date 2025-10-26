@@ -86,6 +86,13 @@ export default function Clients() {
     );
   });
 
+  // Sort clients by applications remaining in descending order
+  const sortedClients = filteredClients.slice().sort((a, b) => {
+    const aRemaining = a.applicationsRemaining ?? 0;
+    const bRemaining = b.applicationsRemaining ?? 0;
+    return bRemaining - aRemaining;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
@@ -152,7 +159,7 @@ export default function Clients() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredClients.map((client) => (
+                    {sortedClients.map((client) => (
                       <TableRow 
                         key={client.userId}
                         className="cursor-pointer hover:bg-slate-50"
