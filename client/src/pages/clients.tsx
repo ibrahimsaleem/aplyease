@@ -76,15 +76,18 @@ export default function Clients() {
   });
 
   // Filter clients based on search
-  const filteredClients = clientsWithProfiles.filter(client => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      client.fullName.toLowerCase().includes(searchLower) ||
-      client.user?.email.toLowerCase().includes(searchLower) ||
-      client.phoneNumber.toLowerCase().includes(searchLower) ||
-      client.desiredTitles.toLowerCase().includes(searchLower)
-    );
-  });
+  const filteredClients = clientsWithProfiles
+    .filter(client => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        client.fullName.toLowerCase().includes(searchLower) ||
+        client.user?.email.toLowerCase().includes(searchLower) ||
+        client.phoneNumber.toLowerCase().includes(searchLower) ||
+        client.desiredTitles.toLowerCase().includes(searchLower)
+      );
+    })
+    // Sort by applications remaining (highest to lowest)
+    .sort((a, b) => (b.applicationsRemaining || 0) - (a.applicationsRemaining || 0));
 
   return (
     <div className="min-h-screen bg-slate-50">
