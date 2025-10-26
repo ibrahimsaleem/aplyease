@@ -1286,16 +1286,32 @@ export class DatabaseStorage implements IStorage {
 
   async listClientProfiles(): Promise<ClientProfileWithUser[]> {
     return retryOperation(async () => {
+      // Get all client profiles with user data
       const profiles = await db
         .select()
         .from(clientProfiles)
-        .leftJoin(users, eq(clientProfiles.userId, users.id))
-        .orderBy(desc(clientProfiles.createdAt));
+        .leftJoin(users, eq(clientProfiles.userId, users.id));
 
-      return profiles.map(p => ({
-        ...p.client_profiles,
-        user: p.users || undefined,
-      }));
+      // Get application counts for each client
+      const profilesWithCounts = await Promise.all(
+        profiles.map(async (p) => {
+          const applicationCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(jobApplications)
+            .where(eq(jobApplications.clientId, p.client_profiles.userId));
+
+          return {
+            ...p.client_profiles,
+            user: p.users || undefined,
+            totalApplications: applicationCount[0]?.count || 0,
+          };
+        })
+      );
+
+      // Sort by application count (descending - most applications first)
+      const sortedProfiles = profilesWithCounts.sort((a, b) => b.totalApplications - a.totalApplications);
+
+      return sortedProfiles;
     });
   }
 }

@@ -220,4 +220,5 @@ export type JobApplicationWithUsers = JobApplication & {
 
 export type ClientProfileWithUser = ClientProfile & {
   user?: User;
+  totalApplications?: number;
 };
