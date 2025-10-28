@@ -1253,7 +1253,7 @@ export class DatabaseStorage implements IStorage {
 
   async upsertClientProfile(userId: string, profileData: InsertClientProfile | UpdateClientProfile): Promise<ClientProfile> {
     return retryOperation(async () => {
-      // Convert arrays to JSON strings for storage
+      // Convert arrays to JSON strings for storage and handle empty date strings
       const dataToStore = {
         ...profileData,
         userId,
@@ -1269,6 +1269,10 @@ export class DatabaseStorage implements IStorage {
         cities: Array.isArray(profileData.cities) 
           ? JSON.stringify(profileData.cities) 
           : profileData.cities || '[]',
+        // Handle empty string dates - convert to null for PostgreSQL
+        startDate: profileData.startDate && profileData.startDate.trim() !== '' 
+          ? profileData.startDate 
+          : null,
       };
 
       const [profile] = await db

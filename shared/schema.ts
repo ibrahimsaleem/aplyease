@@ -192,6 +192,9 @@ export const insertClientProfileSchema = createInsertSchema(clientProfiles)
     searchScope: z.array(z.string()).optional(),
     states: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
+    startDate: z.string().optional().nullable().transform((val) => 
+      val && val.trim() !== '' ? val : undefined
+    ),
   });
 
 export const updateClientProfileSchema = insertClientProfileSchema.partial();
