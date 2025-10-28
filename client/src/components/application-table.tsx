@@ -287,10 +287,10 @@ export function ApplicationTable({
             {showEmployeeColumn && (
               <Select value={filters.employeeId || "all"} onValueChange={(value) => updateFilter("employeeId", value === "all" ? "" : value)}>
                 <SelectTrigger className="w-40" data-testid="select-employee">
-                  <SelectValue placeholder="All Employees" />
+                  <SelectValue placeholder="All Applicants" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
+                  <SelectItem value="all">All Applicants</SelectItem>
                   {currentUser?.id && <SelectItem value={currentUser.id}>My Applications</SelectItem>}
                   {employees.filter(u => u.role === "EMPLOYEE").map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
@@ -346,7 +346,7 @@ export function ApplicationTable({
                   Date Applied
                   <ArrowUpDown className="w-4 h-4 ml-1 inline" />
                 </TableHead>
-                {showEmployeeColumn && <TableHead>Employee</TableHead>}
+                {showEmployeeColumn && <TableHead>Applicant</TableHead>}
                 {showClientColumn && <TableHead>Client</TableHead>}
                 <TableHead>Job Title</TableHead>
                 <TableHead>Company</TableHead>
@@ -382,17 +382,20 @@ export function ApplicationTable({
                   {showEmployeeColumn && (
                     <TableCell>
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-blue-600 text-xs font-medium">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-blue-600 text-sm font-semibold">
                             {getInitials(application.employee.name)}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium" data-testid="text-employee-name">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-gray-900" data-testid="text-employee-name">
                             {application.employee.name}
                           </span>
+                          <span className="text-xs text-gray-500">
+                            Applicant
+                          </span>
                           {isMyApplication && (
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 w-fit mt-1">
                               My Application
                             </Badge>
                           )}
