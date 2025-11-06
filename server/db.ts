@@ -8,31 +8,51 @@ if (!process.env.DATABASE_URL) {
 
 // Using node-postgres Pool for Supabase/Postgres with SSL
 
+// Determine if we should use SSL
+const shouldUseSSL = process.env.NODE_ENV === 'production' || 
+  (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('supabase.com') || process.env.DATABASE_URL.includes('amazonaws.com')));
+
+// Parse DATABASE_URL to check if it's using pooler port
+const isUsingPooler = process.env.DATABASE_URL && process.env.DATABASE_URL.includes(':6543');
+
 // Create connection pool with improved configuration
-const isSupabase = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com');
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 5,
+  max: isUsingPooler ? 1 : 8, // Use 1 connection for pooler, more for direct
   min: 1,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   allowExitOnIdle: false,
-  ssl: false
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+  ssl: shouldUseSSL ? {
+    rejectUnauthorized: true,
+    // Allow self-signed certificates in production for some providers
+    ca: process.env.DATABASE_CA_CERT,
+  } : false
 });
 
 // Add connection error handling
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  console.error('⚠️  Unexpected error on idle client:', err.message);
+  if (err.message.includes('ECONNREFUSED')) {
+    console.error('💡 Connection refused. Possible causes:');
+    console.error('   1. Database server is not running');
+    console.error('   2. Wrong port (try switching between 5432 and 6543)');
+    console.error('   3. Firewall blocking the connection');
+    console.error('   4. IP not allowlisted in database provider');
+  }
+  // Don't exit immediately, let the app try to reconnect
 });
 
-// Add connection acquire error handling
-pool.on('acquire', (client) => {
-  console.log('Client acquired from pool');
-});
-
+// Log successful connections
 pool.on('connect', (client) => {
-  console.log('New client connected to database');
+  console.log('✅ New client connected to database');
+});
+
+// Log when client is removed
+pool.on('remove', (client) => {
+  console.log('🔌 Client removed from pool');
 });
 
 // Export the drizzle instance

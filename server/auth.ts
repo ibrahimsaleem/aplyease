@@ -3,7 +3,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { users } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -54,16 +54,14 @@ export function setupAuth(app: express.Application) {
   if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
     try {
       console.log("Attempting to initialize PostgreSQL session store...");
+      // Use the shared pool from db.ts instead of creating a new connection
       sessionConfig.store = new PgSession({
-        conObject: {
-          connectionString: process.env.DATABASE_URL,
-          ssl: {
-            rejectUnauthorized: false
-          }
-        },
-        tableName: 'sessions'
+        pool: pool, // Reuse the same pool instance
+        tableName: 'sessions',
+        createTableIfMissing: true,
+        pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
       });
-      console.log("PostgreSQL session store initialized successfully");
+      console.log("PostgreSQL session store initialized successfully with shared pool");
     } catch (error) {
       console.error("Failed to initialize PostgreSQL session store:", error);
       console.log("Falling back to MemoryStore");
