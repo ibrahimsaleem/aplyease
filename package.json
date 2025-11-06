@@ -17,6 +17,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:test": "node scripts/test-db.js",
+    "db:test-connection": "node scripts/test-db-connection.js",
     "test:delete": "node scripts/test-delete.js",
     "test:quota": "node scripts/test-quota.js",
     "test:additional-link": "node scripts/test-additional-link.js",
