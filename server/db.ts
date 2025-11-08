@@ -22,7 +22,7 @@ const pool = new Pool({
 });
 
 // Add connection error handling with recovery
-pool.on('error', (err) => {
+pool.on('error', (err: any) => {
   console.error('Unexpected error on idle client:', err.message);
   console.error('Error code:', err.code);
   // Don't exit immediately - allow app to recover and retry

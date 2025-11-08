@@ -51,7 +51,7 @@ const limiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   // Skip rate limiting for health checks
   skip: (req) => req.path === '/api/health',
-  handler: (req, res) => {
+  handler: (req: any, res) => {
     console.warn('Rate limit exceeded for IP:', req.ip);
     res.status(429).json({
       message: 'Too many requests, please try again later.',
