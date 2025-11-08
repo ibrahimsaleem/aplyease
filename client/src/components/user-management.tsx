@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { getInitials, getRoleColor } from "@/lib/auth-utils";
 import type { User } from "@/types";
 
@@ -41,6 +42,7 @@ const editUserSchema = z.object({
 type UserFormData = z.infer<typeof createUserSchema>;
 
 export function UserManagement() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -59,7 +61,7 @@ export function UserManagement() {
     },
   });
 
-  const { data: users = [], isLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["/api/users", { search: searchTerm }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -67,6 +69,8 @@ export function UserManagement() {
       const res = await apiRequest("GET", `/api/users?${params.toString()}`);
       return res.json();
     },
+    enabled: user?.role === "ADMIN", // Only fetch if user is an admin
+    retry: false, // Don't retry on permission errors
   });
 
   const createUser = useMutation({
@@ -225,11 +229,39 @@ export function UserManagement() {
     setIsDialogOpen(true);
   };
 
+  // Guard: Only admins can access user management
+  if (user?.role !== "ADMIN") {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-slate-600">
+            <p className="text-lg font-semibold mb-2">Access Denied</p>
+            <p>You don't have permission to manage users. This feature is only available to administrators.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center">Loading users...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error message if there's a permission error
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            <p className="text-lg font-semibold mb-2">Error Loading Users</p>
+            <p>{(error as any)?.message || "Failed to load users. Please try again."}</p>
+          </div>
         </CardContent>
       </Card>
     );

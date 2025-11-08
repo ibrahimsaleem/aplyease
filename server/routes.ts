@@ -8,6 +8,38 @@ import { ZodError } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Health check endpoint - doesn't require authentication
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Test database connection
+      const dbHealthy = await storage.getUser("health-check-test")
+        .then(() => true)
+        .catch(() => false);
+      
+      const health = {
+        status: dbHealthy ? "healthy" : "degraded",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: dbHealthy ? "connected" : "disconnected",
+        memory: {
+          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          unit: "MB"
+        }
+      };
+      
+      const statusCode = dbHealthy ? 200 : 503;
+      res.status(statusCode).json(health);
+    } catch (error) {
+      console.error("Health check error:", error);
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Health check failed"
+      });
+    }
+  });
+
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -19,38 +51,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
 
-      const user = await authenticateUser(email, password);
+      let user;
+      try {
+        user = await authenticateUser(email, password);
+      } catch (authError: any) {
+        // Handle database connection errors during authentication
+        console.error("Database error during authentication:", authError);
+        return res.status(503).json({ 
+          message: "Database temporarily unavailable. Please try again in a moment.",
+          retryAfter: 30
+        });
+      }
+      
       if (!user) {
         console.log("Authentication failed for:", email);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log("Setting session for user:", email);
-      req.session.user = user;
-      
-      // Ensure session is saved before responding
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) {
-            console.error("Session save error:", err);
-            reject(err);
-          } else {
-            console.log("Session saved successfully for:", email);
-            resolve();
-          }
-        });
-      });
-
-      // Verify session was saved
-      console.log("Session after save:", {
-        sessionId: req.sessionID,
-        hasUser: !!req.session.user,
-        userEmail: req.session.user?.email
-      });
-
-      // Generate JWT token
+      // Generate JWT token (primary auth method)
       const token = generateJWT(user);
       console.log("Generated JWT token for:", email);
+
+      // Try to save session, but don't block login if it fails
+      // JWT is the primary authentication method, session is optional
+      console.log("Attempting to save session for user:", email);
+      req.session.user = user;
+      
+      try {
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+        console.log("Session saved successfully for:", email);
+      } catch (sessionError) {
+        // Log warning but don't block login - JWT authentication will work
+        console.warn("Session save failed for:", email, "Error:", sessionError);
+        console.warn("Login proceeding with JWT authentication only");
+      }
 
       console.log("Login successful for:", email);
       res.json({ user, token });

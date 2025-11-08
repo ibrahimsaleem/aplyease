@@ -104,8 +104,25 @@ export async function authenticateUser(email: string, password: string): Promise
       role: user.role,
       company: user.company || undefined
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Differentiate between database errors and authentication failures
     console.error("Authentication error:", error);
+    
+    // If it's a connection error, throw it so it can be handled by retry logic
+    const isConnectionError = 
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ECONNRESET' ||
+      error.code === 'ETIMEDOUT' ||
+      error.message?.includes('connection');
+    
+    if (isConnectionError) {
+      console.error("Database connection error during authentication");
+      // Throw connection errors so they can be handled properly
+      throw error;
+    }
+    
+    // For other errors (parsing, unexpected errors), log but return null
+    console.error("Unexpected authentication error:", error.message);
     return null;
   }
 }

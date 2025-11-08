@@ -3,12 +3,13 @@ import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
+import { cache } from "./cache";
 
-// Retry configuration
-const RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 1000; // 1 second
+// Retry configuration - increased for better resilience
+const RETRY_ATTEMPTS = 5; // Increased from 3 to 5
+const RETRY_DELAY = 1000; // 1 second base delay
 
-// Helper function to retry database operations
+// Helper function to retry database operations with exponential backoff
 async function retryOperation<T>(
   operation: () => Promise<T>,
   attempts: number = RETRY_ATTEMPTS
@@ -18,20 +19,27 @@ async function retryOperation<T>(
       return await operation();
     } catch (error: any) {
       console.error(`Database operation failed (attempt ${attempt}/${attempts}):`, error);
+      console.error('Error code:', error.code, 'Message:', error.message);
       
       // Check if it's a connection error that we should retry
-      if (error.message?.includes('Connection terminated unexpectedly') ||
-          error.message?.includes('connection') ||
-          error.code === 'ECONNRESET' ||
-          error.code === 'ENOTFOUND') {
-        
+      const isConnectionError = 
+        error.message?.includes('Connection terminated unexpectedly') ||
+        error.message?.includes('connection') ||
+        error.message?.includes('ECONNREFUSED') ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ECONNREFUSED' || // Added for Supabase Session Pooler
+        error.code === 'ENOTFOUND' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNABORTED';
+      
+      if (isConnectionError) {
         if (attempt === attempts) {
           throw new Error(`Database operation failed after ${attempts} attempts: ${error.message}`);
         }
         
-        // Wait before retrying (exponential backoff)
+        // Wait before retrying with exponential backoff: 1s, 2s, 4s, 8s, 16s
         const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-        console.log(`Retrying in ${delay}ms...`);
+        console.log(`Connection error detected. Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -131,8 +139,19 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
+    // Check cache first (5 minute TTL)
+    const cacheKey = `user:${id}`;
+    const cached = cache.get<User>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     return retryOperation(async () => {
       const [user] = await db.select().from(users).where(eq(users.id, id));
+      // Cache the result
+      if (user) {
+        cache.set(cacheKey, user, 300); // 5 minutes
+      }
       return user;
     });
   }
@@ -179,6 +198,10 @@ export class DatabaseStorage implements IStorage {
         } as any)
         .where(eq(users.id, id))
         .returning();
+      
+      // Invalidate cache after update
+      cache.delete(`user:${id}`);
+      
       return user;
     });
   }
@@ -189,6 +212,9 @@ export class DatabaseStorage implements IStorage {
         .update(users)
         .set({ isActive: false, updatedAt: new Date() } as any)
         .where(eq(users.id, id));
+      
+      // Invalidate cache after update
+      cache.delete(`user:${id}`);
     });
   }
 
@@ -198,6 +224,9 @@ export class DatabaseStorage implements IStorage {
         .update(users)
         .set({ isActive: true, updatedAt: new Date() } as any)
         .where(eq(users.id, id));
+      
+      // Invalidate cache after update
+      cache.delete(`user:${id}`);
     });
   }
 

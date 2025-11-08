@@ -12,27 +12,44 @@ if (!process.env.DATABASE_URL) {
 const isSupabase = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 5,
+  max: 2, // Reduced for Supabase Session Pooler limits (free tier: 1-2 connections)
   min: 1,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 60000, // Increased to 60s to keep connections alive longer
+  connectionTimeoutMillis: 20000, // Increased to 20s for pooler connections
   allowExitOnIdle: false,
-  ssl: false
+  statement_timeout: 10000, // 10s timeout to prevent hung queries
+  ssl: isSupabase ? { rejectUnauthorized: false } : false // Enable SSL for Supabase
 });
 
-// Add connection error handling
+// Add connection error handling with recovery
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  console.error('Unexpected error on idle client:', err.message);
+  console.error('Error code:', err.code);
+  // Don't exit immediately - allow app to recover and retry
+  // Only exit on critical errors
+  if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === '57P01') {
+    console.error('Critical database error detected, initiating graceful shutdown...');
+    setTimeout(() => process.exit(1), 5000); // Give 5s for cleanup
+  }
 });
 
 // Add connection acquire error handling
 pool.on('acquire', (client) => {
   console.log('Client acquired from pool');
+  // Log pool stats for monitoring
+  console.log('Pool stats:', {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount
+  });
 });
 
 pool.on('connect', (client) => {
   console.log('New client connected to database');
+});
+
+pool.on('remove', (client) => {
+  console.log('Client removed from pool');
 });
 
 // Export the drizzle instance
