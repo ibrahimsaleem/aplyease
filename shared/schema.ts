@@ -163,7 +163,10 @@ export const updateUserSchema = createInsertSchema(users)
     updatedAt: true,
     passwordHash: true,
   } as any)
-  .partial();
+  .partial()
+  .extend({
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  });
 
 export const insertJobApplicationSchema = createInsertSchema(jobApplications)
   .omit({

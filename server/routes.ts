@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT } from "./auth";
+import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
 import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
 import { ZodError } from "zod";
 
@@ -170,7 +170,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userData = updateUserSchema.parse(req.body);
-      const user = await storage.updateUser(id, userData);
+      
+      // If password is provided, hash it before updating
+      const updateData: any = { ...userData };
+      if (updateData.password) {
+        updateData.passwordHash = await hashPassword(updateData.password);
+        delete updateData.password; // Remove plain password
+      }
+      
+      const user = await storage.updateUser(id, updateData);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
