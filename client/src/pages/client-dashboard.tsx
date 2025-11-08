@@ -39,6 +39,7 @@ export default function ClientDashboard() {
           showActions={false}
           readonly={true}
           filters={{ clientId: user.id }}
+          useLoadMore={true}
         />
       </div>
     </div>

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Search, UserCircle } from "lucide-react";
+import { Loader2, Search, UserCircle, ArrowLeft } from "lucide-react";
 import type { ClientProfile, User } from "@/types";
 
 type ClientWithStats = ClientProfile & {
@@ -91,6 +91,15 @@ export default function Clients() {
       <NavigationHeader user={user} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button 
+          variant="ghost" 
+          className="mb-4"
+          onClick={() => setLocation("/")}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

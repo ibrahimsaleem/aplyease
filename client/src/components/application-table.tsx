@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ interface ApplicationTableProps {
   filters?: ApplicationFilters;
   onEdit?: (application: JobApplication) => void;
   onDelete?: (id: string) => void;
+  useLoadMore?: boolean;
 }
 
 export function ApplicationTable({
@@ -38,19 +39,28 @@ export function ApplicationTable({
   filters: initialFilters = {},
   onEdit,
   onDelete,
+  useLoadMore = false,
 }: ApplicationTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const [currentLimit, setCurrentLimit] = useState(10);
   const [filters, setFilters] = useState<ApplicationFilters>({
     page: 1,
-    limit: 10,
+    limit: useLoadMore ? currentLimit : 10,
     sortBy: "dateApplied",
     sortOrder: "desc",
     ...initialFilters,
   });
   const [searchInput, setSearchInput] = useState<string>(initialFilters.search || "");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
+
+  // Update filters when currentLimit changes (for load more mode)
+  useEffect(() => {
+    if (useLoadMore) {
+      setFilters(prev => ({ ...prev, limit: currentLimit }));
+    }
+  }, [currentLimit, useLoadMore]);
 
   const { data: clients = [] } = useQuery<User[]>({
     queryKey: ["/api/clients"],
@@ -136,6 +146,10 @@ export function ApplicationTable({
       [key]: value,
       page: key === "page" ? value : 1, // Reset to page 1 when changing filters
     }));
+  };
+
+  const handleLoadMore = () => {
+    setCurrentLimit(prev => prev + 10);
   };
 
   const handleExport = async () => {
@@ -559,63 +573,83 @@ export function ApplicationTable({
           </Table>
         </div>
 
-        {/* Pagination */}
-        <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <Button
-              variant="outline"
-              onClick={() => updateFilter("page", Math.max(1, (filters.page || 1) - 1))}
-              disabled={(filters.page || 1) <= 1}
-              data-testid="button-prev-mobile"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => updateFilter("page", (filters.page || 1) + 1)}
-              disabled={(filters.page || 1) >= totalPages}
-              data-testid="button-next-mobile"
-            >
-              Next
-            </Button>
-          </div>
-          
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-slate-700" data-testid="text-pagination-info">
-                Showing {((filters.page || 1) - 1) * (filters.limit || 10) + 1} to{" "}
-                {Math.min((filters.page || 1) * (filters.limit || 10), data?.total || 0)} of{" "}
-                {data?.total || 0} results
+        {/* Pagination or Load More */}
+        {useLoadMore ? (
+          <div className="bg-white px-6 py-4 border-t border-slate-200">
+            <div className="flex flex-col items-center space-y-3">
+              <p className="text-sm text-slate-700" data-testid="text-load-more-info">
+                Showing {data?.applications.length || 0} of {data?.total || 0} applications
               </p>
+              {(data?.applications.length || 0) < (data?.total || 0) && (
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoading}
+                  data-testid="button-load-more"
+                >
+                  {isLoading ? "Loading..." : "Load More"}
+                </Button>
+              )}
             </div>
-            
-            <div className="flex items-center space-x-2">
+          </div>
+        ) : (
+          <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => updateFilter("page", Math.max(1, (filters.page || 1) - 1))}
                 disabled={(filters.page || 1) <= 1}
-                data-testid="button-prev"
+                data-testid="button-prev-mobile"
               >
-                <ChevronLeft className="w-4 h-4" />
+                Previous
               </Button>
-              
-              <span className="text-sm text-slate-700" data-testid="text-current-page">
-                Page {filters.page || 1} of {totalPages}
-              </span>
-              
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => updateFilter("page", (filters.page || 1) + 1)}
                 disabled={(filters.page || 1) >= totalPages}
-                data-testid="button-next"
+                data-testid="button-next-mobile"
               >
-                <ChevronRight className="w-4 h-4" />
+                Next
               </Button>
             </div>
+            
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-slate-700" data-testid="text-pagination-info">
+                  Showing {((filters.page || 1) - 1) * (filters.limit || 10) + 1} to{" "}
+                  {Math.min((filters.page || 1) * (filters.limit || 10), data?.total || 0)} of{" "}
+                  {data?.total || 0} results
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter("page", Math.max(1, (filters.page || 1) - 1))}
+                  disabled={(filters.page || 1) <= 1}
+                  data-testid="button-prev"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <span className="text-sm text-slate-700" data-testid="text-current-page">
+                  Page {filters.page || 1} of {totalPages}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter("page", (filters.page || 1) + 1)}
+                  disabled={(filters.page || 1) >= totalPages}
+                  data-testid="button-next"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

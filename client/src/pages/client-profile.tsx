@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NavigationHeader } from "@/components/navigation-header";
+import { ClientProfileView } from "@/components/client-profile-view";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Loader2, ArrowLeft } from "lucide-react";
-import type { ClientProfile } from "@/types";
+import type { ClientProfile, ClientStats } from "@/types";
 
 const profileSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -63,6 +64,7 @@ export default function ClientProfile() {
   const [, setLocation] = useLocation();
   const [statesInput, setStatesInput] = useState("");
   const [citiesInput, setCitiesInput] = useState("");
+  const [editMode, setEditMode] = useState(false);
   
   // Get clientId from URL query params (for employees editing client profiles)
   const urlParams = new URLSearchParams(window.location.search);
@@ -71,6 +73,7 @@ export default function ClientProfile() {
   // Determine which user's profile to load/edit
   const targetUserId = editClientId || user?.id;
   const isEditingOtherProfile = editClientId && editClientId !== user?.id;
+  const isOwnProfile = !editClientId || editClientId === user?.id;
 
   const { data: profile, isLoading } = useQuery<ClientProfile>({
     queryKey: ["/api/client-profiles", targetUserId],
@@ -82,6 +85,16 @@ export default function ClientProfile() {
       return res.json();
     },
     enabled: !!targetUserId,
+  });
+
+  // Fetch stats when viewing own profile in read-only mode
+  const { data: stats } = useQuery<ClientStats>({
+    queryKey: ["/api/stats/client", user?.id],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/stats/client/${user?.id}`);
+      return res.json();
+    },
+    enabled: isOwnProfile && !editMode && !!user?.id,
   });
 
   // Update input fields when profile loads
@@ -152,6 +165,10 @@ export default function ClientProfile() {
         description: isEditingOtherProfile ? "Client profile updated successfully" : "Profile updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/client-profiles", targetUserId] });
+      // Exit edit mode after successful save (for clients viewing their own profile)
+      if (isOwnProfile) {
+        setEditMode(false);
+      }
     },
     onError: (error) => {
       toast({
@@ -185,7 +202,8 @@ export default function ClientProfile() {
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back button for employees editing client profile */}
         {isEditingOtherProfile && (
           <Button 
             variant="ghost" 
@@ -196,8 +214,29 @@ export default function ClientProfile() {
             Back to Client Detail
           </Button>
         )}
-        
-        <Card>
+
+        {/* Back button for clients viewing their own profile */}
+        {isOwnProfile && user?.role === "CLIENT" && (
+          <Button 
+            variant="ghost" 
+            className="mb-4"
+            onClick={() => setLocation("/")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        )}
+
+        {/* Show read-only view for clients viewing their own profile, unless in edit mode */}
+        {isOwnProfile && !editMode && profile ? (
+          <ClientProfileView
+            profile={profile}
+            stats={stats}
+            isOwnProfile={isOwnProfile}
+            onEditClick={() => setEditMode(true)}
+          />
+        ) : (
+          <Card>
           <CardHeader>
             <CardTitle>
               {isEditingOtherProfile ? `Edit Client Profile: ${profile?.fullName || 'Loading...'}` : 'Client Profile'}
@@ -627,6 +666,11 @@ export default function ClientProfile() {
                 </div>
 
                 <div className="flex justify-end gap-4">
+                  {isOwnProfile && editMode && (
+                    <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
+                      Cancel
+                    </Button>
+                  )}
                   <Button type="submit" disabled={updateProfile.isPending}>
                     {updateProfile.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Save Profile
@@ -636,6 +680,7 @@ export default function ClientProfile() {
             </Form>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
