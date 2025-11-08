@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Mobile touch optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Safe area support for mobile devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Prevent text selection on touch elements */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Smooth scrolling for mobile */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
 :root {
   --background: hsl(0 0% 100%);
   --foreground: hsl(210 25% 7.8431%);

@@ -69,21 +69,21 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <div className="flex justify-between items-center h-14 sm:h-16">
+          <div className="flex items-center space-x-2 sm:space-x-6">
             <div className="flex items-center">
-              <div className="bg-primary text-white p-2 rounded-lg mr-3">
-                <Briefcase className="w-5 h-5" />
+              <div className="bg-primary text-white p-1.5 sm:p-2 rounded-lg mr-2 sm:mr-3">
+                <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h1 className="text-xl font-bold text-slate-900">AplyEase Portal</h1>
-              <span className={`ml-3 text-xs font-medium px-2.5 py-0.5 rounded-full ${getRoleColor(user.role)}`}>
+              <h1 className="text-base sm:text-xl font-bold text-slate-900">AplyEase Portal</h1>
+              <span className={`ml-2 sm:ml-3 text-xs font-medium px-2 sm:px-2.5 py-0.5 rounded-full ${getRoleColor(user.role)}`}>
                 {user.role}
               </span>
             </div>
 
-            {/* Navigation Links */}
-            <div className="flex items-center space-x-4">
+            {/* Navigation Links - Hidden on mobile for clients */}
+            <div className="hidden md:flex items-center space-x-4">
               {user.role === "CLIENT" && (
                 <Button 
                   variant="ghost" 
@@ -110,7 +110,7 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-4">
             {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
               <Dialog open={showSettings} onOpenChange={setShowSettings}>
                 <DialogTrigger asChild>
@@ -187,23 +187,23 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
               </Dialog>
             )}
 
-            <Button variant="ghost" size="sm" data-testid="button-notifications">
+            <Button variant="ghost" size="sm" className="hidden sm:flex" data-testid="button-notifications">
               <Bell className="w-4 h-4" />
             </Button>
             
-            <div className="flex items-center space-x-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                 user.role === "ADMIN" ? "bg-red-100" : 
                 user.role === "CLIENT" ? "bg-green-100" : "bg-blue-100"
               }`}>
-                <span className={`text-sm font-medium ${
+                <span className={`text-xs sm:text-sm font-medium ${
                   user.role === "ADMIN" ? "text-red-600" : 
                   user.role === "CLIENT" ? "text-green-600" : "text-blue-600"
                 }`} data-testid="text-user-initials">
                   {getInitials(user.name)}
                 </span>
               </div>
-              <span className="text-sm font-medium text-slate-900" data-testid="text-user-name">
+              <span className="hidden sm:inline text-sm font-medium text-slate-900" data-testid="text-user-name">
                 {user.name}
               </span>
               <Button 
@@ -212,6 +212,7 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
                 onClick={handleLogout}
                 disabled={logout.isPending}
                 data-testid="button-logout"
+                className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
               >
                 <LogOut className="w-4 h-4" />
               </Button>

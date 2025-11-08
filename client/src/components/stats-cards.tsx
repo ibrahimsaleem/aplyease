@@ -174,95 +174,95 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
   // Client stats
   const clientStats = stats as ClientStats;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
       {/* Applications Left - First card for clients */}
-      <Card>
-        <CardContent className="p-6">
+      <Card className="touch-manipulation">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Applications Left</p>
-              <p className="text-3xl font-bold text-slate-900" data-testid="text-applications-left">
+              <p className="text-xs md:text-sm font-medium text-slate-600">Applications Left</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-applications-left">
                 {clientStats.applicationsRemaining ?? 0}
               </p>
             </div>
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <FileText className="w-6 h-6 text-orange-600" />
+            <div className="bg-orange-100 p-2 md:p-3 rounded-lg flex-shrink-0">
+              <FileText className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
             </div>
           </div>
-          <p className="text-sm text-slate-600 mt-2">
+          <p className="text-xs md:text-sm text-slate-600 mt-2">
             Remaining applications
           </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="touch-manipulation">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Applications</p>
-              <p className="text-3xl font-bold text-slate-900" data-testid="text-total-applications">
+              <p className="text-xs md:text-sm font-medium text-slate-600">Total Applications</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-total-applications">
                 {clientStats.totalApplications}
               </p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="bg-blue-100 p-2 md:p-3 rounded-lg flex-shrink-0">
+              <FileText className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            <TrendingUp className="w-4 h-4 inline mr-1" />
+          <p className="text-xs md:text-sm text-green-600 mt-2">
+            <TrendingUp className="w-3 h-3 md:w-4 md:h-4 inline mr-1" />
             +5 this week
           </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="touch-manipulation">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">In Progress</p>
-              <p className="text-3xl font-bold text-slate-900" data-testid="text-in-progress">
+              <p className="text-xs md:text-sm font-medium text-slate-600">In Progress</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-in-progress">
                 {clientStats.inProgress}
               </p>
             </div>
-            <div className="bg-yellow-100 p-3 rounded-lg">
-              <Clock className="w-6 h-6 text-yellow-600" />
+            <div className="bg-yellow-100 p-2 md:p-3 rounded-lg flex-shrink-0">
+              <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
             </div>
           </div>
-          <p className="text-sm text-slate-600 mt-2">Awaiting updates</p>
+          <p className="text-xs md:text-sm text-slate-600 mt-2">Awaiting updates</p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="touch-manipulation">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Interviews</p>
-              <p className="text-3xl font-bold text-slate-900" data-testid="text-interviews">
+              <p className="text-xs md:text-sm font-medium text-slate-600">Interviews</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-interviews">
                 {clientStats.interviews}
               </p>
             </div>
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600" />
+            <div className="bg-purple-100 p-2 md:p-3 rounded-lg flex-shrink-0">
+              <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
             </div>
           </div>
-          <p className="text-sm text-slate-600 mt-2">Scheduled</p>
+          <p className="text-xs md:text-sm text-slate-600 mt-2">Scheduled</p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="touch-manipulation sm:col-span-2 lg:col-span-4">
+        <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Hired</p>
-              <p className="text-3xl font-bold text-slate-900" data-testid="text-hired">
+              <p className="text-xs md:text-sm font-medium text-slate-600">Hired</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-hired">
                 {clientStats.hired}
               </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="bg-green-100 p-2 md:p-3 rounded-lg flex-shrink-0">
+              <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
+          <p className="text-xs md:text-sm text-green-600 mt-2">
             {clientStats.totalApplications > 0 
               ? `${((clientStats.hired / clientStats.totalApplications) * 100).toFixed(1)}% success rate`
               : "0% success rate"
