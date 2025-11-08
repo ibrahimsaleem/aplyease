@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Pencil } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Eye, EyeOff } from "lucide-react";
 import type { ClientProfile, ClientStats } from "@/types";
 
 interface ClientProfileViewProps {
@@ -14,6 +15,7 @@ interface ClientProfileViewProps {
 
 export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }: ClientProfileViewProps) {
   const { toast } = useToast();
+  const [showFullLatex, setShowFullLatex] = useState(false);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -307,21 +309,44 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Base Resume LaTeX Code</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => copyToClipboard(profile.baseResumeLatex!, "LaTeX code")}
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy Code
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowFullLatex(!showFullLatex)}
+                  >
+                    {showFullLatex ? (
+                      <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Show Full Code
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => copyToClipboard(profile.baseResumeLatex!, "LaTeX code")}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Code
+                  </Button>
+                </div>
               </div>
               <CardDescription>
                 This is your LaTeX resume template
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto">
-                <code className="text-sm font-mono">{profile.baseResumeLatex}</code>
+              <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
+                <code className="text-sm font-mono">
+                  {showFullLatex 
+                    ? profile.baseResumeLatex 
+                    : profile.baseResumeLatex.split('\n').slice(0, 20).join('\n') + '\n\n... (click "Show Full Code" to see more)'}
+                </code>
               </pre>
             </CardContent>
           </Card>

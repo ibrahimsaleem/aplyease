@@ -372,6 +372,197 @@ Generate the tailored LaTeX resume:`;
     }
   });
 
+  // Resume evaluation with Gemini AI (Agent 2)
+  app.post("/api/evaluate-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { latex, jobDescription } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (!latex || typeof latex !== 'string') {
+        return res.status(400).json({ message: "LaTeX resume is required" });
+      }
+
+      if (!jobDescription || typeof jobDescription !== 'string') {
+        return res.status(400).json({ message: "Job description is required" });
+      }
+
+      // Get current user's Gemini API key
+      const user = await storage.getUser(currentUser.id);
+      if (!user || !user.geminiApiKey) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Initialize Gemini AI
+      const { GoogleGenAI } = await import("@google/genai");
+      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
+
+      // Construct evaluation prompt
+      const prompt = `You are an expert ATS (Applicant Tracking System) resume evaluator with 15+ years of experience. Analyze this LaTeX resume against the job description.
+
+EVALUATION CRITERIA:
+1. Keyword Matching: Extract 10-15 critical requirements from job description and check if resume addresses them
+2. ATS Formatting: Proper structure, clear sections, no graphics/tables that break ATS
+3. Quantifiable Achievements: Metrics, percentages, numbers showing impact
+4. Job-Specific Terminology: Use of exact terms from job description
+5. Content Prioritization: Most relevant qualifications prominently placed
+
+SCORING (0-100):
+- 90-100: Excellent match (90%+ requirements met, ATS-optimized, strong quantification)
+- 75-89: Good match (75-89% requirements met, minor improvements needed)
+- 60-74: Average match (60-74% requirements met, several gaps)
+- Below 60: Poor match (significant gaps)
+
+OUTPUT FORMAT (JSON):
+{
+  "score": [number 0-100],
+  "overallAssessment": "[2-3 sentences]",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "improvements": ["improvement 1 with actionable advice", "improvement 2", "improvement 3"],
+  "missingElements": ["missing keyword/skill 1", "missing keyword/skill 2"]
+}
+
+Job Description:
+${jobDescription}
+
+LaTeX Resume:
+${latex}
+
+Provide your evaluation in valid JSON format only, no other text:`;
+
+      // Generate evaluation
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      
+      let evaluationText = response.text.trim();
+
+      // Clean up any markdown code blocks if present
+      evaluationText = evaluationText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      // Parse JSON response
+      const evaluation = JSON.parse(evaluationText);
+
+      res.json(evaluation);
+    } catch (error: any) {
+      console.error("Error evaluating resume:", error);
+      
+      // Handle specific Gemini API errors
+      if (error.message?.includes('API key')) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes('quota')) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error instanceof SyntaxError) {
+        return res.status(500).json({ 
+          message: "Failed to parse evaluation response", 
+          details: "AI returned invalid JSON format" 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to evaluate resume", 
+        details: error.message || "Unknown error" 
+      });
+    }
+  });
+
+  // Resume optimization with Gemini AI (Agent 3)
+  app.post("/api/optimize-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { latex, jobDescription, previousFeedback } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (!latex || typeof latex !== 'string') {
+        return res.status(400).json({ message: "LaTeX resume is required" });
+      }
+
+      if (!jobDescription || typeof jobDescription !== 'string') {
+        return res.status(400).json({ message: "Job description is required" });
+      }
+
+      if (!previousFeedback || typeof previousFeedback !== 'object') {
+        return res.status(400).json({ message: "Previous feedback is required" });
+      }
+
+      // Get current user's Gemini API key
+      const user = await storage.getUser(currentUser.id);
+      if (!user || !user.geminiApiKey) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Initialize Gemini AI
+      const { GoogleGenAI } = await import("@google/genai");
+      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
+
+      const { score, strengths, improvements, missingElements } = previousFeedback;
+
+      // Construct optimization prompt
+      const prompt = `You are an expert LaTeX resume optimizer. Your task is to improve this resume based on specific feedback from an ATS evaluation.
+
+PREVIOUS EVALUATION FEEDBACK:
+Score: ${score}/100
+Strengths: ${strengths?.join(', ') || 'None identified'}
+Areas for Improvement: ${improvements?.join(', ') || 'None identified'}
+Missing Elements: ${missingElements?.join(', ') || 'None identified'}
+
+OPTIMIZATION STRATEGY:
+1. Address every improvement point mentioned in the feedback
+2. Integrate all missing elements naturally into relevant sections
+3. Enhance keyword density for job-specific terms
+4. Add more quantifiable achievements where possible
+5. Improve ATS formatting (simple structure, clear headers, no complex formatting)
+6. Keep resume to ONE PAGE maximum
+7. Preserve all existing accomplishments while making them more relevant
+
+CRITICAL REQUIREMENTS:
+- Integrate missing keywords: ${missingElements?.join(', ') || 'None'}
+- Focus on improvements: ${improvements?.join('; ') || 'None'}
+- Maintain perfect LaTeX syntax
+- Keep one-page format
+- DO NOT fabricate experiences - only reframe and optimize existing content
+
+Job Description:
+${jobDescription}
+
+Current LaTeX Resume:
+${latex}
+
+Return ONLY the optimized LaTeX code without explanations, comments, or markdown:`;
+
+      // Generate optimized resume
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      
+      let optimizedLatex = response.text;
+
+      // Clean up any markdown code blocks if present
+      optimizedLatex = optimizedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
+
+      res.json({ latex: optimizedLatex });
+    } catch (error: any) {
+      console.error("Error optimizing resume:", error);
+      
+      // Handle specific Gemini API errors
+      if (error.message?.includes('API key')) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes('quota')) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to optimize resume", 
+        details: error.message || "Unknown error" 
+      });
+    }
+  });
+
   // Job application routes
   app.get("/api/applications", requireAuth, async (req, res) => {
     try {

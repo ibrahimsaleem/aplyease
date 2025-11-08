@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Copy, AlertCircle } from "lucide-react";
+import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye } from "lucide-react";
+import { ResumeEvaluationDisplay } from "./resume-evaluation-display";
+import type { ResumeEvaluation, OptimizationIteration } from "@/types";
 
 interface ResumeGeneratorProps {
   clientId: string;
@@ -18,9 +21,16 @@ interface ResumeGeneratorProps {
 export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: ResumeGeneratorProps) {
   const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState("");
-  const [generatedLatex, setGeneratedLatex] = useState("");
-  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [currentLatex, setCurrentLatex] = useState("");
+  const [evaluationResult, setEvaluationResult] = useState<ResumeEvaluation | null>(null);
+  const [iterationCount, setIterationCount] = useState(0);
+  const [optimizationHistory, setOptimizationHistory] = useState<OptimizationIteration[]>([]);
+  const [showLatexDialog, setShowLatexDialog] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const maxIterations = 10;
 
+  // Generate initial resume (Agent 1: Tailor)
   const generateResume = useMutation({
     mutationFn: async (jobDesc: string) => {
       const response = await apiRequest("POST", `/api/generate-resume/${clientId}`, {
@@ -28,15 +38,18 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
       });
       return response.json();
     },
-    onSuccess: (data) => {
-      setGeneratedLatex(data.latex);
-      setShowResultDialog(true);
+    onSuccess: async (data) => {
+      setCurrentLatex(data.latex);
+      setIterationCount(1);
       toast({
         title: "Resume Generated!",
-        description: "Your tailored resume is ready to copy.",
+        description: "Evaluating resume quality...",
       });
+      // Auto-evaluate the generated resume
+      await evaluateResume(data.latex, jobDescription);
     },
     onError: (error: any) => {
+      setIsProcessing(false);
       toast({
         title: "Generation Failed",
         description: error.message || "Failed to generate resume",
@@ -45,6 +58,80 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     },
   });
 
+  // Evaluate resume (Agent 2: Evaluate)
+  const evaluateResumeMutation = useMutation({
+    mutationFn: async ({ latex, jobDesc }: { latex: string; jobDesc: string }) => {
+      const response = await apiRequest("POST", `/api/evaluate-resume/${clientId}`, {
+        latex,
+        jobDescription: jobDesc,
+      });
+      return response.json();
+    },
+    onSuccess: (evaluation: ResumeEvaluation) => {
+      setEvaluationResult(evaluation);
+      setIsProcessing(false);
+      
+      // Add to history
+      const newIteration: OptimizationIteration = {
+        iteration: iterationCount,
+        score: evaluation.score,
+        latex: currentLatex,
+        evaluation,
+        timestamp: new Date().toISOString(),
+      };
+      setOptimizationHistory(prev => [...prev, newIteration]);
+
+      toast({
+        title: "Evaluation Complete",
+        description: `Score: ${evaluation.score}/100`,
+      });
+    },
+    onError: (error: any) => {
+      setIsProcessing(false);
+      toast({
+        title: "Evaluation Failed",
+        description: error.message || "Failed to evaluate resume",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Optimize resume (Agent 3: Optimize)
+  const optimizeResumeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/optimize-resume/${clientId}`, {
+        latex: currentLatex,
+        jobDescription,
+        previousFeedback: evaluationResult,
+      });
+      return response.json();
+    },
+    onSuccess: async (data) => {
+      setCurrentLatex(data.latex);
+      setIterationCount(prev => prev + 1);
+      toast({
+        title: "Resume Optimized!",
+        description: "Re-evaluating improved resume...",
+      });
+      // Auto-evaluate the optimized resume
+      await evaluateResume(data.latex, jobDescription);
+    },
+    onError: (error: any) => {
+      setIsProcessing(false);
+      toast({
+        title: "Optimization Failed",
+        description: error.message || "Failed to optimize resume",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Helper function to evaluate resume
+  const evaluateResume = async (latex: string, jobDesc: string) => {
+    await evaluateResumeMutation.mutateAsync({ latex, jobDesc });
+  };
+
+  // Handle initial generation
   const handleGenerate = () => {
     if (!jobDescription.trim()) {
       toast({
@@ -54,16 +141,56 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
       });
       return;
     }
+
+    // Reset state
+    setCurrentLatex("");
+    setEvaluationResult(null);
+    setIterationCount(0);
+    setOptimizationHistory([]);
+    setIsProcessing(true);
+
     generateResume.mutate(jobDescription);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLatex);
+  // Handle optimization
+  const handleOptimize = () => {
+    if (iterationCount >= maxIterations) {
+      toast({
+        title: "Maximum Iterations Reached",
+        description: `You've reached the maximum of ${maxIterations} optimization attempts.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    optimizeResumeMutation.mutate();
+  };
+
+  // Copy to clipboard
+  const copyToClipboard = (latex?: string) => {
+    const textToCopy = latex || currentLatex;
+    navigator.clipboard.writeText(textToCopy);
     toast({
       title: "Copied!",
       description: "LaTeX code copied to clipboard",
     });
   };
+
+  // Load iteration from history
+  const loadIteration = (iteration: OptimizationIteration) => {
+    setCurrentLatex(iteration.latex);
+    setEvaluationResult(iteration.evaluation);
+    setIterationCount(iteration.iteration);
+    setShowHistoryDialog(false);
+    toast({
+      title: "Iteration Loaded",
+      description: `Loaded iteration ${iteration.iteration} with score ${iteration.score}/100`,
+    });
+  };
+
+  const hasResults = currentLatex && evaluationResult;
+  const canOptimize = hasResults && iterationCount < maxIterations && !isProcessing;
 
   return (
     <>
@@ -71,10 +198,10 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
         <CardHeader>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-600" />
-            <CardTitle>AI Resume Generator</CardTitle>
+            <CardTitle>AI Resume Agent System</CardTitle>
           </div>
           <CardDescription>
-            Paste a job description to generate a tailored LaTeX resume for this client
+            Paste a job description to generate and iteratively optimize a tailored LaTeX resume for this client
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -96,6 +223,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
             </Alert>
           )}
 
+          {/* Job Description Input */}
           <div>
             <label className="text-sm font-medium text-slate-700 mb-2 block">
               Job Description
@@ -105,37 +233,117 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste the full job description here..."
               className="min-h-[200px] font-mono text-sm"
-              disabled={!userHasApiKey || !hasBaseResume}
+              disabled={!userHasApiKey || !hasBaseResume || isProcessing}
             />
           </div>
 
-          <Button
-            onClick={handleGenerate}
-            disabled={generateResume.isPending || !userHasApiKey || !hasBaseResume}
-            className="w-full"
-            size="lg"
-          >
-            {generateResume.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating Resume...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Tailored Resume
-              </>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGenerate}
+              disabled={isProcessing || !userHasApiKey || !hasBaseResume}
+              className="flex-1"
+              size="lg"
+            >
+              {isProcessing && !hasResults ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating & Evaluating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Tailored Resume
+                </>
+              )}
+            </Button>
+
+            {optimizationHistory.length > 0 && (
+              <Button
+                onClick={() => setShowHistoryDialog(true)}
+                variant="outline"
+                size="lg"
+                disabled={isProcessing}
+              >
+                <History className="w-4 h-4 mr-2" />
+                History ({optimizationHistory.length})
+              </Button>
             )}
-          </Button>
+          </div>
+
+          {/* Evaluation Results */}
+          {hasResults && (
+            <div className="space-y-4">
+              <ResumeEvaluationDisplay 
+                evaluation={evaluationResult} 
+                iterationCount={iterationCount}
+              />
+
+              {/* Action Buttons for Results */}
+              <div className="flex gap-2">
+                {canOptimize && (
+                  <Button
+                    onClick={handleOptimize}
+                    disabled={isProcessing}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Optimizing & Re-evaluating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Optimize Again
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <Button
+                  onClick={() => setShowLatexDialog(true)}
+                  variant="outline"
+                  size="lg"
+                  disabled={isProcessing}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View LaTeX
+                </Button>
+
+                <Button
+                  onClick={() => copyToClipboard()}
+                  variant="default"
+                  size="lg"
+                  disabled={isProcessing}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Code
+                </Button>
+              </div>
+
+              {/* Progress Info */}
+              <div className="text-center text-sm text-slate-600">
+                Iteration {iterationCount} of {maxIterations} maximum
+                {evaluationResult.score >= 90 && (
+                  <span className="text-green-600 font-semibold ml-2">
+                    ✓ Target score achieved!
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+      {/* LaTeX Code Dialog */}
+      <Dialog open={showLatexDialog} onOpenChange={setShowLatexDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Generated Resume</DialogTitle>
+            <DialogTitle>Generated Resume (Iteration {iterationCount})</DialogTitle>
             <DialogDescription>
-              Your AI-tailored LaTeX resume is ready. Copy the code below.
+              Score: {evaluationResult?.score}/100 - Your AI-tailored LaTeX resume
             </DialogDescription>
           </DialogHeader>
           
@@ -143,11 +351,11 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
             <div className="relative h-full">
               <div className="bg-slate-900 text-slate-100 p-4 rounded-lg h-[60vh] overflow-auto">
                 <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-                  <code>{generatedLatex}</code>
+                  <code>{currentLatex}</code>
                 </pre>
               </div>
               <Button
-                onClick={copyToClipboard}
+                onClick={() => copyToClipboard()}
                 className="absolute top-2 right-2 z-10"
                 size="sm"
               >
@@ -157,14 +365,87 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
             </div>
             
             <div className="flex justify-end gap-2 flex-shrink-0">
-              <Button onClick={() => setShowResultDialog(false)} variant="outline">
+              <Button onClick={() => setShowLatexDialog(false)} variant="outline">
                 Close
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Optimization History Dialog */}
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Optimization History</DialogTitle>
+            <DialogDescription>
+              View and revert to previous iterations
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 overflow-y-auto max-h-[60vh]">
+            {optimizationHistory.map((iteration) => (
+              <Card key={iteration.iteration} className="cursor-pointer hover:bg-slate-50 transition-colors">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-lg">
+                          Iteration {iteration.iteration}
+                        </h3>
+                        <Badge 
+                          className={
+                            iteration.score >= 90 
+                              ? "bg-green-600" 
+                              : iteration.score >= 75 
+                              ? "bg-yellow-600" 
+                              : "bg-red-600"
+                          }
+                        >
+                          Score: {iteration.score}/100
+                        </Badge>
+                        {iteration.iteration === iterationCount && (
+                          <Badge variant="outline">Current</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600 mb-2">
+                        {iteration.evaluation.overallAssessment}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(iteration.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => copyToClipboard(iteration.latex)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      {iteration.iteration !== iterationCount && (
+                        <Button
+                          onClick={() => loadIteration(iteration)}
+                          variant="default"
+                          size="sm"
+                        >
+                          Load
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="flex justify-end">
+            <Button onClick={() => setShowHistoryDialog(false)} variant="outline">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
-

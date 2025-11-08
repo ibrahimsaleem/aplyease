@@ -157,3 +157,19 @@ export type ClientProfile = {
   updatedAt: string;
   user?: User;
 };
+
+export type ResumeEvaluation = {
+  score: number;
+  overallAssessment: string;
+  strengths: string[];
+  improvements: string[];
+  missingElements: string[];
+};
+
+export type OptimizationIteration = {
+  iteration: number;
+  score: number;
+  latex: string;
+  evaluation: ResumeEvaluation;
+  timestamp: string;
+};
