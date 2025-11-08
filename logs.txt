@@ -1,0 +1,50 @@
+2025-11-08T06:19:43.356245668Z 6:19:43 AM [express] GET /api/applications 304 in 191ms :: {"applications":[{"id":"57e96c29-4abe-405…
+2025-11-08T06:19:49.131271384Z Client acquired from pool
+2025-11-08T06:19:49.196416063Z Client acquired from pool
+2025-11-08T06:19:49.322621791Z 6:19:49 AM [express] GET /api/applications 304 in 192ms :: {"applications":[{"id":"fef2aef3-f064-40a…
+2025-11-08T06:19:53.875124516Z Client acquired from pool
+2025-11-08T06:19:53.93888944Z Client acquired from pool
+2025-11-08T06:19:54.064185701Z 6:19:54 AM [express] GET /api/applications 304 in 190ms :: {"applications":[{"id":"22d5017a-b94d-482…
+2025-11-08T06:19:57.847151246Z Client acquired from pool
+2025-11-08T06:19:57.911284342Z Client acquired from pool
+2025-11-08T06:19:58.036702543Z 6:19:58 AM [express] GET /api/applications 304 in 190ms :: {"applications":[{"id":"d54dcf97-1d17-4cc…
+2025-11-08T06:20:01.181283488Z Client acquired from pool
+2025-11-08T06:20:01.245237028Z Client acquired from pool
+2025-11-08T06:20:01.370950314Z 6:20:01 AM [express] GET /api/applications 304 in 191ms :: {"applications":[{"id":"2dc2dc0f-7f0e-489…
+2025-11-08T06:20:04.343227579Z Client acquired from pool
+2025-11-08T06:20:04.408531032Z Client acquired from pool
+2025-11-08T06:20:04.534717568Z 6:20:04 AM [express] GET /api/applications 304 in 194ms :: {"applications":[{"id":"d54dcf97-1d17-4cc…
+2025-11-08T06:20:08.824732113Z Client acquired from pool
+2025-11-08T06:20:08.888528399Z Client acquired from pool
+2025-11-08T06:20:09.015566686Z 6:20:09 AM [express] GET /api/applications 304 in 191ms :: {"applications":[{"id":"e02c3e7a-d7d7-480…
+2025-11-08T06:20:14.367546586Z Client acquired from pool
+2025-11-08T06:20:14.431592193Z Client acquired from pool
+2025-11-08T06:20:14.55742137Z 6:20:14 AM [express] GET /api/applications 304 in 191ms :: {"applications":[{"id":"a0671825-8272-4bd…
+2025-11-08T06:20:19.77187385Z Client acquired from pool
+2025-11-08T06:20:19.836628566Z Client acquired from pool
+2025-11-08T06:20:19.962638778Z 6:20:19 AM [express] GET /api/applications 200 in 191ms :: {"applications":[{"id":"f6423449-e909-426…
+2025-11-08T06:22:00.989372203Z New client connected to database
+2025-11-08T06:22:00.989406585Z Client acquired from pool
+2025-11-08T06:22:01.150771015Z 6:22:01 AM [express] GET /api/auth/user 304 in 572ms :: {"user":{"id":"77e5f0de-f40d-429e-8d41-263dd…
+2025-11-08T06:22:01.479184417Z Client acquired from pool
+2025-11-08T06:22:01.583174694Z 6:22:01 AM [express] GET /api/clients 304 in 105ms :: [{"id":"4dd99d3b-9e79-42ac-b2fa-3c3781361169",…
+2025-11-08T06:22:01.90923977Z New client connected to database
+2025-11-08T06:22:01.909261142Z Client acquired from pool
+2025-11-08T06:22:01.985087802Z 6:22:01 AM [express] GET /api/users 403 in 1ms :: {"message":"Insufficient permissions"}
+2025-11-08T06:22:01.985912481Z Client acquired from pool
+2025-11-08T06:22:01.990651966Z Client acquired from pool
+2025-11-08T06:22:02.128022795Z 6:22:02 AM [express] GET /api/applications 304 in 626ms :: {"applications":[{"id":"07768704-e503-45d…
+2025-11-08T06:22:02.251984607Z Client acquired from pool
+2025-11-08T06:22:02.36047866Z Client acquired from pool
+2025-11-08T06:22:02.429325087Z 6:22:02 AM [express] GET /api/stats/employee/77e5f0de-f40d-429e-8d41-263dd62e798a 304 in 440ms :: {"…
+2025-11-08T06:22:12.807840215Z Client acquired from pool
+2025-11-08T06:22:12.911142795Z Client acquired from pool
+2025-11-08T06:22:13.057878865Z 6:22:13 AM [express] GET /api/applications 200 in 250ms :: {"applications":[{"id":"9c472328-b8a9-447…
+2025-11-08T06:30:20.369930407Z 6:30:20 AM [express] GET /api/users 403 in 2ms :: {"message":"Insufficient permissions"}
+2025-11-08T06:30:20.802095751Z New client connected to database
+2025-11-08T06:30:20.802121614Z Client acquired from pool
+2025-11-08T06:30:20.870964669Z Client acquired from pool
+2025-11-08T06:30:20.939796484Z Client acquired from pool
+2025-11-08T06:30:21.00780955Z Client acquired from pool
+2025-11-08T06:30:21.076154794Z Client acquired from pool
+2025-11-08T06:30:21.145621671Z 6:30:21 AM [express] GET /api/stats/client/d4ea196e-66e9-42aa-8e2a-1193e8b0298a 200 in 773ms :: {"to…

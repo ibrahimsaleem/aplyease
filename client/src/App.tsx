@@ -1,10 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import LoginPage from "@/pages/login";
+import SignupPage from "@/pages/signup";
 import AdminDashboard from "@/pages/admin-dashboard";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
@@ -15,6 +16,12 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+
+  // Allow access to signup page without authentication
+  if (location === "/signup") {
+    return <SignupPage />;
+  }
 
   if (isLoading) {
     return (
@@ -30,6 +37,9 @@ function Router() {
   if (!user) {
     return <LoginPage />;
   }
+
+  // Temporarily removed profile completion check to fix infinite loop
+  // Profile completion will be handled within individual pages
 
   return (
     <Switch>

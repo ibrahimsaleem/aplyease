@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { NavigationHeader } from "@/components/navigation-header";
@@ -27,6 +27,9 @@ export default function ClientDashboard() {
   const [filters, setFilters] = useState<Partial<ApplicationFilters>>({
     clientId: user?.id,
   });
+
+  // Temporarily disable profile check to fix infinite loop
+  // TODO: Re-implement profile completion check without infinite loop
 
   const { data: stats, refetch: refetchStats } = useQuery<ClientStats>({
     queryKey: ["/api/stats/client", user?.id],

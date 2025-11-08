@@ -168,6 +168,18 @@ export const updateUserSchema = createInsertSchema(users)
     password: z.string().min(6, "Password must be at least 6 characters").optional(),
   });
 
+// Schema for public signup - excludes admin-only fields
+export const signupSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password confirmation is required"),
+  company: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 export const insertJobApplicationSchema = createInsertSchema(jobApplications)
   .omit({
     id: true,
@@ -206,6 +218,7 @@ export const updateClientProfileSchema = insertClientProfileSchema.partial();
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type SignupData = z.infer<typeof signupSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type UpdateJobApplication = z.infer<typeof updateJobApplicationSchema>;

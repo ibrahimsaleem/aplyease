@@ -66,11 +66,25 @@ export function ApplicationForm() {
     queryKey: ["/api/client-profiles", selectedClientId],
     queryFn: async () => {
       if (!selectedClientId) return null;
-      const res = await apiRequest("GET", `/api/client-profiles/${selectedClientId}`);
-      if (res.status === 404) return null;
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/client-profiles/${selectedClientId}`);
+        if (res.status === 404) return null;
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      } catch (error) {
+        // If it's a 404 or network error, return null instead of throwing
+        if (error instanceof Error && (error.message.includes('404') || error.message.includes('Failed to fetch'))) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: !!selectedClientId,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Update selected client when form value changes

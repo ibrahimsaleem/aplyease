@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
-import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
+import { insertUserSchema, updateUserSchema, signupSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
 import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -115,6 +115,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Public signup endpoint
+  app.post("/api/signup", async (req, res) => {
+    try {
+      // First validate with signup schema (includes confirmPassword)
+      const signupData = signupSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(signupData.email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+
+      // Remove confirmPassword before creating user (server doesn't need it after validation)
+      const { confirmPassword, ...userDataWithoutConfirm } = signupData;
+
+      // Create user with CLIENT role and default applicationsRemaining
+      const userData = {
+        ...userDataWithoutConfirm,
+        role: "CLIENT" as const,
+        applicationsRemaining: 10, // Default quota for new clients
+        isActive: true,
+      };
+
+      const user = await storage.createUser(userData);
+      
+      // Generate JWT token and log them in automatically
+      const token = generateJWT(user);
+      
+      // Set session
+      req.session.user = user;
+      
+      try {
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      } catch (sessionError) {
+        console.warn("Session save failed during signup:", sessionError);
+      }
+
+      console.log("User signed up successfully:", signupData.email);
+      res.status(201).json({ user, token });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
   });
 
   app.get("/api/auth/user", requireAuth, async (req, res) => {

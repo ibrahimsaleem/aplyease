@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Briefcase, Eye, EyeOff } from "lucide-react";
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -162,6 +163,13 @@ export default function LoginPage() {
                 >
                   {login.isPending ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <div className="text-center text-sm text-slate-600">
+                  Don't have an account?{" "}
+                  <Link href="/signup" className="text-primary hover:underline font-medium">
+                    Sign up
+                  </Link>
+                </div>
               </form>
             </Form>
           </CardContent>

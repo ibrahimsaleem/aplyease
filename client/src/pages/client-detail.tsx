@@ -23,13 +23,27 @@ export default function ClientDetail() {
   const { data: profile, isLoading: profileLoading } = useQuery<ClientProfile>({
     queryKey: ["/api/client-profiles", clientId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/client-profiles/${clientId}`);
-      if (res.status === 404) {
-        return null;
+      try {
+        const res = await apiRequest("GET", `/api/client-profiles/${clientId}`);
+        if (res.status === 404) {
+          return null;
+        }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      } catch (error) {
+        // If it's a 404 or network error, return null instead of throwing
+        if (error instanceof Error && (error.message.includes('404') || error.message.includes('Failed to fetch'))) {
+          return null;
+        }
+        throw error;
       }
-      return res.json();
     },
     enabled: !!clientId,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: stats } = useQuery<ClientStats>({

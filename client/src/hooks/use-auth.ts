@@ -39,6 +39,34 @@ export function useLogin() {
   });
 }
 
+export function useSignup() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ name, email, password, confirmPassword, company }: { 
+      name: string; 
+      email: string; 
+      password: string; 
+      confirmPassword: string;
+      company?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/signup", { name, email, password, confirmPassword, company });
+      const data = await response.json();
+      
+      // Store JWT token if provided
+      if (data.token) {
+        setAuthToken(data.token);
+        console.log("JWT token stored successfully after signup");
+      }
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   

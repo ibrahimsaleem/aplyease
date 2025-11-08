@@ -15,7 +15,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { isProfileComplete, getMissingRequiredFields } from "@/lib/profile-utils";
 import type { ClientProfile, ClientStats } from "@/types";
 
 const profileSchema = z.object({
@@ -78,13 +80,27 @@ export default function ClientProfile() {
   const { data: profile, isLoading } = useQuery<ClientProfile>({
     queryKey: ["/api/client-profiles", targetUserId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/client-profiles/${targetUserId}`);
-      if (res.status === 404) {
-        return null;
+      try {
+        const res = await apiRequest("GET", `/api/client-profiles/${targetUserId}`);
+        if (res.status === 404) {
+          return null;
+        }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      } catch (error) {
+        // If it's a 404 or network error, return null instead of throwing
+        if (error instanceof Error && (error.message.includes('404') || error.message.includes('Failed to fetch'))) {
+          return null;
+        }
+        throw error;
       }
-      return res.json();
     },
     enabled: !!targetUserId,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch stats when viewing own profile in read-only mode
@@ -227,8 +243,20 @@ export default function ClientProfile() {
           </Button>
         )}
 
+        {/* Show profile completion alert for incomplete profiles */}
+        {isOwnProfile && profile && !isProfileComplete(profile) && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Complete your profile to access the dashboard.</strong>
+              <br />
+              Missing required fields: {getMissingRequiredFields(profile).join(", ")}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Show read-only view for clients viewing their own profile, unless in edit mode */}
-        {isOwnProfile && !editMode && profile ? (
+        {isOwnProfile && !editMode && profile && isProfileComplete(profile) ? (
           <ClientProfileView
             profile={profile}
             stats={stats}
