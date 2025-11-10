@@ -109,11 +109,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
+    // Handle case where session doesn't exist or is already destroyed
+    if (!req.session) {
+      res.clearCookie("connect.sid");
+      return res.status(200).json({ message: "Logged out successfully" });
+    }
+
     req.session.destroy((err) => {
+      // Always clear the cookie, even if session destruction fails
+      res.clearCookie("connect.sid");
+      
       if (err) {
-        return res.status(500).json({ message: "Could not log out" });
+        // Log error but still return success to prevent users from being stuck
+        console.warn("Session destruction error during logout:", err);
+        return res.status(200).json({ message: "Logged out successfully" });
       }
-      res.json({ message: "Logged out successfully" });
+      
+      res.status(200).json({ message: "Logged out successfully" });
     });
   });
 

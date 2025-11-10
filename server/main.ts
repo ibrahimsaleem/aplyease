@@ -17,6 +17,10 @@ console.log('- PORT:', process.env.PORT);
 
 const app = express();
 
+// Trust proxy (needed for Render and other hosting platforms)
+// This allows Express to correctly identify client IPs from X-Forwarded-For headers
+app.set('trust proxy', 1);
+
 // Enable CORS for all environments
 app.use(cors({
   origin: (origin, callback) => {
