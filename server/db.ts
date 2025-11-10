@@ -10,9 +10,10 @@ if (!process.env.DATABASE_URL) {
 
 // Create connection pool with improved configuration
 const isSupabase = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com');
+const maxPool = parseInt(process.env.DB_POOL_MAX || "15"); // configurable pool size (defaults to 15)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 2, // Reduced for Supabase Session Pooler limits (free tier: 1-2 connections)
+  max: maxPool,
   min: 1,
   idleTimeoutMillis: 60000, // Increased to 60s to keep connections alive longer
   connectionTimeoutMillis: 20000, // Increased to 20s for pooler connections
