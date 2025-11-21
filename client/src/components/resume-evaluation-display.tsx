@@ -32,7 +32,17 @@ export function ResumeEvaluationDisplay({ evaluation, iterationCount }: ResumeEv
               <CardTitle className="text-2xl">
                 Resume Score: <span className={scoreStyle.color}>{score}/100</span>
               </CardTitle>
-              <p className="text-sm text-slate-600">Iteration {iterationCount}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-sm text-slate-600">Iteration {iterationCount}</p>
+                {evaluation.modelUsed && (
+                  <>
+                    <span className="text-slate-400">•</span>
+                    <p className="text-xs text-slate-500">
+                      Model: <span className="font-mono font-semibold text-slate-700">{evaluation.modelUsed}</span>
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           {score >= 90 ? (

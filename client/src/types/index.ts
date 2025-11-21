@@ -164,6 +164,7 @@ export type ResumeEvaluation = {
   strengths: string[];
   improvements: string[];
   missingElements: string[];
+  modelUsed?: string;
 };
 
 export type OptimizationIteration = {
@@ -172,4 +173,5 @@ export type OptimizationIteration = {
   latex: string;
   evaluation: ResumeEvaluation;
   timestamp: string;
+  modelUsed?: string;
 };

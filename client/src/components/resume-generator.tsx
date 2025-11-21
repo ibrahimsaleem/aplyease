@@ -28,6 +28,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
   const [showLatexDialog, setShowLatexDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentModelUsed, setCurrentModelUsed] = useState<string>("");
   const maxIterations = 10;
 
   // Generate initial resume (Agent 1: Tailor)
@@ -40,10 +41,11 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     },
     onSuccess: async (data) => {
       setCurrentLatex(data.latex);
+      setCurrentModelUsed(data.modelUsed || "");
       setIterationCount(1);
       toast({
         title: "Resume Generated!",
-        description: "Evaluating resume quality...",
+        description: data.modelUsed ? `Using ${data.modelUsed} - Evaluating resume quality...` : "Evaluating resume quality...",
       });
       // Auto-evaluate the generated resume
       await evaluateResume(data.latex, jobDescription);
@@ -69,6 +71,9 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     },
     onSuccess: (evaluation: ResumeEvaluation) => {
       setEvaluationResult(evaluation);
+      if (evaluation.modelUsed) {
+        setCurrentModelUsed(evaluation.modelUsed);
+      }
       setIsProcessing(false);
       
       // Add to history
@@ -78,6 +83,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
         latex: currentLatex,
         evaluation,
         timestamp: new Date().toISOString(),
+        modelUsed: evaluation.modelUsed || currentModelUsed,
       };
       setOptimizationHistory(prev => [...prev, newIteration]);
 
@@ -108,10 +114,11 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     },
     onSuccess: async (data) => {
       setCurrentLatex(data.latex);
+      setCurrentModelUsed(data.modelUsed || "");
       setIterationCount(prev => prev + 1);
       toast({
         title: "Resume Optimized!",
-        description: "Re-evaluating improved resume...",
+        description: data.modelUsed ? `Using ${data.modelUsed} - Re-evaluating improved resume...` : "Re-evaluating improved resume...",
       });
       // Auto-evaluate the optimized resume
       await evaluateResume(data.latex, jobDescription);
@@ -324,12 +331,19 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
               </div>
 
               {/* Progress Info */}
-              <div className="text-center text-sm text-slate-600">
-                Iteration {iterationCount} of {maxIterations} maximum
-                {evaluationResult.score >= 90 && (
-                  <span className="text-green-600 font-semibold ml-2">
-                    ✓ Target score achieved!
-                  </span>
+              <div className="text-center text-sm text-slate-600 space-y-1">
+                <div>
+                  Iteration {iterationCount} of {maxIterations} maximum
+                  {evaluationResult.score >= 90 && (
+                    <span className="text-green-600 font-semibold ml-2">
+                      ✓ Target score achieved!
+                    </span>
+                  )}
+                </div>
+                {currentModelUsed && (
+                  <div className="text-xs text-slate-500">
+                    AI Model: <span className="font-mono font-semibold text-slate-700">{currentModelUsed}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -344,6 +358,11 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
             <DialogTitle>Generated Resume (Iteration {iterationCount})</DialogTitle>
             <DialogDescription>
               Score: {evaluationResult?.score}/100 - Your AI-tailored LaTeX resume
+              {currentModelUsed && (
+                <span className="block mt-1 text-xs text-slate-500">
+                  AI Model: <span className="font-mono font-semibold">{currentModelUsed}</span>
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -411,9 +430,15 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
                       <p className="text-sm text-slate-600 mb-2">
                         {iteration.evaluation.overallAssessment}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(iteration.timestamp).toLocaleString()}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span>{new Date(iteration.timestamp).toLocaleString()}</span>
+                        {iteration.modelUsed && (
+                          <>
+                            <span>•</span>
+                            <span>Model: <span className="font-mono font-semibold text-slate-700">{iteration.modelUsed}</span></span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button

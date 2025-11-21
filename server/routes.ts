@@ -26,16 +26,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     for (const model of models) {
       try {
-        console.log(`[${operation}] Attempting with model: ${model}`);
         const response = await genAI.models.generateContent({
           model: model,
           contents: prompt,
         });
         
-        console.log(`[${operation}] ✅ Successfully used model: ${model}`);
         return { text: response.text, modelUsed: model };
       } catch (error: any) {
-        console.warn(`[${operation}] ❌ Model ${model} failed:`, error.message);
+        // Only log warnings for failures (not the first attempt)
+        if (model !== models[0]) {
+          console.warn(`[${operation}] Model ${model} failed, trying next:`, error.message);
+        }
         lastError = error;
         
         // If it's an API key or quota error, don't try other models
