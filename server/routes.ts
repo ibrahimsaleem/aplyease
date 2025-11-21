@@ -8,6 +8,50 @@ import { ZodError } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Helper function for Gemini AI with model fallback
+  // Tries models in priority order: gemini-3-pro-preview > gemini-2.5-pro > gemini-2.5-flash > gemini-2.5-flash-lite
+  async function generateWithFallback(
+    genAI: any,
+    prompt: string,
+    operation: string = "generation"
+  ): Promise<{ text: string; modelUsed: string }> {
+    const models = [
+      "gemini-3-pro-preview",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite"
+    ];
+
+    let lastError: any = null;
+
+    for (const model of models) {
+      try {
+        console.log(`[${operation}] Attempting with model: ${model}`);
+        const response = await genAI.models.generateContent({
+          model: model,
+          contents: prompt,
+        });
+        
+        console.log(`[${operation}] ✅ Successfully used model: ${model}`);
+        return { text: response.text, modelUsed: model };
+      } catch (error: any) {
+        console.warn(`[${operation}] ❌ Model ${model} failed:`, error.message);
+        lastError = error;
+        
+        // If it's an API key or quota error, don't try other models
+        if (error.message?.includes('API key') || error.message?.includes('quota')) {
+          throw error;
+        }
+        
+        // Continue to next model
+        continue;
+      }
+    }
+
+    // If all models failed, throw the last error
+    throw lastError || new Error("All Gemini models failed");
+  }
+
   // Health check endpoint - doesn't require authentication
   app.get("/api/health", async (req, res) => {
     try {
@@ -354,18 +398,18 @@ ${jobDescription}
 
 Generate the tailored LaTeX resume:`;
 
-      // Generate content
-      const response = await genAI.models.generateContent({
-        model: "gemini-3-pro-preview",
-        contents: prompt,
-      });
+      // Generate content with model fallback
+      const { text, modelUsed } = await generateWithFallback(genAI, prompt, "resume-generation");
       
-      let generatedLatex = response.text;
+      let generatedLatex = text;
 
       // Clean up any markdown code blocks if present
       generatedLatex = generatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
 
-      res.json({ latex: generatedLatex });
+      res.json({ 
+        latex: generatedLatex,
+        modelUsed: modelUsed 
+      });
     } catch (error: any) {
       console.error("Error generating resume:", error);
       
@@ -442,13 +486,10 @@ ${latex}
 
 Provide your evaluation in valid JSON format only, no other text:`;
 
-      // Generate evaluation
-      const response = await genAI.models.generateContent({
-        model: "gemini-3-pro-preview",
-        contents: prompt,
-      });
+      // Generate evaluation with model fallback
+      const { text, modelUsed } = await generateWithFallback(genAI, prompt, "resume-evaluation");
       
-      let evaluationText = response.text.trim();
+      let evaluationText = text.trim();
 
       // Clean up any markdown code blocks if present
       evaluationText = evaluationText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -456,7 +497,10 @@ Provide your evaluation in valid JSON format only, no other text:`;
       // Parse JSON response
       const evaluation = JSON.parse(evaluationText);
 
-      res.json(evaluation);
+      res.json({
+        ...evaluation,
+        modelUsed: modelUsed
+      });
     } catch (error: any) {
       console.error("Error evaluating resume:", error);
       
@@ -545,18 +589,18 @@ ${latex}
 
 Return ONLY the optimized LaTeX code without explanations, comments, or markdown:`;
 
-      // Generate optimized resume
-      const response = await genAI.models.generateContent({
-        model: "gemini-3-pro-preview",
-        contents: prompt,
-      });
+      // Generate optimized resume with model fallback
+      const { text, modelUsed } = await generateWithFallback(genAI, prompt, "resume-optimization");
       
-      let optimizedLatex = response.text;
+      let optimizedLatex = text;
 
       // Clean up any markdown code blocks if present
       optimizedLatex = optimizedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
 
-      res.json({ latex: optimizedLatex });
+      res.json({ 
+        latex: optimizedLatex,
+        modelUsed: modelUsed 
+      });
     } catch (error: any) {
       console.error("Error optimizing resume:", error);
       
