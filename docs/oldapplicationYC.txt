@@ -1,0 +1,184 @@
+Y Combinator
+ibrahimsaleem9
+Log out
+chevron_left
+Back
+AplyEase
+Fall 2025
+Founders
+Mohammad Ibrahim Saleem
+how_to_reg
+Profile complete
+keyboard_arrow_down
+Who writes code, or does other technical work on your product? Was any of it done by a non-founder? Please explain.
+I am the sole technical founder, responsible for end-to-end development: AI Tool development, AI integration and management. No non-founder has contributed to the technical development.
+Are you looking for a cofounder?
+I am open to adding a co-founder with deep expertise in Applied AI, Finance, and sales, but I am fully committed to building AplyEase regardless of the co-founder's status.
+Founder Video
+Company
+Company name
+AplyEase
+Describe what your company does in 50 characters or less.
+We apply to jobs for you (AI + human)
+Company URL, if any
+https://aplyease.com
+Please provide a link to the product, if any.
+https://aplyeaseportal.web.app/
+admin@aplyease.com , Demo@123
+What is your company going to make? Please describe your product and what it does or will do.
+AplyEase is a career co-pilot that applies to jobs for you—accurately, fast, and with proof.
+We pair an AI document engine with a human application specialist. Candidates onboard with goals and constraints; for each role, our AI creates ATS-optimized résumés and cover letters from the job description and profile. A human then refines tone/relevance, submits manually (to avoid automation flags), and logs evidence (screenshots, timestamps). A live dashboard shows status, proof-of-work, and next actions; candidate feedback continuously improves targeting.
+
+What it does today
+
+Onboarding & approvals: Google Form for goals, role preferences, and sign-offs.
+
+AI tailoring engine: JD parsing, skills matching, résumé/cover letter generation (prototype: airesumemaker.onrender.com).
+
+Assistant console: QA checklist + real-time coordination via WhatsApp.
+
+Manual submission: Evidence capture and daily tracking.
+
+What’s next (roadmap)
+
+Full web & mobile app: Unified tracking, better dashboard, client visibility.
+
+Outcome-aware ranking: Prioritize roles with higher interview lift.
+
+Interview-prep handoff: Auto briefs and likely questions from JD/company signals.
+
+Integrations: Compliant ATS/job-board connectors; bulk/org portals for universities and agencies.
+
+Analytics: Funnel metrics, rejection-reason mining, and prompt tuning to raise pass-through.
+
+Talent marketplace: Train expert “appliers” on our tools; let busy candidates hire them on-demand.
+Where do you live now, and where would the company be based after YC?
+Houston, USA / Remote
+Explain your decision regarding location.
+Our business model is location-independent, allowing us to serve global clients while maintaining a central base in Houston. The remote-first approach enables us to access top talent nationwide and provide personalized job search services without geographical limitations.
+Progress
+How far along are you?
+We’ve built a fully functional platform with an AI resume generator, job matching engine, and a workflow that blends automation with human input.
+So far, we’ve helped 50+ professionals land jobs. We have 7 full-time application specialists, 1 manager, and have seen a ~70% success rate. Clients pay up front for one of our service packages. The product is live, generating revenue, and improving based on real-time user feedback.
+How long have each of you been working on this? How much of that has been full-time? Please explain.
+I’m the sole founder and have been building AplyEase part-time for ~7 months (typically 15–20 hrs/week) while pursuing my M.S. and working. None of this period has been full-time. During this time, I’ve focused on scaling the platform, refining the AI-human hybrid workflow, and expanding our user base. If admitted/funded, I’ll transition to full-time immediately to accelerate product development, user acquisition, and rapid iteration.
+What tech stack are you using, or planning to use, to build this product? Include AI models and AI coding tools you use.
+Frontend: HTML5, CSS3, JavaScript
+Backend: FastAPI (Python)
+AI Integration: Google Gemini API (gemini-2.0-flash); Any LLM
+AI Components: Custom job-matching agent (prompt-/tool-driven)
+AI Coding Tools: Cursor, GitHub Copilot
+Dev Environment: Cursor IDE, VS Code
+Version Control: Git (GitHub)
+Deployment: Render, Firebase
+Are people using your product?
+Yes
+How many active users or customers do you have? How many are paying? Who is paying you the most, and how much do they pay you?
+As of August 2, 2025: 10 active paying customers (active = purchased or used credits in the last 30 days); 48 total paying customers to date.
+Pricing: Per-application $0.50–$1.00; pilot bundles: 250 apps @ $125, 500 @ $299, 1,000 @ $599.
+Highest single purchase: $599 (1,000-application bundle).
+Renewals: Most customers repurchase once their credits are used; no subscriptions yet (usage-driven spend).
+Do you have revenue?
+yes
+Where does your revenue come from? If your revenue comes from multiple sources (e.g., multiple products, multiple companies or a mix of consulting and this product), please break down how much is coming from each source.
+~100% from paid pilot participants purchasing application bundles (per-application fees or pre-paid packages).
+Add-ons (<5% and not yet material): resume creation/review, job matching.
+Delivery model: All billable work performed by independent contractors (1 manager + 7 application specialists).
+I serve as an unpaid founder focused on AI tooling, website, and infrastructure.
+Anything else you would like us to know regarding your revenue or growth rate?
+I’ve taken no personal compensation to date. All billable work in the pilot was handled by contractors (1 manager + 7 specialists). I’m an unpaid founder focused on AI/tooling and will only perform compensated work after securing CPT/OPT.
+If you have already participated or committed to participate in an incubator, "accelerator" or "pre-accelerator" program, please tell us about it.
+No prior participation in incubator or accelerator programs. AplyEase has been bootstrapped and developed independently, focusing on organic growth and direct customer feedback. We are seeking Y Combinator's mentorship and ecosystem to accelerate our growth, scale it and refine our product-market fit.
+Idea
+Why did you pick this idea to work on? Do you have domain expertise in this area? How do you know people need what you're making?
+I’ve experienced firsthand how painful the job search process can be from sending hundreds of resumes to getting ghosted. I also helped friends navigate the same cycle. That frustration led me to build AplyEase.
+
+With a background in tech and product development, I saw a clear opportunity: people were using AI tools to save time, but still getting poor results. We researched the space, talked to job seekers, and built early prototypes. The feedback was clear: automation helped with speed, but what they really needed was smarter targeting and personal support.
+
+That’s why we combined AI with real human assistants. So far, we’ve served 50+ clients, with ~70% getting hired through our platform.
+Who are your competitors? What do you understand about your business that they don't?
+Our competitors fall into three buckets:
+1. Automated tools (e.g. UseMassive, Simplify.jobs): focus on scale, not quality
+2. Hybrid platforms (e.g. Scale.jobs, Resumas): similar model, but less differentiated
+3. Traditional recruiters: expensive, slow, and often focused on employer needs
+
+What we understand that others miss:
+
+- Mass applications don’t work. Relevance beats volume.
+- Job seekers want emotional support and real guidance, not just automation.
+- Features like visa support filtering, ATS-optimised resumes, and live WhatsApp access make a huge difference.
+- Our success rates (~70% job placement) speak for themselves.
+We’re building a “career wingman,” not just another tool.
+How do or will you make money? How much could you make?
+Current Revenue Model:
+- One-time service packages ($125–$599 for 250–1000 job applications)
+- Add-ons: Resume review, job matching, interview prep
+
+Projected Annual Revenue:
+Conservative: With ~300 monthly customers on the 500-app bundle, ~$90K/month (~$1.1M ARR).
+Aggressive: With ~1,000 monthly customers, ~$299K/month (~$3.6M ARR).
+
+Current gross margin ~50–65% before overhead; improves as automation increases.
+
+Future Streams:
+- B2B outplacement (companies pay for laid-off employees)
+- University and bootcamp partnerships
+- Job matching subscriptions and AI Job/resume tools
+
+Our margins are healthy, and our model is scalable with the right hiring and process systems in place.
+Which category best applies to your company?
+Recruiting
+If you had any other ideas you considered applying with, please list them. One may be something we've been waiting for. Often when we fund people it's to do something they list here and not in the main application.
+Pure auto-apply Agent: Fast/cheap at scale
+
+B2B Outplacement OS (schools/bootcamps/companies): Cohort job-matching + tracking; not chosen: long sales cycles; I’ll add later.
+
+Resume/Cover-Letter API (developer tool): Per-job tailoring via API; not chosen: commoditised without distribution.
+
+Skills: Offer Coach: Assessments, practice, interview prep; not chosen: content-heavy, slower to prove.
+
+AI-matched freelance gigs marketplace: First jobs via short gigs; not chosen: marketplace cold-start and trust issues.
+
+Warm-intro/referral router: Systematise intros to hiring managers; not chosen: trust/abuse and data-quality risks.
+Equity
+Have you formed ANY legal entity yet?
+no
+If you have not formed the company yet, describe the planned equity ownership breakdown among the founders, employees and any other proposed stockholders. If there are multiple founders, be sure to give the proposed equity ownership of each founder and founder title (e.g. CEO). (This question is as much for you as us.)
+Founder: Mohammad Ibrahim Saleem: 100% common, Founder & CEO (standard 4-year vesting with 1-year cliff, credit for ~7 months already worked).
+Employees/Option Pool: None at formation. Plan to create a 10–15% ESOP at first financing/hire.
+Advisors/Other stockholders: None planned pre-funding (may grant up to ~1% total from a future ESOP).
+Have you taken any investment yet?
+no
+Are you currently fundraising?
+no
+Curious
+What convinced you to apply to Y Combinator? Did someone encourage you to apply? Have you been to any YC events?
+- Access to mentorship and the startup ecosystem
+- Potential for strategic guidance
+- Network of experienced founders and investors
+- Accelerate product development and market entry
+- Validate business model and Scale strategy
+Encouragement:
+- Recommended by a previous YC founder
+- YouTube Videos of YC and other founder stories
+- Attended YC startup events and webinars
+- Deeply aligned with YC's mission of supporting transformative technology startups
+How did you hear about Y Combinator?
+Hacker News, YouTube, LinkedIn, YC Blog, YC Founders, and Startup School events.
+format_list_bulletedContents
+Founders
+Founder Video
+Company
+Progress
+Idea
+Equity
+Curious
+Batch Preference
+Y Combinator
+About
+People
+Blog
+Resources
+Legal
+Notice at Collection
+Contact

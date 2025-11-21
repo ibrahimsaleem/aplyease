@@ -356,7 +356,7 @@ Generate the tailored LaTeX resume:`;
 
       // Generate content
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-pro-preview",
         contents: prompt,
       });
       
@@ -444,7 +444,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
 
       // Generate evaluation
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-pro-preview",
         contents: prompt,
       });
       
@@ -547,7 +547,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
 
       // Generate optimized resume
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-pro-preview",
         contents: prompt,
       });
       
