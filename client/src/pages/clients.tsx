@@ -155,6 +155,7 @@ export default function Clients() {
                       <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Desired Titles</TableHead>
+                      <TableHead>Total Apps</TableHead>
                       <TableHead>Apps Remaining</TableHead>
                       <TableHead>Profile Status</TableHead>
                       <TableHead>Actions</TableHead>
