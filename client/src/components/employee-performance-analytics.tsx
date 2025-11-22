@@ -1,17 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, BarChart, Bar } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Users, Target, Calendar, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Clock, BarChart3 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { EmployeePerformanceAnalytics } from "@/types";
+import type { EmployeePerformanceAnalytics, DailyEmployeeAnalytics } from "@/types";
 
 export function EmployeePerformanceAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<EmployeePerformanceAnalytics>({
     queryKey: ["/api/analytics/employee-performance"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/analytics/employee-performance");
+      return res.json();
+    },
+  });
+
+  const { data: dailyAnalytics } = useQuery<DailyEmployeeAnalytics>({
+    queryKey: ["/api/analytics/daily-employee-applications"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/daily-employee-applications");
       return res.json();
     },
   });
@@ -41,14 +49,6 @@ export function EmployeePerformanceAnalytics() {
   if (!analytics) {
     return null;
   }
-
-  // Prepare data for the bar chart
-  const chartData = analytics.employees.map(employee => ({
-    name: employee.name,
-    applications: employee.applicationsSubmitted,
-    successRate: employee.successRate,
-    earnings: employee.earnings,
-  }));
 
   return (
     <div className="space-y-6">
@@ -139,70 +139,48 @@ export function EmployeePerformanceAnalytics() {
         </Card>
       </div>
 
-      {/* Performance Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Applications Submitted Chart */}
+      {/* Recent Activity Chart (Last 3 vs 7 Days) */}
+      {dailyAnalytics && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              Applications Submitted
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+              Recent Activity (Last 3 vs 7 Days)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
+              <BarChart data={dailyAnalytics.employees}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
+                <XAxis
+                  dataKey="name"
                   fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
                 />
                 <YAxis />
-                <Tooltip 
-                  formatter={(value: number) => [value, "Applications"]}
-                  labelFormatter={(label) => `Employee: ${label}`}
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Bar dataKey="applications" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Legend />
+                <Bar
+                  dataKey="applicationsLast3Days"
+                  name="Last 3 Days"
+                  fill="#6366f1"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="applicationsLast7Days"
+                  name="Last 7 Days"
+                  fill="#a855f7"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Success Rate Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-green-600" />
-              Success Rate (Interviews/Total)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  fontSize={12}
-                />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value: number) => [`${value}%`, "Success Rate"]}
-                  labelFormatter={(label) => `Employee: ${label}`}
-                />
-                <Bar dataKey="successRate" fill="#10b981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Weekly Performance Chart removed for performance */}
+      )}
 
       {/* Daily Performance Chart */}
       <Card>
@@ -216,8 +194,8 @@ export function EmployeePerformanceAnalytics() {
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={analytics.dailyPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 fontSize={10}
                 angle={-45}
                 textAnchor="end"
@@ -228,68 +206,38 @@ export function EmployeePerformanceAnalytics() {
                 }}
               />
               <YAxis />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number, name: string) => [
-                  value, 
+                  value,
                   name === "applications" ? "Applications" : "Active Employees"
                 ]}
                 labelFormatter={(label) => {
                   const date = new Date(label);
-                  return date.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
+                  return date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
                   });
                 }}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="applications" 
-                stroke="#3b82f6" 
+              <Line
+                type="monotone"
+                dataKey="applications"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 name="Applications"
                 dot={{ fill: "#3b82f6", strokeWidth: 1, r: 2 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="employees" 
-                stroke="#10b981" 
+              <Line
+                type="monotone"
+                dataKey="employees"
+                stroke="#10b981"
                 strokeWidth={2}
                 name="Active Employees"
                 dot={{ fill: "#10b981", strokeWidth: 1, r: 2 }}
               />
             </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Earnings Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
-            Earnings Generated ($0.20 per application when meeting daily target)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                fontSize={12}
-              />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number) => [`$${value.toFixed(2)}`, "Earnings"]}
-                labelFormatter={(label) => `Employee: ${label}`}
-              />
-              <Bar dataKey="earnings" fill="#059669" radius={[4, 4, 0, 0]} />
-            </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
@@ -314,12 +262,12 @@ export function EmployeePerformanceAnalytics() {
             <TableBody>
               {analytics.employees.map((employee) => {
                 const performanceLevel = employee.successRate >= 20 ? "Excellent" :
-                                        employee.successRate >= 15 ? "Good" :
-                                        employee.successRate >= 10 ? "Average" : "Needs Improvement";
-                
+                  employee.successRate >= 15 ? "Good" :
+                    employee.successRate >= 10 ? "Average" : "Needs Improvement";
+
                 const performanceColor = employee.successRate >= 20 ? "bg-green-100 text-green-800" :
-                                        employee.successRate >= 15 ? "bg-blue-100 text-blue-800" :
-                                        employee.successRate >= 10 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800";
+                  employee.successRate >= 15 ? "bg-blue-100 text-blue-800" :
+                    employee.successRate >= 10 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800";
 
                 return (
                   <TableRow key={employee.id}>
@@ -346,8 +294,6 @@ export function EmployeePerformanceAnalytics() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Daily Employee Application Analytics removed (redundant) */}
     </div>
   );
 }

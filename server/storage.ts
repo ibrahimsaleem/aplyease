@@ -20,9 +20,9 @@ async function retryOperation<T>(
     } catch (error: any) {
       console.error(`Database operation failed (attempt ${attempt}/${attempts}):`, error);
       console.error('Error code:', error.code, 'Message:', error.message);
-      
+
       // Check if it's a connection error that we should retry
-      const isConnectionError = 
+      const isConnectionError =
         error.message?.includes('Connection terminated unexpectedly') ||
         error.message?.includes('connection') ||
         error.message?.includes('ECONNREFUSED') ||
@@ -31,19 +31,19 @@ async function retryOperation<T>(
         error.code === 'ENOTFOUND' ||
         error.code === 'ETIMEDOUT' ||
         error.code === 'ECONNABORTED';
-      
+
       if (isConnectionError) {
         if (attempt === attempts) {
           throw new Error(`Database operation failed after ${attempts} attempts: ${error.message}`);
         }
-        
+
         // Wait before retrying with exponential backoff: 1s, 2s, 4s, 8s, 16s
         const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
         console.log(`Connection error detected. Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
-      
+
       // For non-connection errors, don't retry
       throw error;
     }
@@ -200,10 +200,10 @@ export class DatabaseStorage implements IStorage {
         } as any)
         .where(eq(users.id, id))
         .returning();
-      
+
       // Invalidate cache after update
       cache.delete(`user:${id}`);
-      
+
       return user;
     });
   }
@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
         .update(users)
         .set({ isActive: false, updatedAt: new Date() } as any)
         .where(eq(users.id, id));
-      
+
       // Invalidate cache after update
       cache.delete(`user:${id}`);
     });
@@ -226,7 +226,7 @@ export class DatabaseStorage implements IStorage {
         .update(users)
         .set({ isActive: true, updatedAt: new Date() } as any)
         .where(eq(users.id, id));
-      
+
       // Invalidate cache after update
       cache.delete(`user:${id}`);
     });
@@ -234,7 +234,7 @@ export class DatabaseStorage implements IStorage {
 
   async listUsers(filters?: { role?: string; search?: string }): Promise<User[]> {
     const conditions: SQL[] = [];
-    
+
     if (filters?.role) {
       conditions.push(eq(users.role, filters.role as any));
     }
@@ -336,7 +336,7 @@ export class DatabaseStorage implements IStorage {
     await retryOperation(async () => {
       // First, get the application to find the client
       const [application] = await db.select().from(jobApplications).where(eq(jobApplications.id, id));
-      
+
       if (!application) {
         throw new Error('Application not found');
       }
@@ -373,7 +373,7 @@ export class DatabaseStorage implements IStorage {
 
     const clientUsers = alias(users, 'client_users');
     const employeeUsers = alias(users, 'employee_users');
-    
+
     return retryOperation(async () => {
       const baseQuery = db
         .select({
@@ -420,7 +420,7 @@ export class DatabaseStorage implements IStorage {
       // Build the final query
       const finalQuery = baseQuery
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(filters?.sortOrder === "asc" 
+        .orderBy(filters?.sortOrder === "asc"
           ? asc(filters?.sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt)
           : desc(filters?.sortBy === "dateApplied" ? jobApplications.dateApplied : jobApplications.createdAt)
         );
@@ -432,14 +432,14 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
         .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined);
-      
+
       const [{ count: total }] = await countQuery;
 
       // Get paginated results
       const results = await finalQuery.limit(limit).offset(offset);
 
       const applications: JobApplicationWithUsers[] = results
-        .filter((result): result is typeof result & { client: User; employee: User } => 
+        .filter((result): result is typeof result & { client: User; employee: User } =>
           result.client !== null && result.employee !== null
         )
         .map(result => ({
@@ -460,7 +460,7 @@ export class DatabaseStorage implements IStorage {
   }> {
     return retryOperation(async () => {
       const [totalApps] = await db.select({ count: count() }).from(jobApplications);
-      
+
       const [activeEmps] = await db
         .select({ count: count() })
         .from(users)
@@ -641,7 +641,7 @@ export class DatabaseStorage implements IStorage {
 
           // Calculate success rate (interviews/total)
           const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
-          
+
           // Calculate earnings ($0.20 per application)
           const earnings = totalApps.count * 0.2;
 
@@ -665,7 +665,7 @@ export class DatabaseStorage implements IStorage {
 
       // Calculate weekly performance (last 8 weeks)
       const weeklyPerformance = await this.getWeeklyPerformance();
-      
+
       // Calculate daily performance (last 30 days)
       const dailyPerformance = await this.getDailyPerformance();
 
@@ -753,11 +753,11 @@ export class DatabaseStorage implements IStorage {
 
           // Calculate success rate (hired/total)
           const successRate = totalApps.count > 0 ? (hired.count / totalApps.count) * 100 : 0;
-          
+
           // Determine priority based on applications remaining and activity
           let priority: "High" | "Medium" | "Low";
           const appsRemaining = (client as any).applicationsRemaining ?? 0;
-          
+
           if (appsRemaining <= 2 || (totalApps.count === 0 && appsRemaining <= 5)) {
             priority = "High";
           } else if (appsRemaining <= 5 || totalApps.count === 0) {
@@ -834,13 +834,13 @@ export class DatabaseStorage implements IStorage {
       // Calculate date ranges
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       const threeDaysAgo = new Date(today);
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      
+
       const sevenDaysAgo = new Date(today);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -910,7 +910,7 @@ export class DatabaseStorage implements IStorage {
 
           // Calculate success rate (interviews/total)
           const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
-          
+
           // Calculate earnings ($0.20 per application)
           const earnings = totalApps.count * 0.2;
 
@@ -956,13 +956,13 @@ export class DatabaseStorage implements IStorage {
   }>> {
     return retryOperation(async () => {
       const weeks: Array<{ week: string; applications: number; employees: number }> = [];
-      
+
       // Get data for last 8 weeks
       for (let i = 7; i >= 0; i--) {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - (i * 7));
         startDate.setHours(0, 0, 0, 0);
-        
+
         const endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
@@ -988,7 +988,7 @@ export class DatabaseStorage implements IStorage {
               lt(jobApplications.dateApplied, endDate.toISOString().split('T')[0])
             )
           );
-        
+
         // Count unique employee IDs
         const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
 
@@ -1011,7 +1011,7 @@ export class DatabaseStorage implements IStorage {
   }>> {
     return retryOperation(async () => {
       const days: Array<{ date: string; applications: number; employees: number }> = [];
-      
+
       // Get data for last 30 days
       for (let i = 29; i >= 0; i--) {
         const targetDate = new Date();
@@ -1029,7 +1029,7 @@ export class DatabaseStorage implements IStorage {
           .select({ employeeId: jobApplications.employeeId })
           .from(jobApplications)
           .where(eq(jobApplications.dateApplied, dateString));
-        
+
         // Count unique employee IDs
         const uniqueEmployeeIds = new Set(uniqueEmployees.map(emp => emp.employeeId));
 
@@ -1061,7 +1061,7 @@ export class DatabaseStorage implements IStorage {
         const targetMonth = month ? parseInt(month) - 1 : now.getMonth(); // month is 0-indexed
         const startOfMonth = new Date(targetYear, targetMonth, 1);
         const endOfMonth = new Date(targetYear, targetMonth + 1, 0);
-        
+
         const startDate = startOfMonth.toISOString().split('T')[0];
         const endDate = endOfMonth.toISOString().split('T')[0];
 
@@ -1079,63 +1079,63 @@ export class DatabaseStorage implements IStorage {
 
         console.log(`Found ${allEmployees.length} employees`);
 
-      // Get rates from environment variables
-      const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
-      const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
-      const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
-      const monthlyTarget = dailyTarget * 30; // Approximate monthly target
+        // Get rates from environment variables
+        const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
+        const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
+        const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
+        const monthlyTarget = dailyTarget * 30; // Approximate monthly target
 
-      // Calculate daily payouts for each employee this month
-      const employeeStats = await Promise.all(
-        allEmployees.map(async (employee) => {
-          let totalApplications = 0;
-          let totalPayout = 0;
-          let daysMetTarget = 0;
+        // Calculate daily payouts for each employee this month
+        const employeeStats = await Promise.all(
+          allEmployees.map(async (employee) => {
+            let totalApplications = 0;
+            let totalPayout = 0;
+            let daysMetTarget = 0;
 
-          // Get all days in the month and calculate daily payouts
-          for (let day = 1; day <= endOfMonth.getDate(); day++) {
-            const currentDate = new Date(targetYear, targetMonth, day);
-            const dateString = currentDate.toISOString().split('T')[0];
+            // Get all days in the month and calculate daily payouts
+            for (let day = 1; day <= endOfMonth.getDate(); day++) {
+              const currentDate = new Date(targetYear, targetMonth, day);
+              const dateString = currentDate.toISOString().split('T')[0];
 
-            // Get applications for this specific day
-            const [dailyApplicationCount] = await db
-              .select({ count: count() })
-              .from(jobApplications)
-              .where(
-                and(
-                  eq(jobApplications.employeeId, employee.id),
-                  eq(jobApplications.dateApplied, dateString)
-                )
-              );
+              // Get applications for this specific day
+              const [dailyApplicationCount] = await db
+                .select({ count: count() })
+                .from(jobApplications)
+                .where(
+                  and(
+                    eq(jobApplications.employeeId, employee.id),
+                    eq(jobApplications.dateApplied, dateString)
+                  )
+                );
 
-            const dailyApplications = dailyApplicationCount.count;
-            totalApplications += dailyApplications;
+              const dailyApplications = dailyApplicationCount.count;
+              totalApplications += dailyApplications;
 
-            // Calculate daily payout based on daily target
-            // If employee applied >= 15 applications on this day: $0.20 per application
-            // If employee applied < 15 applications on this day: $0.15 per application
-            const dailyMetTarget = dailyApplications >= dailyTarget;
-            if (dailyMetTarget) daysMetTarget++;
-            
-            const dailyRate = dailyMetTarget ? baseRate : belowTargetRate;
-            const dailyPayout = dailyApplications * dailyRate;
-            totalPayout += dailyPayout;
-          }
+              // Calculate daily payout based on daily target
+              // If employee applied >= 15 applications on this day: $0.20 per application
+              // If employee applied < 15 applications on this day: $0.15 per application
+              const dailyMetTarget = dailyApplications >= dailyTarget;
+              if (dailyMetTarget) daysMetTarget++;
 
-          const isAboveTarget = daysMetTarget > (endOfMonth.getDate() / 2); // More than half the days met target
+              const dailyRate = dailyMetTarget ? baseRate : belowTargetRate;
+              const dailyPayout = dailyApplications * dailyRate;
+              totalPayout += dailyPayout;
+            }
 
-          return {
-            employeeId: employee.id,
-            employeeName: employee.name,
-            applicationsThisMonth: totalApplications,
-            totalPayout,
-            baseRate,
-            belowTargetRate,
-            dailyTarget,
-            isAboveTarget
-          };
-        })
-      );
+            const isAboveTarget = daysMetTarget > (endOfMonth.getDate() / 2); // More than half the days met target
+
+            return {
+              employeeId: employee.id,
+              employeeName: employee.name,
+              applicationsThisMonth: totalApplications,
+              totalPayout,
+              baseRate,
+              belowTargetRate,
+              dailyTarget,
+              isAboveTarget
+            };
+          })
+        );
 
         return employeeStats;
       } catch (error) {
@@ -1176,7 +1176,7 @@ export class DatabaseStorage implements IStorage {
         const targetMonth = month ? parseInt(month) - 1 : now.getMonth(); // month is 0-indexed
         const startOfMonth = new Date(targetYear, targetMonth, 1);
         const endOfMonth = new Date(targetYear, targetMonth + 1, 0);
-        
+
         const startDate = startOfMonth.toISOString().split('T')[0];
         const endDate = endOfMonth.toISOString().split('T')[0];
 
@@ -1288,21 +1288,21 @@ export class DatabaseStorage implements IStorage {
       const dataToStore = {
         ...profileData,
         userId,
-        servicesRequested: Array.isArray(profileData.servicesRequested) 
-          ? JSON.stringify(profileData.servicesRequested) 
+        servicesRequested: Array.isArray(profileData.servicesRequested)
+          ? JSON.stringify(profileData.servicesRequested)
           : profileData.servicesRequested || '[]',
-        searchScope: Array.isArray(profileData.searchScope) 
-          ? JSON.stringify(profileData.searchScope) 
+        searchScope: Array.isArray(profileData.searchScope)
+          ? JSON.stringify(profileData.searchScope)
           : profileData.searchScope || '[]',
-        states: Array.isArray(profileData.states) 
-          ? JSON.stringify(profileData.states) 
+        states: Array.isArray(profileData.states)
+          ? JSON.stringify(profileData.states)
           : profileData.states || '[]',
-        cities: Array.isArray(profileData.cities) 
-          ? JSON.stringify(profileData.cities) 
+        cities: Array.isArray(profileData.cities)
+          ? JSON.stringify(profileData.cities)
           : profileData.cities || '[]',
         // Handle empty string dates - convert to null for PostgreSQL
-        startDate: profileData.startDate && profileData.startDate.trim() !== '' 
-          ? profileData.startDate 
+        startDate: profileData.startDate && profileData.startDate.trim() !== ''
+          ? profileData.startDate
           : null,
       };
 

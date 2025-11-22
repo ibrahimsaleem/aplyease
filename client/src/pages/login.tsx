@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLogin } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
+import { Link } from "wouter";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -62,9 +63,11 @@ export default function LoginPage() {
       <div className="max-w-md w-full mx-4">
         {/* Logo and Branding */}
         <div className="text-center mb-8">
-          <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Briefcase className="w-8 h-8" />
-          </div>
+          <Link href="/">
+            <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+              <Briefcase className="w-8 h-8" />
+            </div>
+          </Link>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">AplyEase Portal</h1>
           <p className="text-slate-600">Job Application Tracking System</p>
         </div>
@@ -162,6 +165,13 @@ export default function LoginPage() {
                 >
                   {login.isPending ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <div className="text-center text-sm text-slate-600">
+                  Don't have an account?{" "}
+                  <Link href="/signup" className="text-primary hover:underline font-medium">
+                    Sign up
+                  </Link>
+                </div>
               </form>
             </Form>
           </CardContent>

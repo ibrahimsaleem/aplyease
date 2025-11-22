@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Users, Target, TrendingUp, FileText, AlertCircle } from "lucide-react";
+import { AlertTriangle, Users, Target, FileText, BarChart3 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { ClientPerformanceAnalytics } from "@/types";
 
@@ -42,27 +42,16 @@ export function ClientPerformanceAnalytics() {
     return null;
   }
 
-  // Prepare data for charts
-  const chartData = analytics.clients.map(client => ({
-    name: client.name,
-    applicationsRemaining: client.applicationsRemaining,
-    totalApplications: client.totalApplications,
-    successRate: client.successRate,
-  }));
-
-  // Priority distribution for pie chart
-  const priorityData = [
-    { name: "High Priority", value: analytics.clients.filter(c => c.priority === "High").length, color: "#ef4444" },
-    { name: "Medium Priority", value: analytics.clients.filter(c => c.priority === "Medium").length, color: "#f59e0b" },
-    { name: "Low Priority", value: analytics.clients.filter(c => c.priority === "Low").length, color: "#10b981" },
-  ];
-
   // Calculate summary stats
   const highPriorityClients = analytics.clients.filter(c => c.priority === "High");
   const totalApplicationsRemaining = analytics.clients.reduce((sum, client) => sum + client.applicationsRemaining, 0);
-  const averageSuccessRate = analytics.clients.length > 0 
-    ? analytics.clients.reduce((sum, client) => sum + client.successRate, 0) / analytics.clients.length 
+  const averageSuccessRate = analytics.clients.length > 0
+    ? analytics.clients.reduce((sum, client) => sum + client.successRate, 0) / analytics.clients.length
     : 0;
+
+  // Prepare chart data: Sort by applications remaining (descending)
+  const chartData = [...analytics.clients]
+    .sort((a, b) => b.applicationsRemaining - a.applicationsRemaining);
 
   return (
     <div className="space-y-6">
@@ -145,125 +134,37 @@ export function ClientPerformanceAnalytics() {
         </Card>
       </div>
 
-      {/* Priority Distribution Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-600" />
-            Client Priority Distribution
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={priorityData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {priorityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-2">Priority Criteria</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span><strong>High:</strong> ≤2 applications left OR no activity + ≤5 left</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                    <span><strong>Medium:</strong> ≤5 applications left OR no activity</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span><strong>Low:</strong> &gt;5 applications left with activity</span>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-                  <div>
-                    <h5 className="font-semibold text-amber-800">Focus Areas</h5>
-                    <p className="text-sm text-amber-700 mt-1">
-                      Prioritize clients with low applications remaining or no recent activity. 
-                      Consider reaching out to high-priority clients to discuss renewal options.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Applications Remaining Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
+            <BarChart3 className="w-5 h-5 text-blue-600" />
             Applications Remaining by Client
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={100}
-                fontSize={12}
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+              <XAxis type="number" />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={120}
+                tick={{ fontSize: 12 }}
               />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number) => [value, "Applications"]}
-                labelFormatter={(label) => `Client: ${label}`}
+              <Tooltip
+                cursor={{ fill: 'transparent' }}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
               />
-              <Bar dataKey="applicationsRemaining" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Success Rate Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-green-600" />
-            Success Rate by Client
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={100}
-                fontSize={12}
+              <Legend />
+              <Bar
+                dataKey="applicationsRemaining"
+                name="Applications Remaining"
+                fill="#3b82f6"
+                radius={[0, 4, 4, 0]}
+                barSize={20}
               />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number) => [`${value}%`, "Success Rate"]}
-                labelFormatter={(label) => `Client: ${label}`}
-              />
-              <Bar dataKey="successRate" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -292,18 +193,17 @@ export function ClientPerformanceAnalytics() {
             <TableBody>
               {analytics.clients.map((client) => {
                 const priorityColor = client.priority === "High" ? "bg-red-100 text-red-800" :
-                                    client.priority === "Medium" ? "bg-amber-100 text-amber-800" : 
-                                    "bg-green-100 text-green-800";
+                  client.priority === "Medium" ? "bg-amber-100 text-amber-800" :
+                    "bg-green-100 text-green-800";
 
                 return (
                   <TableRow key={client.id} className={client.priority === "High" ? "bg-red-50" : ""}>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>{client.company || "-"}</TableCell>
                     <TableCell className="text-center">
-                      <span className={`font-semibold ${
-                        client.applicationsRemaining <= 2 ? "text-red-600" :
+                      <span className={`font-semibold ${client.applicationsRemaining <= 2 ? "text-red-600" :
                         client.applicationsRemaining <= 5 ? "text-amber-600" : "text-green-600"
-                      }`}>
+                        }`}>
                         {client.applicationsRemaining}
                       </span>
                     </TableCell>

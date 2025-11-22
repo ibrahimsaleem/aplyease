@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dbHealthy = await storage.getUser("health-check-test")
         .then(() => true)
         .catch(() => false);
-      
+
       const health = {
         status: dbHealthy ? "healthy" : "degraded",
         timestamp: new Date().toISOString(),
@@ -27,7 +27,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unit: "MB"
         }
       };
-      
+
       const statusCode = dbHealthy ? 200 : 503;
       res.status(statusCode).json(health);
     } catch (error) {
@@ -57,12 +57,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (authError: any) {
         // Handle database connection errors during authentication
         console.error("Database error during authentication:", authError);
-        return res.status(503).json({ 
+        return res.status(503).json({
           message: "Database temporarily unavailable. Please try again in a moment.",
           retryAfter: 30
         });
       }
-      
+
       if (!user) {
         console.log("Authentication failed for:", email);
         return res.status(401).json({ message: "Invalid credentials" });
@@ -76,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // JWT is the primary authentication method, session is optional
       console.log("Attempting to save session for user:", email);
       req.session.user = user;
-      
+
       try {
         await new Promise<void>((resolve, reject) => {
           req.session.save((err) => {
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof Error) {
         console.error("Error details:", error.message, error.stack);
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Internal server error",
         details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
       });
@@ -118,13 +118,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.session.destroy((err) => {
       // Always clear the cookie, even if session destruction fails
       res.clearCookie("connect.sid");
-      
+
       if (err) {
         // Log error but still return success to prevent users from being stuck
         console.warn("Session destruction error during logout:", err);
         return res.status(200).json({ message: "Logged out successfully" });
       }
-      
+
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
@@ -135,13 +135,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!sessionUser) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       // Fetch fresh user data from database to get latest fields like geminiApiKey
       const freshUser = await storage.getUser(sessionUser.id);
       if (!freshUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       res.json({ user: freshUser });
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -182,20 +182,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userData = updateUserSchema.parse(req.body);
-      
+
       // If password is provided, hash it before updating
       const updateData: any = { ...userData };
       if (updateData.password) {
         updateData.passwordHash = await hashPassword(updateData.password);
         delete updateData.password; // Remove plain password
       }
-      
+
       const user = await storage.updateUser(id, updateData);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       res.json(user);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -359,7 +359,7 @@ Generate the tailored LaTeX resume:`;
         model: "gemini-2.5-flash",
         contents: prompt,
       });
-      
+
       let generatedLatex = response.text;
 
       // Clean up any markdown code blocks if present
@@ -368,7 +368,7 @@ Generate the tailored LaTeX resume:`;
       res.json({ latex: generatedLatex });
     } catch (error: any) {
       console.error("Error generating resume:", error);
-      
+
       // Handle specific Gemini API errors
       if (error.message?.includes('API key')) {
         return res.status(400).json({ message: "Invalid Gemini API key" });
@@ -376,10 +376,10 @@ Generate the tailored LaTeX resume:`;
       if (error.message?.includes('quota')) {
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
       }
-      
-      res.status(500).json({ 
-        message: "Failed to generate resume", 
-        details: error.message || "Unknown error" 
+
+      res.status(500).json({
+        message: "Failed to generate resume",
+        details: error.message || "Unknown error"
       });
     }
   });
@@ -447,7 +447,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
         model: "gemini-2.5-flash",
         contents: prompt,
       });
-      
+
       let evaluationText = response.text.trim();
 
       // Clean up any markdown code blocks if present
@@ -459,7 +459,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
       res.json(evaluation);
     } catch (error: any) {
       console.error("Error evaluating resume:", error);
-      
+
       // Handle specific Gemini API errors
       if (error.message?.includes('API key')) {
         return res.status(400).json({ message: "Invalid Gemini API key" });
@@ -468,15 +468,15 @@ Provide your evaluation in valid JSON format only, no other text:`;
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
       }
       if (error instanceof SyntaxError) {
-        return res.status(500).json({ 
-          message: "Failed to parse evaluation response", 
-          details: "AI returned invalid JSON format" 
+        return res.status(500).json({
+          message: "Failed to parse evaluation response",
+          details: "AI returned invalid JSON format"
         });
       }
-      
-      res.status(500).json({ 
-        message: "Failed to evaluate resume", 
-        details: error.message || "Unknown error" 
+
+      res.status(500).json({
+        message: "Failed to evaluate resume",
+        details: error.message || "Unknown error"
       });
     }
   });
@@ -550,7 +550,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
         model: "gemini-2.5-flash",
         contents: prompt,
       });
-      
+
       let optimizedLatex = response.text;
 
       // Clean up any markdown code blocks if present
@@ -559,7 +559,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       res.json({ latex: optimizedLatex });
     } catch (error: any) {
       console.error("Error optimizing resume:", error);
-      
+
       // Handle specific Gemini API errors
       if (error.message?.includes('API key')) {
         return res.status(400).json({ message: "Invalid Gemini API key" });
@@ -567,10 +567,10 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       if (error.message?.includes('quota')) {
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
       }
-      
-      res.status(500).json({ 
-        message: "Failed to optimize resume", 
-        details: error.message || "Unknown error" 
+
+      res.status(500).json({
+        message: "Failed to optimize resume",
+        details: error.message || "Unknown error"
       });
     }
   });
@@ -632,7 +632,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
 
       // Set appliedByName and employeeId based on user role
       let finalApplicationData: any = { ...applicationData };
-      
+
       if (user.role === "EMPLOYEE") {
         finalApplicationData.employeeId = user.id;
         finalApplicationData.appliedByName = user.name;
@@ -726,7 +726,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
     try {
       const { id } = req.params;
       const user = (req.user ?? req.session.user)!;
-      
+
       // Get the application to check permissions
       const application = await storage.getJobApplication(id);
       if (!application) {
@@ -734,7 +734,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       }
 
       // Check if user can delete this application
-      const canDelete = 
+      const canDelete =
         user.role === "ADMIN" ||
         (user.role === "CLIENT" && application.clientId === user.id);
 
@@ -771,7 +771,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       }
 
       // Check if user can delete all applications
-      const canDeleteAll = applications.every(application => 
+      const canDeleteAll = applications.every(application =>
         user.role === "ADMIN" ||
         (user.role === "CLIENT" && application.clientId === user.id)
       );
@@ -983,12 +983,12 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       const { employeeId } = req.params;
       const month = req.query.month as string;
       const year = req.query.year as string;
-      
+
       // Check if user is admin or the employee themselves
       if (req.user?.role !== "ADMIN" && req.user?.id !== employeeId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const analytics = await storage.getEmployeeDailyPayoutBreakdown(employeeId, month, year);
       res.json(analytics);
     } catch (error) {
