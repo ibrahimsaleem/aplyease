@@ -91,17 +91,30 @@ export default function LandingPage() {
                 Contact
               </a>
               <Link href="/login">
-                <Button variant="ghost">Login</Button>
+                <Button>Login</Button>
               </Link>
               <Link href="/signup">
-                <Button>Get Started</Button>
+                <Button variant="outline">Get Started</Button>
               </Link>
             </nav>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Login Button - Always visible */}
+            <div className="md:hidden flex items-center gap-2">
+              <Link href="/login">
+                <Button size="sm">Login</Button>
+              </Link>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 text-slate-600"
+              >
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
+
+            {/* Desktop Menu Button (hidden, kept for consistency) */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 text-slate-600"
+              className="hidden p-2 text-slate-600"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -121,10 +134,10 @@ export default function LandingPage() {
               </a>
               <div className="pt-4 flex flex-col gap-2">
                 <Link href="/login">
-                  <Button variant="outline" className="w-full">Login</Button>
+                  <Button className="w-full">Login</Button>
                 </Link>
                 <Link href="/signup">
-                  <Button className="w-full">Get Started</Button>
+                  <Button variant="outline" className="w-full">Get Started</Button>
                 </Link>
               </div>
             </div>
