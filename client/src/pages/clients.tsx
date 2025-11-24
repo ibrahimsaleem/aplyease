@@ -90,14 +90,15 @@ export default function Clients() {
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
         <Button 
           variant="ghost" 
-          className="mb-4"
+          className="mb-4 min-h-[44px]"
           onClick={() => setLocation("/")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
+          <span className="hidden sm:inline">Back to Dashboard</span>
+          <span className="sm:hidden">Back</span>
         </Button>
 
         <Card>
@@ -145,67 +146,108 @@ export default function Clients() {
               </div>
             )}
 
-            {/* Clients Table */}
+            {/* Clients Table - Desktop */}
             {!profilesLoading && filteredClients.length > 0 && (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Desired Titles</TableHead>
-                      <TableHead>Apps Remaining</TableHead>
-                      <TableHead>Profile Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClients.map((client) => (
-                      <TableRow 
-                        key={client.userId}
-                        className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => setLocation(`/clients/${client.userId}`)}
-                      >
-                        <TableCell className="font-medium">{client.fullName}</TableCell>
-                        <TableCell className="text-slate-600">
-                          {client.user?.email}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {client.phoneNumber || "-"}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate text-slate-600">
-                          {client.desiredTitles || "-"}
-                        </TableCell>
-                        <TableCell>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Desired Titles</TableHead>
+                        <TableHead>Apps Remaining</TableHead>
+                        <TableHead>Profile Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClients.map((client) => (
+                        <TableRow 
+                          key={client.userId}
+                          className="cursor-pointer hover:bg-slate-50"
+                          onClick={() => setLocation(`/clients/${client.userId}`)}
+                        >
+                          <TableCell className="font-medium">{client.fullName}</TableCell>
+                          <TableCell className="text-slate-600">
+                            {client.user?.email}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {client.phoneNumber || "-"}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-slate-600">
+                            {client.desiredTitles || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={client.applicationsRemaining > 0 ? "default" : "secondary"}>
+                              {client.applicationsRemaining}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {client.phoneNumber ? (
+                              <Badge variant="default" className="bg-green-600">Complete</Badge>
+                            ) : (
+                              <Badge variant="secondary">Incomplete</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/clients/${client.userId}`);
+                              }}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card List */}
+                <div className="md:hidden space-y-3">
+                  {filteredClients.map((client) => (
+                    <div
+                      key={client.userId}
+                      onClick={() => setLocation(`/clients/${client.userId}`)}
+                      className="bg-white border border-slate-200 rounded-lg p-4 active:bg-slate-50 cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 truncate">{client.fullName}</h3>
+                          <p className="text-sm text-slate-600 truncate">{client.user?.email}</p>
+                        </div>
+                        <div className="flex gap-2 ml-2">
                           <Badge variant={client.applicationsRemaining > 0 ? "default" : "secondary"}>
                             {client.applicationsRemaining}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
                           {client.phoneNumber ? (
-                            <Badge variant="default" className="bg-green-600">Complete</Badge>
+                            <Badge variant="default" className="bg-green-600">✓</Badge>
                           ) : (
-                            <Badge variant="secondary">Incomplete</Badge>
+                            <Badge variant="secondary">!</Badge>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLocation(`/clients/${client.userId}`);
-                            }}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </div>
+                      </div>
+                      {client.phoneNumber && (
+                        <p className="text-sm text-slate-600 mb-2">
+                          <span className="font-medium">Phone:</span> {client.phoneNumber}
+                        </p>
+                      )}
+                      {client.desiredTitles && (
+                        <p className="text-sm text-slate-600 line-clamp-2">
+                          <span className="font-medium">Titles:</span> {client.desiredTitles}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

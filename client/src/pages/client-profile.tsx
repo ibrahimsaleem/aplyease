@@ -202,16 +202,17 @@ export default function ClientProfile() {
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
         {/* Back button for employees editing client profile */}
         {isEditingOtherProfile && (
           <Button 
             variant="ghost" 
-            className="mb-4"
+            className="mb-4 min-h-[44px]"
             onClick={() => setLocation(`/clients/${editClientId}`)}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Client Detail
+            <span className="hidden sm:inline">Back to Client Detail</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         )}
 
@@ -219,11 +220,12 @@ export default function ClientProfile() {
         {isOwnProfile && user?.role === "CLIENT" && (
           <Button 
             variant="ghost" 
-            className="mb-4"
+            className="mb-4 min-h-[44px]"
             onClick={() => setLocation("/")}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         )}
 

@@ -86,33 +86,38 @@ export default function ClientDetail() {
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
         {/* Back Button */}
         <Button 
           variant="ghost" 
-          className="mb-4"
+          className="mb-4 min-h-[44px]"
           onClick={() => setLocation("/clients")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Clients
+          <span className="hidden sm:inline">Back to Clients</span>
+          <span className="sm:hidden">Back</span>
         </Button>
 
         {/* Client Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">{profile.fullName}</h1>
-              <p className="text-slate-600">{profile.user?.email}</p>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">{profile.fullName}</h1>
+              <p className="text-sm sm:text-base text-slate-600 truncate">{profile.user?.email}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button
                 onClick={() => setLocation("/")}
+                className="w-full sm:w-auto min-h-[44px]"
+                size="sm"
               >
-                Apply for This Client
+                Apply for Client
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation(`/profile?clientId=${clientId}`)}
+                className="w-full sm:w-auto min-h-[44px]"
+                size="sm"
               >
                 Edit Profile
               </Button>
@@ -121,28 +126,28 @@ export default function ClientDetail() {
 
           {/* Quick Stats */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600">Total Applications</p>
-                <p className="text-2xl font-bold">{stats.totalApplications}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
+              <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+                <p className="text-xs sm:text-sm text-slate-600">Total Applications</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalApplications}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600">In Progress</p>
-                <p className="text-2xl font-bold">{stats.inProgress}</p>
+              <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+                <p className="text-xs sm:text-sm text-slate-600">In Progress</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.inProgress}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600">Interviews</p>
-                <p className="text-2xl font-bold">{stats.interviews}</p>
+              <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+                <p className="text-xs sm:text-sm text-slate-600">Interviews</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.interviews}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600">Hired</p>
-                <p className="text-2xl font-bold text-green-600">{stats.hired}</p>
+              <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+                <p className="text-xs sm:text-sm text-slate-600">Hired</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.hired}</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Contact Information */}
           <Card>
             <CardHeader>

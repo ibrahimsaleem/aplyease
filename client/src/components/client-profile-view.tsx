@@ -26,16 +26,16 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Profile Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{profile.fullName}</h1>
-            <p className="text-slate-600">{profile.user?.email}</p>
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 break-words">{profile.fullName}</h1>
+            <p className="text-sm sm:text-base text-slate-600 break-all">{profile.user?.email}</p>
           </div>
           {isOwnProfile && (
-            <Button onClick={onEditClick} variant="outline">
+            <Button onClick={onEditClick} variant="outline" className="w-full sm:w-auto min-h-[44px]">
               <Pencil className="w-4 h-4 mr-2" />
               Edit Profile
             </Button>
@@ -44,28 +44,28 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
 
         {/* Quick Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-sm text-slate-600">Applications Left</p>
-              <p className="text-2xl font-bold">{stats.applicationsRemaining ?? 0}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
+            <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm text-slate-600">Applications Left</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.applicationsRemaining ?? 0}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-sm text-slate-600">Total Applications</p>
-              <p className="text-2xl font-bold">{stats.totalApplications}</p>
+            <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm text-slate-600">Total Applications</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.totalApplications}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-sm text-slate-600">Interviews</p>
-              <p className="text-2xl font-bold">{stats.interviews}</p>
+            <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm text-slate-600">Interviews</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.interviews}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-sm text-slate-600">Hired</p>
-              <p className="text-2xl font-bold text-green-600">{stats.hired}</p>
+            <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm text-slate-600">Hired</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.hired}</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Contact Information */}
         <Card>
           <CardHeader>

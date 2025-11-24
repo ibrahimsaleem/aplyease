@@ -82,17 +82,18 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
               </span>
             </div>
 
-            {/* Navigation Links - Hidden on mobile for clients */}
-            <div className="hidden md:flex items-center space-x-4">
+            {/* Navigation Links - Now visible on mobile */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {user.role === "CLIENT" && (
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => setLocation("/profile")}
-                  className="text-slate-700"
+                  className="text-slate-700 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+                  title="Profile"
                 >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
+                  <User className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Profile</span>
                 </Button>
               )}
               
@@ -101,10 +102,11 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
                   variant="ghost" 
                   size="sm"
                   onClick={() => setLocation("/clients")}
-                  className="text-slate-700"
+                  className="text-slate-700 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+                  title="Clients"
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  Clients
+                  <Users className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Clients</span>
                 </Button>
               )}
             </div>
