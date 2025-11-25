@@ -485,10 +485,13 @@ export default function LandingPage() {
               <p className="text-lg text-slate-600 mb-8">Questions? We're here to help</p>
               <Card className="border-none shadow-lg">
                 <CardContent className="p-6 space-y-4">
-                  <Input placeholder="Your name" className="h-12 text-base" />
-                  <Textarea placeholder="Your message" className="min-h-[120px] text-base" />
-                  <Button className="w-full h-12 text-base">Send Message</Button>
-                  <div className="pt-4">
+                  <form action="https://formspree.io/f/mgvawbjw" method="POST" className="space-y-4">
+                    <Input name="name" placeholder="Your name" className="h-12 text-base" required />
+                    <Input name="email" type="email" placeholder="Your email" className="h-12 text-base" required />
+                    <Textarea name="message" placeholder="Your message" className="min-h-[120px] text-base" required />
+                    <Button type="submit" className="w-full h-12 text-base">Send Message</Button>
+                  </form>
+                  <div className="pt-4 border-t border-slate-100">
                     <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service">
                       <Button variant="outline" className="w-full h-12 text-base">
                         <MessageSquare className="mr-2 h-5 w-5" />
