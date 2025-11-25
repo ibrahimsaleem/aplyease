@@ -320,8 +320,13 @@ export default function LandingPage() {
               </Card>
 
               {/* Standard */}
-              <Card className="border-2 border-slate-200 hover:border-primary transition-colors">
-                <CardContent className="p-6">
+              <Card className="border-2 border-slate-200 hover:border-primary transition-colors relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-green-500 text-white hover:bg-green-500 px-3 py-1 text-xs font-semibold uppercase">
+                    Most Popular
+                  </Badge>
+                </div>
+                <CardContent className="p-6 pt-8">
                   <div className="text-center mb-6">
                     <p className="text-sm font-semibold text-slate-600 mb-2">STANDARD</p>
                     <div className="text-4xl font-bold text-primary mb-2">$299</div>
@@ -355,13 +360,11 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
 
-              {/* Best Value */}
-              <Card className="border-2 border-primary shadow-xl">
-                <div className="bg-primary text-white text-center py-2 text-sm font-semibold uppercase">
-                  Best Value!
-                </div>
+              {/* $350 Plan */}
+              <Card className="border-2 border-slate-200 hover:border-primary transition-colors">
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
+                    <p className="text-sm font-semibold text-slate-600 mb-2">PREMIUM</p>
                     <div className="text-4xl font-bold text-primary mb-2">$350</div>
                     <p className="text-slate-600 text-sm">One-time Payment</p>
                   </div>
@@ -384,21 +387,18 @@ export default function LandingPage() {
                     </li>
                   </ul>
                   <Link href="/signup">
-                    <Button className="w-full h-11">Get Started</Button>
+                    <Button variant="outline" className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>
               </Card>
 
-              {/* Ultimate Bundle */}
-              <Card className="border-2 border-slate-200 hover:border-primary transition-colors relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-green-500 text-white hover:bg-green-500 px-3 py-1 text-xs font-semibold uppercase">
-                    Most Popular
-                  </Badge>
+              {/* Ultimate Bundle - Best Value */}
+              <Card className="border-2 border-primary shadow-xl">
+                <div className="bg-primary text-white text-center py-2 text-sm font-semibold uppercase">
+                  Best Value!
                 </div>
-                <CardContent className="p-6 pt-8">
+                <CardContent className="p-6">
                   <div className="text-center mb-6">
-                    <p className="text-sm font-semibold text-slate-600 mb-2">ULTIMATE BUNDLE</p>
                     <div className="text-4xl font-bold text-primary mb-2">$599</div>
                     <p className="text-slate-600 text-sm">One-time Payment</p>
                   </div>
@@ -429,7 +429,7 @@ export default function LandingPage() {
                     </li>
                   </ul>
                   <Link href="/signup">
-                    <Button variant="outline" className="w-full h-11">Get Started</Button>
+                    <Button className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>
               </Card>
