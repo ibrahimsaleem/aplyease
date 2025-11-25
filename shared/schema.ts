@@ -8,7 +8,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", ["ADMIN", "CLIENT", "EMPLOYEE"]);
 export const statusEnum = pgEnum("status", [
   "Applied",
-  "Screening", 
+  "Screening",
   "Interview",
   "Offer",
   "Hired",
@@ -36,6 +36,7 @@ export const users = pgTable(
     email: text("email").notNull().unique(),
     role: roleEnum("role").notNull(),
     company: text("company"),
+    packageTier: text("package_tier"),
     applicationsRemaining: integer("applications_remaining").notNull().default(sql`0`),
     isActive: boolean("is_active").default(sql`true`).notNull(),
     passwordHash: text("password_hash").notNull(),
@@ -140,6 +141,7 @@ export const clientProfilesRelations = relations(clientProfiles, ({ one }) => ({
   user: one(users, {
     fields: [clientProfiles.userId],
     references: [users.id],
+    relationName: "client",
   }),
 }));
 
@@ -152,8 +154,16 @@ export const insertUserSchema = createInsertSchema(users)
     passwordHash: true, // Exclude passwordHash since we'll handle it in the backend
   } as any)
   .extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  applicationsRemaining: z.number().int().min(0).optional(),
+    password: z.string().min(6, "Password must be at least 6 characters").regex(/^(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter and one number"),
+    applicationsRemaining: z.number().int().min(0).optional(),
+    packageTier: z.string().optional(),
+  });
+
+export const registerUserSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters").regex(/^(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter and one number"),
+  packageTier: z.string().optional(),
 });
 
 export const updateUserSchema = createInsertSchema(users)
@@ -176,12 +186,12 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications)
     appliedByName: true, // Will be set automatically on server
   } as any)
   .extend({
-  employeeId: z.string().optional(), // Optional for employees, required for admin submissions
-  jobLink: z.string().url().optional().or(z.literal("")),
-  jobPage: z.string().url().optional().or(z.literal("")),
-  resumeUrl: z.string().url().optional().or(z.literal("")),
-  additionalLink: z.string().url().optional().or(z.literal("")),
-});
+    employeeId: z.string().optional(), // Optional for employees, required for admin submissions
+    jobLink: z.string().url().optional().or(z.literal("")),
+    jobPage: z.string().url().optional().or(z.literal("")),
+    resumeUrl: z.string().url().optional().or(z.literal("")),
+    additionalLink: z.string().url().optional().or(z.literal("")),
+  });
 
 export const updateJobApplicationSchema = insertJobApplicationSchema.partial();
 
@@ -195,7 +205,7 @@ export const insertClientProfileSchema = createInsertSchema(clientProfiles)
     searchScope: z.array(z.string()).optional(),
     states: z.array(z.string()).optional(),
     cities: z.array(z.string()).optional(),
-    startDate: z.string().optional().nullable().transform((val) => 
+    startDate: z.string().optional().nullable().transform((val) =>
       val && val.trim() !== '' ? val : undefined
     ),
   });

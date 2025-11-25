@@ -58,6 +58,8 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User | undefined>;
   disableUser(id: string): Promise<void>;
+  enableUser(id: string): Promise<void>;
+  deleteUser(id: string): Promise<void>;
   listUsers(filters?: { role?: string; search?: string }): Promise<User[]>;
 
   // Job application operations
@@ -163,9 +165,9 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async createUser(userData: InsertUser): Promise<User> {
+  async createUser(userData: InsertUser & { passwordHash?: string, packageTier?: string }): Promise<User> {
     return retryOperation(async () => {
-      const passwordHash = await hashPassword(userData.password);
+      const passwordHash = userData.passwordHash || await hashPassword(userData.password);
       const [user] = await db
         .insert(users)
         .values({
@@ -174,6 +176,7 @@ export class DatabaseStorage implements IStorage {
           email: (userData as any).email,
           role: (userData as any).role,
           company: (userData as any).company,
+          packageTier: userData.packageTier,
           applicationsRemaining: (userData as any).applicationsRemaining ?? 0,
           passwordHash,
           isActive: (userData as any).isActive ?? true,
@@ -202,14 +205,16 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       // Invalidate cache after update
-      cache.delete(`user:${id}`);
+      if (user) {
+        cache.delete(`user:${id}`);
+      }
 
       return user;
     });
   }
 
   async disableUser(id: string): Promise<void> {
-    await retryOperation(async () => {
+    return retryOperation(async () => {
       await db
         .update(users)
         .set({ isActive: false, updatedAt: new Date() } as any)
@@ -221,13 +226,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async enableUser(id: string): Promise<void> {
-    await retryOperation(async () => {
+    return retryOperation(async () => {
       await db
         .update(users)
         .set({ isActive: true, updatedAt: new Date() } as any)
         .where(eq(users.id, id));
 
       // Invalidate cache after update
+      cache.delete(`user:${id}`);
+    });
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return retryOperation(async () => {
+      // Manual cascade delete since foreign keys might not have ON DELETE CASCADE
+      // 1. Delete client profile
+      await db.delete(clientProfiles).where(eq(clientProfiles.userId, id));
+
+      // 2. Delete job applications where user is client or employee
+      await db.delete(jobApplications).where(or(
+        eq(jobApplications.clientId, id),
+        eq(jobApplications.employeeId, id)
+      ));
+
+      // 3. Delete the user
+      await db.delete(users).where(eq(users.id, id));
+
+      // Invalidate cache
       cache.delete(`user:${id}`);
     });
   }

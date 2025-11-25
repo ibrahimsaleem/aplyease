@@ -2,11 +2,21 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
-import { insertUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
+import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
 import { ZodError } from "zod";
+import rateLimit from "express-rate-limit";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+
+  // Rate limiter for registration
+  const registerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 create account requests per windowMs
+    message: "Too many registration attempts, please try again after 15 minutes",
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
 
   // Health check endpoint - doesn't require authentication
   app.get("/api/health", async (req, res) => {
@@ -105,6 +115,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Internal server error",
         details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
       });
+    }
+  });
+
+
+  app.post("/api/register", registerLimiter, async (req, res) => {
+    try {
+      const userData = registerUserSchema.parse(req.body);
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      // Determine applications quota based on package
+      let applicationsRemaining = 0;
+      switch (userData.packageTier) {
+        case "basic":
+          applicationsRemaining = 250;
+          break;
+        case "standard":
+          applicationsRemaining = 500;
+          break;
+        case "premium":
+          applicationsRemaining = 1000;
+          break;
+        case "ultimate":
+          applicationsRemaining = 1000;
+          break;
+        default:
+          applicationsRemaining = 0;
+      }
+
+      const hashedPassword = await hashPassword(userData.password);
+      // Cast to any to avoid strict type checking issues with inferred schema
+      const user = await storage.createUser({
+        ...userData,
+        role: "CLIENT",
+        passwordHash: hashedPassword,
+        applicationsRemaining,
+        isActive: true
+      } as any);
+
+      // Create empty client profile
+      await storage.upsertClientProfile(user.id, {
+        fullName: user.name,
+        phoneNumber: "",
+        mailingAddress: "",
+        situation: "",
+        desiredTitles: "",
+        workAuthorization: "",
+        sponsorshipAnswer: "",
+      } as any);
+      res.status(201).json({
+        userId: user.id,
+        message: "Registration successful"
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: "Validation failed", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   });
 
@@ -225,6 +299,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error enabling user:", error);
       res.status(500).json({ message: "Failed to enable user" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      // Prevent self-deletion
+      if (id === currentUser.id) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+
+      // Get user details before deletion for audit log
+      const userToDelete = await storage.getUser(id);
+
+      await storage.deleteUser(id);
+
+      // Audit log
+      console.log(`[AUDIT] User deletion: Admin ${currentUser.email} (${currentUser.id}) deleted user ${userToDelete?.email || 'Unknown'} (${id}) at ${new Date().toISOString()}`);
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 

@@ -313,7 +313,7 @@ export default function LandingPage() {
                       <span className="text-slate-700 text-sm">Job Matching</span>
                     </li>
                   </ul>
-                  <Link href="/signup">
+                  <Link href="/signup?package=basic">
                     <Button variant="outline" className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>
@@ -354,7 +354,7 @@ export default function LandingPage() {
                       <span className="text-slate-700 text-sm">Job Matching</span>
                     </li>
                   </ul>
-                  <Link href="/signup">
+                  <Link href="/signup?package=standard">
                     <Button variant="outline" className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>
@@ -386,7 +386,7 @@ export default function LandingPage() {
                       <span className="text-slate-700 text-sm">Job Matching</span>
                     </li>
                   </ul>
-                  <Link href="/signup">
+                  <Link href="/signup?package=premium">
                     <Button variant="outline" className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>
@@ -428,7 +428,7 @@ export default function LandingPage() {
                       <span className="text-slate-700 text-sm">Expert Resume Review*</span>
                     </li>
                   </ul>
-                  <Link href="/signup">
+                  <Link href="/signup?package=ultimate">
                     <Button className="w-full h-11">Get Started</Button>
                   </Link>
                 </CardContent>

@@ -3,13 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search } from "lucide-react";
+import { Plus, Edit, Search, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -47,6 +57,8 @@ export function UserManagement() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm<UserFormData>({
@@ -162,11 +174,32 @@ export function UserManagement() {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/users/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      setDeletingUser(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: UserFormData) => {
     // Validate with the appropriate schema
     const schema = editingUser ? editUserSchema : createUserSchema;
     const validation = schema.safeParse(data);
-    
+
     if (!validation.success) {
       // Show validation errors
       validation.error.errors.forEach((error) => {
@@ -182,8 +215,8 @@ export function UserManagement() {
     const submitData = {
       ...data,
       // Convert applicationsRemaining to number if it exists
-      applicationsRemaining: data.applicationsRemaining 
-        ? Number(data.applicationsRemaining) 
+      applicationsRemaining: data.applicationsRemaining
+        ? Number(data.applicationsRemaining)
         : undefined,
     };
 
@@ -220,6 +253,17 @@ export function UserManagement() {
       } else {
         enableUser.mutate(user.id);
       }
+    }
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setDeletingUser(user);
+    setDeleteConfirmation("");
+  };
+
+  const confirmDelete = () => {
+    if (deletingUser) {
+      deleteUser.mutate(deletingUser.id);
     }
   };
 
@@ -363,22 +407,22 @@ export function UserManagement() {
                       )}
                     />
 
-                                      {/* Applications Left (for CLIENT only) */}
-                  {form.watch("role") === "CLIENT" && (
-                    <FormField
-                      control={form.control}
-                      name="applicationsRemaining"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Applications Left</FormLabel>
-                          <FormControl>
-                            <Input type="number" min={0} {...field} data-testid="input-user-apps-left" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                    {/* Applications Left (for CLIENT only) */}
+                    {form.watch("role") === "CLIENT" && (
+                      <FormField
+                        control={form.control}
+                        name="applicationsRemaining"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Applications Left</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} data-testid="input-user-apps-left" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     <FormField
                       control={form.control}
@@ -430,7 +474,7 @@ export function UserManagement() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Company</TableHead>
-                                 <TableHead>Applications Left</TableHead>
+                <TableHead>Applications Left</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
@@ -441,14 +485,12 @@ export function UserManagement() {
                 <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                   <TableCell>
                     <div className="flex items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
-                        user.role === "ADMIN" ? "bg-red-100" : 
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${user.role === "ADMIN" ? "bg-red-100" :
                         user.role === "CLIENT" ? "bg-green-100" : "bg-blue-100"
-                      }`}>
-                        <span className={`font-medium ${
-                          user.role === "ADMIN" ? "text-red-600" : 
+                        }`}>
+                        <span className={`font-medium ${user.role === "ADMIN" ? "text-red-600" :
                           user.role === "CLIENT" ? "text-green-600" : "text-blue-600"
-                        }`} data-testid="text-user-initials">
+                          }`} data-testid="text-user-initials">
                           {getInitials(user.name)}
                         </span>
                       </div>
@@ -466,9 +508,9 @@ export function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell data-testid="text-user-company">{user.company || "-"}</TableCell>
-                                       <TableCell data-testid="text-user-apps-left">
-                       {user.role === "CLIENT" ? ((user as any).applicationsRemaining ?? "-") : "-"}
-                     </TableCell>
+                  <TableCell data-testid="text-user-apps-left">
+                    {user.role === "CLIENT" ? ((user as any).applicationsRemaining ?? "-") : "-"}
+                  </TableCell>
                   <TableCell>
                     <Badge className={user.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"} data-testid="badge-user-status">
                       {user.isActive ? "Active" : "Inactive"}
@@ -492,11 +534,20 @@ export function UserManagement() {
                         onCheckedChange={() => handleToggleStatus(user)}
                         data-testid="switch-user-status"
                       />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        data-testid="button-delete-user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
-              
+
               {!users.length && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
@@ -510,6 +561,41 @@ export function UserManagement() {
           </Table>
         </div>
       </CardContent>
+
+      <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user
+              <span className="font-semibold"> {deletingUser?.name} </span>
+              and all associated data including client profiles and job applications.
+            </AlertDialogDescription>
+            <div className="py-4">
+              <p className="text-sm text-slate-500 mb-2">
+                Please type <span className="font-mono font-bold select-all">{deletingUser?.email}</span> to confirm.
+              </p>
+              <Input
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="Type user email to confirm"
+                data-testid="input-delete-confirmation"
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteConfirmation !== deletingUser?.email}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="button-confirm-delete"
+            >
+              {deleteUser.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
