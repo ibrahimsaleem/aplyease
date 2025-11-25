@@ -250,34 +250,32 @@ export default function LandingPage() {
                   </div>
                 </CardContent>
               </Card>
+              <Card className="border-none shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex gap-1 mb-4 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <p className="text-slate-700 mb-4">"Great team, understood my goals perfectly. Found opportunities I'd have missed."</p>
+                  <div>
+                    <p className="font-semibold text-slate-900">Rafi</p>
+                    <p className="text-sm text-slate-500">University of Houston</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex gap-1 mb-4 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <p className="text-slate-700 mb-4">"AI and human support made my search efficient. Professional and detail-oriented. Landed good interviews."</p>
+                  <div>
+                    <p className="font-semibold text-slate-900">Azhar Ahmed</p>
+                    <p className="text-sm text-slate-500">Lamar University</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <Card className="border-none shadow-md">
-              <CardContent className="p-6">
-                <div className="flex gap-1 mb-4 text-amber-400">
-                  {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
-                </div>
-                <p className="text-slate-700 mb-4">"Great team, understood my goals perfectly. Found opportunities I'd have missed."</p>
-                <div>
-                  <p className="font-semibold text-slate-900">Rafi</p>
-                  <p className="text-sm text-slate-500">University of Houston</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-md">
-              <CardContent className="p-6">
-                <div className="flex gap-1 mb-4 text-amber-400">
-                  {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
-                </div>
-                <p className="text-slate-700 mb-4">"AI and human support made my search efficient. Professional and detail-oriented. Landed good interviews."</p>
-                <div>
-                  <p className="font-semibold text-slate-900">Azhar Ahmed</p>
-                  <p className="text-sm text-slate-500">Lamar University</p>
-                </div>
-              </CardContent>
-            </Card>
-
-
           </div>
         </section>
 
