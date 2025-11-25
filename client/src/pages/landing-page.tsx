@@ -59,7 +59,7 @@ export default function LandingPage() {
             <p className="text-slate-700 mb-4">Special launch pricing - Save up to 30% on all packages!</p>
           </div>
           <DialogFooter className="sm:justify-center">
-            <a href="https://wa.me/+17138537974" className="w-full">
+            <a href="https://wa.me/+17138537974?text=I%20want%20to%20get%20the%20deal%2030%25%20off" className="w-full">
               <Button className="w-full" size="lg">Get the Deal</Button>
             </a>
           </DialogFooter>
@@ -87,7 +87,7 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Pricing
               </button>
-              <a href="https://wa.me/+17138537974" className="text-slate-600 hover:text-primary transition-colors font-medium">
+              <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service" className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Contact
               </a>
               <Link href="/login">
@@ -129,7 +129,7 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Pricing
               </button>
-              <a href="https://wa.me/+17138537974" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
+              <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Contact
               </a>
               <div className="pt-4 flex flex-col gap-2">
@@ -163,7 +163,7 @@ export default function LandingPage() {
                   </Button>
                 </Link>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 h-14" asChild>
-                  <a href="https://wa.me/+17138537974">Chat on WhatsApp</a>
+                  <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service">Chat on WhatsApp</a>
                 </Button>
               </div>
 
@@ -489,7 +489,7 @@ export default function LandingPage() {
                   <Textarea placeholder="Your message" className="min-h-[120px] text-base" />
                   <Button className="w-full h-12 text-base">Send Message</Button>
                   <div className="pt-4">
-                    <a href="https://wa.me/+17138537974">
+                    <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service">
                       <Button variant="outline" className="w-full h-12 text-base">
                         <MessageSquare className="mr-2 h-5 w-5" />
                         Chat on WhatsApp
@@ -517,7 +517,7 @@ export default function LandingPage() {
             <div className="flex justify-center gap-6 text-sm">
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
               <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="https://wa.me/+17138537974" className="hover:text-white transition-colors">Contact</a>
+              <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service" className="hover:text-white transition-colors">Contact</a>
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-sm">
