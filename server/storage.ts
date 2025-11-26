@@ -1350,7 +1350,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(clientProfiles)
         .leftJoin(users, eq(clientProfiles.userId, users.id))
-        .orderBy(desc(clientProfiles.createdAt));
+        .orderBy(asc(users.applicationsRemaining));
 
       return profiles.map(p => ({
         ...p.client_profiles,
