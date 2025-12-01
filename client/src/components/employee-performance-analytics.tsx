@@ -7,6 +7,9 @@ import { DollarSign, TrendingUp, Calendar, Clock, BarChart3 } from "lucide-react
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics, DailyEmployeeAnalytics } from "@/types";
 
+// Conversion rate: 1 USD = 87 INR
+const USD_TO_INR = 87;
+
 export function EmployeePerformanceAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<EmployeePerformanceAnalytics>({
     queryKey: ["/api/analytics/employee-performance"],
@@ -62,6 +65,9 @@ export function EmployeePerformanceAnalytics() {
                 <p className="text-sm font-medium text-emerald-600">Total Payout</p>
                 <p className="text-3xl font-bold text-emerald-900" data-testid="text-total-payout">
                   ${analytics.totalPayout.toFixed(2)}
+                </p>
+                <p className="text-lg font-semibold text-emerald-700 mt-1">
+                  ₹{(analytics.totalPayout * USD_TO_INR).toFixed(2)}
                 </p>
                 <p className="text-sm text-emerald-600 mt-1">
                   {analytics.employees.length} active employees
@@ -278,9 +284,14 @@ export function EmployeePerformanceAnalytics() {
                       <span className="font-semibold">{employee.successRate}%</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className="font-semibold text-emerald-600">
-                        ${employee.earnings.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold text-emerald-600">
+                          ${employee.earnings.toFixed(2)}
+                        </span>
+                        <span className="text-sm text-emerald-600">
+                          ₹{(employee.earnings * USD_TO_INR).toFixed(2)}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge className={performanceColor}>
