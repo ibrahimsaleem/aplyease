@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DollarSign, Users, Target, TrendingUp, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+// Conversion rate: 1 USD = 87 INR
+const USD_TO_INR = 87;
+
 interface MonthlyPayoutData {
   employeeId: string;
   employeeName: string;
@@ -203,7 +206,10 @@ export function MonthlyPayoutAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalPayout.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-emerald-600 mt-1">
+              ₹{(totalPayout * USD_TO_INR).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
               Total amount to be paid
             </p>
           </CardContent>
@@ -280,6 +286,9 @@ export function MonthlyPayoutAnalytics() {
                       <div className="text-right">
                         <div className="text-3xl font-bold text-green-600">
                           ${employee.totalPayout.toFixed(2)}
+                        </div>
+                        <div className="text-lg font-semibold text-emerald-700">
+                          ₹{(employee.totalPayout * USD_TO_INR).toFixed(2)}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           Monthly Payout

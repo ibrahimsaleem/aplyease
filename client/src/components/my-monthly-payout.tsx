@@ -8,6 +8,9 @@ import { Calendar, DollarSign, Target, TrendingUp, TrendingDown, CheckCircle, XC
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
+// Conversion rate: 1 USD = 87 INR
+const USD_TO_INR = 87;
+
 interface DailyPayoutData {
   employeeName: string;
   monthYear: string;
@@ -130,6 +133,16 @@ export function MyMonthlyPayout() {
         </CardHeader>
         <CardContent className="text-blue-900">
           <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-blue-100 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-blue-700">Current Rate:</span>
+                <span className="text-lg font-bold text-green-600">1 USD = ₹{USD_TO_INR}</span>
+              </div>
+              <div className="text-sm text-blue-600 italic">
+                Note: This is the bank transfer rate, not the online market rate.
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <h4 className="font-semibold text-lg">💰 Daily Payment Rates</h4>
@@ -144,7 +157,7 @@ export function MyMonthlyPayout() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <h4 className="font-semibold text-lg">🎯 How to Earn Maximum</h4>
                 <div className="space-y-2 text-sm">
@@ -163,7 +176,7 @@ export function MyMonthlyPayout() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-blue-100 p-3 rounded-lg">
               <h4 className="font-semibold mb-2">📊 Example Calculation:</h4>
               <div className="grid md:grid-cols-3 gap-2 text-sm">
@@ -181,14 +194,14 @@ export function MyMonthlyPayout() {
                 <strong>Total for 3 days: $5.00 + $2.25 + $4.00 = <span className="text-green-700 text-lg">$11.25</span></strong>
               </div>
             </div>
-            
+
             <div className="bg-yellow-100 p-3 rounded-lg border border-yellow-300">
               <div className="flex items-start gap-2">
                 <span className="text-xl">💡</span>
                 <div>
                   <h4 className="font-semibold text-yellow-800">Pro Tip:</h4>
                   <p className="text-sm text-yellow-800">
-                    Meeting the 15 application target daily gives you <strong>33% higher pay rate</strong> ($0.20 vs $0.15). 
+                    Meeting the 15 application target daily gives you <strong>33% higher pay rate</strong> ($0.20 vs $0.15).
                     Focus on consistent daily performance rather than sporadic high-volume days!
                   </p>
                 </div>
@@ -264,7 +277,10 @@ export function MyMonthlyPayout() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">${payoutData.monthlyTotal.totalPayout.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-emerald-600 mt-1">
+              ₹{(payoutData.monthlyTotal.totalPayout * USD_TO_INR).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
               Your monthly earnings
             </p>
           </CardContent>
@@ -319,7 +335,7 @@ export function MyMonthlyPayout() {
                 When you meet {payoutData.rates.dailyTarget} applications/day
               </div>
             </div>
-            
+
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold text-orange-600">
                 ${payoutData.rates.belowTargetRate}
@@ -329,7 +345,7 @@ export function MyMonthlyPayout() {
                 When below {payoutData.rates.dailyTarget} applications/day
               </div>
             </div>
-            
+
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold text-blue-600">
                 {payoutData.rates.dailyTarget}
@@ -353,9 +369,8 @@ export function MyMonthlyPayout() {
             {payoutData.dailyBreakdown.map((day: any) => (
               <div
                 key={day.date}
-                className={`flex items-center justify-between p-4 border rounded-lg ${
-                  day.metTarget ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'
-                }`}
+                className={`flex items-center justify-between p-4 border rounded-lg ${day.metTarget ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
@@ -366,28 +381,31 @@ export function MyMonthlyPayout() {
                     )}
                     <div>
                       <div className="font-medium">
-                        {new Date(day.date).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
+                        {new Date(day.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
                         })}
                       </div>
                       <div className="text-sm text-muted-foreground">{day.dayOfWeek}</div>
                     </div>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="text-lg font-semibold">{day.applicationsCount}</div>
                     <div className="text-xs text-muted-foreground">Applications</div>
                   </div>
-                  
+
                   <Badge variant={day.metTarget ? "default" : "secondary"}>
                     {day.metTarget ? "Target Met" : "Below Target"}
                   </Badge>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="text-lg font-bold text-green-600">
                     ${day.dailyPayout.toFixed(2)}
+                  </div>
+                  <div className="text-sm font-semibold text-emerald-700">
+                    ₹{(day.dailyPayout * USD_TO_INR).toFixed(2)}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     @ ${day.rateApplied}/app
