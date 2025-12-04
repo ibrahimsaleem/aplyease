@@ -327,6 +327,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee Assignment Routes (Admin only)
+  app.get("/api/clients/:clientId/assignments", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const assignments = await storage.getClientAssignments(clientId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+      res.status(500).json({ message: "Failed to fetch assignments" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/assignments", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { employeeId } = req.body;
+
+      if (!employeeId) {
+        return res.status(400).json({ message: "Employee ID is required" });
+      }
+
+      const assignment = await storage.assignEmployee(clientId, employeeId);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error assigning employee:", error);
+      res.status(500).json({ message: "Failed to assign employee" });
+    }
+  });
+
+  app.delete("/api/clients/:clientId/assignments/:employeeId", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { clientId, employeeId } = req.params;
+      await storage.unassignEmployee(clientId, employeeId);
+      res.json({ message: "Employee unassigned successfully" });
+    } catch (error) {
+      console.error("Error unassigning employee:", error);
+      res.status(500).json({ message: "Failed to unassign employee" });
+    }
+  });
+
   // Gemini API Key management
   app.put("/api/users/:userId/gemini-key", requireAuth, async (req, res) => {
     try {

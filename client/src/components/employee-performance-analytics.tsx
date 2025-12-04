@@ -3,7 +3,7 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Calendar, Clock, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Clock, BarChart3, Users } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics, DailyEmployeeAnalytics } from "@/types";
 
@@ -145,6 +145,57 @@ export function EmployeePerformanceAnalytics() {
         </Card>
       </div>
 
+      {/* Workload Distribution Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            Workload Distribution (Clients per Employee)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={analytics.employees}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis allowDecimals={false} />
+              <Tooltip
+                cursor={{ fill: 'transparent' }}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value: number, name: string, props: any) => {
+                  if (name === "Active Clients") {
+                    return [value, "Active Clients"];
+                  }
+                  return [value, name];
+                }}
+                labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
+              />
+              <Legend />
+              <Bar
+                dataKey="activeClientsCount"
+                name="Active Clients"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="effectiveWorkload"
+                name="Effective Application Load"
+                fill="#f59e0b"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="mt-4 text-sm text-slate-500 text-center">
+            Hover over bars to see detailed workload metrics.
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Recent Activity Chart (Last 3 vs 7 Days) */}
       {dailyAnalytics && (
         <Card>
@@ -248,7 +299,7 @@ export function EmployeePerformanceAnalytics() {
         </CardContent>
       </Card>
 
-      {/* Detailed Performance Table */}
+      {/* Employee Performance Details Table */}
       <Card>
         <CardHeader>
           <CardTitle>Employee Performance Details</CardTitle>
@@ -258,45 +309,54 @@ export function EmployeePerformanceAnalytics() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
-                <TableHead className="text-center">Applications</TableHead>
-                <TableHead className="text-center">Interviews</TableHead>
-                <TableHead className="text-center">Success Rate</TableHead>
-                <TableHead className="text-center">Earnings</TableHead>
+                <TableHead className="text-center">Apps (Today)</TableHead>
+                <TableHead className="text-center">Apps (Month)</TableHead>
+                <TableHead className="text-center">Interviews (Month)</TableHead>
+                <TableHead className="text-center">Earnings (Month)</TableHead>
                 <TableHead className="text-center">Performance</TableHead>
+                <TableHead>Assigned Clients</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {analytics.employees.map((employee) => {
-                const performanceLevel = employee.successRate >= 20 ? "Excellent" :
-                  employee.successRate >= 15 ? "Good" :
-                    employee.successRate >= 10 ? "Average" : "Needs Improvement";
+                const performanceColor = employee.applicationsSubmitted >= 100 ? "bg-green-100 text-green-800" :
+                  employee.applicationsSubmitted >= 50 ? "bg-blue-100 text-blue-800" :
+                    "bg-amber-100 text-amber-800";
 
-                const performanceColor = employee.successRate >= 20 ? "bg-green-100 text-green-800" :
-                  employee.successRate >= 15 ? "bg-blue-100 text-blue-800" :
-                    employee.successRate >= 10 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800";
+                const performanceLabel = employee.applicationsSubmitted >= 100 ? "Excellent" :
+                  employee.applicationsSubmitted >= 50 ? "Good" : "Needs Improvement";
 
                 return (
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">{employee.name}</TableCell>
-                    <TableCell className="text-center">{employee.applicationsSubmitted}</TableCell>
-                    <TableCell className="text-center">{employee.interviews}</TableCell>
-                    <TableCell className="text-center">
-                      <span className="font-semibold">{employee.successRate}%</span>
+                    <TableCell className="text-center font-semibold text-slate-700">
+                      {employee.applicationsToday}
+                    </TableCell>
+                    <TableCell className="text-center font-semibold text-slate-700">
+                      {employee.applicationsThisMonth}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="font-semibold text-emerald-600">
-                          ${employee.earnings.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-emerald-600">
-                          ₹{(employee.earnings * USD_TO_INR).toFixed(2)}
-                        </span>
-                      </div>
+                      {employee.interviewsThisMonth}
+                    </TableCell>
+                    <TableCell className="text-center font-mono">
+                      ${employee.earningsThisMonth.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge className={performanceColor}>
-                        {performanceLevel}
+                        {performanceLabel}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {employee.assignedClients.map((client, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {client}
+                          </Badge>
+                        ))}
+                        {employee.assignedClients.length === 0 && (
+                          <span className="text-slate-400 text-xs italic">None</span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search, Trash2 } from "lucide-react";
+import { Plus, Edit, Search, Trash2, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ export function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [managingEmployeesClient, setManagingEmployeesClient] = useState<User | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -521,6 +522,17 @@ export function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-3">
+                      {user.role === "CLIENT" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setManagingEmployeesClient(user)}
+                          title="Manage Employees"
+                          data-testid="button-manage-employees"
+                        >
+                          <Users className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -596,6 +608,121 @@ export function UserManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+
+
+      <ManageEmployeesDialog
+        client={managingEmployeesClient}
+        open={!!managingEmployeesClient}
+        onOpenChange={(open) => !open && setManagingEmployeesClient(null)}
+        allUsers={users}
+      />
+    </Card >
+  );
+}
+
+function ManageEmployeesDialog({
+  client,
+  open,
+  onOpenChange,
+  allUsers
+}: {
+  client: User | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  allUsers: User[];
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: assignedEmployees = [], isLoading } = useQuery<User[]>({
+    queryKey: ["/api/clients", client?.id, "assignments"],
+    queryFn: async () => {
+      if (!client) return [];
+      const res = await apiRequest("GET", `/api/clients/${client.id}/assignments`);
+      return res.json();
+    },
+    enabled: !!client && open,
+  });
+
+  const assignEmployee = useMutation({
+    mutationFn: async (employeeId: string) => {
+      if (!client) return;
+      await apiRequest("POST", `/api/clients/${client.id}/assignments`, { employeeId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", client?.id, "assignments"] });
+      toast({ title: "Employee assigned successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to assign employee", variant: "destructive" });
+    }
+  });
+
+  const unassignEmployee = useMutation({
+    mutationFn: async (employeeId: string) => {
+      if (!client) return;
+      await apiRequest("DELETE", `/api/clients/${client.id}/assignments/${employeeId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", client?.id, "assignments"] });
+      toast({ title: "Employee unassigned successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to unassign employee", variant: "destructive" });
+    }
+  });
+
+  const employees = allUsers.filter(u => u.role === "EMPLOYEE" && u.isActive);
+  const assignedIds = new Set(assignedEmployees.map(u => u.id));
+
+  const handleToggle = (employeeId: string, isAssigned: boolean) => {
+    if (isAssigned) {
+      unassignEmployee.mutate(employeeId);
+    } else {
+      assignEmployee.mutate(employeeId);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Manage Employees for {client?.name}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          {isLoading ? (
+            <div className="text-center">Loading assignments...</div>
+          ) : (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {employees.length === 0 ? (
+                <div className="text-center text-slate-500">No active employees found.</div>
+              ) : (
+                employees.map(employee => {
+                  const isAssigned = assignedIds.has(employee.id);
+                  return (
+                    <div key={employee.id} className="flex items-center justify-between p-2 rounded hover:bg-slate-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
+                          {getInitials(employee.name)}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{employee.name}</div>
+                          <div className="text-xs text-slate-500">{employee.email}</div>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={isAssigned}
+                        onCheckedChange={() => handleToggle(employee.id, isAssigned)}
+                        disabled={assignEmployee.isPending || unassignEmployee.isPending}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

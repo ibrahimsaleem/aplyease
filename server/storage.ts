@@ -1,4 +1,4 @@
-import { users, jobApplications, clientProfiles, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser } from "../shared/schema";
+import { users, jobApplications, clientProfiles, employeeAssignments, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type EmployeeAssignment, type InsertEmployeeAssignment } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -137,6 +137,11 @@ export interface IStorage {
   getClientProfile(userId: string): Promise<ClientProfileWithUser | undefined>;
   upsertClientProfile(userId: string, profile: InsertClientProfile | UpdateClientProfile): Promise<ClientProfile>;
   listClientProfiles(): Promise<ClientProfileWithUser[]>;
+
+  // Employee Assignment operations
+  assignEmployee(clientId: string, employeeId: string): Promise<EmployeeAssignment>;
+  unassignEmployee(clientId: string, employeeId: string): Promise<void>;
+  getClientAssignments(clientId: string): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -275,7 +280,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(users)
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(desc(users.createdAt));
+        .orderBy(desc(users.isActive), desc(users.applicationsRemaining));
     });
   }
 
@@ -520,6 +525,8 @@ export class DatabaseStorage implements IStorage {
     myApplications: number;
     inProgress: number;
     successRate: number;
+    totalAppsRemaining?: number;
+    assignedClients?: { name: string; appsRemaining: number }[];
   }> {
     return retryOperation(async () => {
       const [myApps] = await db
@@ -549,10 +556,21 @@ export class DatabaseStorage implements IStorage {
 
       const successRate = myApps.count > 0 ? (hired.count / myApps.count) * 100 : 0;
 
+      // Get assigned clients and their remaining applications
+      const assignedClientsData = await this.getEmployeeAssignments(employeeId);
+      const totalAppsRemaining = assignedClientsData.reduce((sum, client) => sum + ((client as any).applicationsRemaining || 0), 0);
+
+      const assignedClients = assignedClientsData.map(client => ({
+        name: client.name,
+        appsRemaining: (client as any).applicationsRemaining || 0
+      }));
+
       return {
         myApplications: myApps.count,
         inProgress: inProgress.count,
         successRate: Math.round(successRate),
+        totalAppsRemaining,
+        assignedClients,
       };
     });
   }
@@ -618,6 +636,11 @@ export class DatabaseStorage implements IStorage {
       earnings: number;
       interviews: number;
       totalApplications: number;
+      assignedClients: string[];
+      applicationsToday: number;
+      applicationsThisMonth: number;
+      interviewsThisMonth: number;
+      earningsThisMonth: number;
     }>;
     weeklyPerformance: Array<{
       week: string;
@@ -645,6 +668,15 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
+      // Get all assignments to calculate client load distribution
+      const allAssignments = await db.select().from(employeeAssignments);
+      const clientEmployeeCounts = new Map<string, number>();
+
+      allAssignments.forEach(assignment => {
+        const currentCount = clientEmployeeCounts.get(assignment.clientId) || 0;
+        clientEmployeeCounts.set(assignment.clientId, currentCount + 1);
+      });
+
       const employeeStats = await Promise.all(
         activeEmployees.map(async (employee) => {
           // Get total applications for this employee
@@ -670,6 +702,57 @@ export class DatabaseStorage implements IStorage {
           // Calculate earnings ($0.20 per application)
           const earnings = totalApps.count * 0.2;
 
+          // Get applications for today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const [todayApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, today.toISOString().split('T')[0])
+              )
+            );
+
+          // Get applications for this month
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          const [monthApps] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                gte(jobApplications.dateApplied, startOfMonth.toISOString().split('T')[0])
+              )
+            );
+
+          // Get interviews for this month
+          const [monthInterviews] = await db
+            .select({ count: count() })
+            .from(jobApplications)
+            .where(
+              and(
+                eq(jobApplications.employeeId, employee.id),
+                eq(jobApplications.status, "Interview"),
+                gte(jobApplications.dateApplied, startOfMonth.toISOString().split('T')[0])
+              )
+            );
+
+          // Calculate earnings for this month
+          const monthEarnings = monthApps.count * 0.2;
+
+          // Get assigned clients details
+          const assignedClientsData = await this.getEmployeeAssignments(employee.id);
+          const activeClientsCount = assignedClientsData.length;
+          const totalApplicationsRemaining = assignedClientsData.reduce((sum, client) => sum + (client.applicationsRemaining || 0), 0);
+
+          // Calculate effective workload (weighted by number of employees assigned to each client)
+          const effectiveWorkload = assignedClientsData.reduce((sum, client) => {
+            const employeeCount = clientEmployeeCounts.get(client.id) || 1; // Default to 1 to avoid division by zero
+            return sum + ((client.applicationsRemaining || 0) / employeeCount);
+          }, 0);
+
           return {
             id: employee.id,
             name: employee.name,
@@ -678,6 +761,14 @@ export class DatabaseStorage implements IStorage {
             earnings: Math.round(earnings * 100) / 100, // Round to 2 decimal places
             interviews: interviews.count,
             totalApplications: totalApps.count,
+            assignedClients: assignedClientsData.map(c => c.name),
+            applicationsToday: todayApps.count,
+            applicationsThisMonth: monthApps.count,
+            interviewsThisMonth: monthInterviews.count,
+            earningsThisMonth: Math.round(monthEarnings * 100) / 100,
+            activeClientsCount,
+            totalApplicationsRemaining,
+            effectiveWorkload: Math.round(effectiveWorkload),
           };
         })
       );
@@ -716,6 +807,7 @@ export class DatabaseStorage implements IStorage {
       hired: number;
       successRate: number;
       priority: "High" | "Medium" | "Low";
+      assignedEmployees: { id: string; name: string }[];
     }>;
   }> {
     return retryOperation(async () => {
@@ -802,17 +894,14 @@ export class DatabaseStorage implements IStorage {
             hired: hired.count,
             successRate: Math.round(successRate * 100) / 100,
             priority,
+            assignedEmployees: (await this.getClientAssignments(client.id)).map(e => ({ id: e.id, name: e.name })),
           };
         })
       );
 
-      // Sort clients by priority (High first) then by applications remaining (ascending)
+      // Sort clients by applications remaining (descending)
       const sortedClients = clientStats.sort((a, b) => {
-        const priorityOrder = { High: 0, Medium: 1, Low: 2 };
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
-        }
-        return a.applicationsRemaining - b.applicationsRemaining;
+        return b.applicationsRemaining - a.applicationsRemaining;
       });
 
       return {
@@ -1356,6 +1445,75 @@ export class DatabaseStorage implements IStorage {
         ...p.client_profiles,
         user: p.users || undefined,
       }));
+    });
+  }
+
+  async assignEmployee(clientId: string, employeeId: string): Promise<EmployeeAssignment> {
+    return retryOperation(async () => {
+      // Check if already assigned
+      const [existing] = await db
+        .select()
+        .from(employeeAssignments)
+        .where(
+          and(
+            eq(employeeAssignments.clientId, clientId),
+            eq(employeeAssignments.employeeId, employeeId)
+          )
+        );
+
+      if (existing) {
+        return existing;
+      }
+
+      const [assignment] = await db
+        .insert(employeeAssignments)
+        .values({
+          clientId,
+          employeeId,
+        })
+        .returning();
+      return assignment;
+    });
+  }
+
+  async unassignEmployee(clientId: string, employeeId: string): Promise<void> {
+    return retryOperation(async () => {
+      await db
+        .delete(employeeAssignments)
+        .where(
+          and(
+            eq(employeeAssignments.clientId, clientId),
+            eq(employeeAssignments.employeeId, employeeId)
+          )
+        );
+    });
+  }
+
+  async getClientAssignments(clientId: string): Promise<User[]> {
+    return retryOperation(async () => {
+      const result = await db
+        .select({
+          user: users,
+        })
+        .from(employeeAssignments)
+        .innerJoin(users, eq(employeeAssignments.employeeId, users.id))
+        .where(eq(employeeAssignments.clientId, clientId));
+
+      return result.map((r) => r.user);
+    });
+  }
+
+  async getEmployeeAssignments(employeeId: string): Promise<User[]> {
+    return retryOperation(async () => {
+      const result = await db
+        .select({
+          user: users,
+        })
+        .from(employeeAssignments)
+        .innerJoin(users, eq(employeeAssignments.clientId, users.id))
+        .where(eq(employeeAssignments.employeeId, employeeId));
+
+      return result.map((r) => r.user);
     });
   }
 }

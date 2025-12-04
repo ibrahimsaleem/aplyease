@@ -181,6 +181,8 @@ export function ClientPerformanceAnalytics() {
               <TableRow>
                 <TableHead>Client</TableHead>
                 <TableHead>Company</TableHead>
+                <TableHead>Assigned Employees</TableHead>
+                <TableHead>Company</TableHead>
                 <TableHead className="text-center">Apps Left</TableHead>
                 <TableHead className="text-center">Total Apps</TableHead>
                 <TableHead className="text-center">In Progress</TableHead>
@@ -199,6 +201,31 @@ export function ClientPerformanceAnalytics() {
                 return (
                   <TableRow key={client.id} className={client.priority === "High" ? "bg-red-50" : ""}>
                     <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>{client.company || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {client.assignedEmployees.map((emp, i) => {
+                          const initials = emp.name
+                            .split(' ')
+                            .map(n => n[0])
+                            .join('')
+                            .toUpperCase()
+                            .slice(0, 2);
+
+                          return (
+                            <Badge key={emp.id || i} variant="outline" className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-0.5 bg-slate-50 hover:bg-slate-100 transition-colors border-slate-200">
+                              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold border border-indigo-200">
+                                {initials}
+                              </div>
+                              <span className="text-xs font-medium text-slate-700">{emp.name}</span>
+                            </Badge>
+                          );
+                        })}
+                        {client.assignedEmployees.length === 0 && (
+                          <span className="text-slate-400 text-xs italic">None</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{client.company || "-"}</TableCell>
                     <TableCell className="text-center">
                       <span className={`font-semibold ${client.applicationsRemaining <= 2 ? "text-red-600" :

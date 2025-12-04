@@ -31,10 +31,31 @@ export default function EmployeeDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Employee Stats */}
         {stats && <StatsCards stats={stats} type="employee" />}
+
+        {/* Assigned Clients List */}
+        {stats && stats.assignedClients && stats.assignedClients.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">My Assigned Clients</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats.assignedClients.map((client, i) => (
+                <div key={i} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{client.name}</p>
+                    <p className="text-sm text-slate-500">Assigned Client</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-blue-600">{client.appsRemaining}</p>
+                    <p className="text-xs text-slate-500">Apps Left</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

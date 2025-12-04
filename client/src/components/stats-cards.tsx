@@ -121,6 +121,23 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm font-medium text-slate-600">Workload</p>
+                <p className="text-3xl font-bold text-slate-900" data-testid="text-workload">
+                  {empStats.totalAppsRemaining || 0}
+                </p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <FileText className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mt-2">Applications to do</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-slate-600">In Progress</p>
                 <p className="text-3xl font-bold text-slate-900" data-testid="text-in-progress">
                   {empStats.inProgress}
@@ -263,7 +280,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
             </div>
           </div>
           <p className="text-xs md:text-sm text-green-600 mt-2">
-            {clientStats.totalApplications > 0 
+            {clientStats.totalApplications > 0
               ? `${((clientStats.hired / clientStats.totalApplications) * 100).toFixed(1)}% success rate`
               : "0% success rate"
             }

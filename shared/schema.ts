@@ -145,6 +145,34 @@ export const clientProfilesRelations = relations(clientProfiles, ({ one }) => ({
   }),
 }));
 
+// Employee Assignments table (Many-to-Many between Clients and Employees)
+export const employeeAssignments = pgTable(
+  "employee_assignments",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    clientId: uuid("client_id").notNull().references(() => users.id),
+    employeeId: uuid("employee_id").notNull().references(() => users.id),
+    assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_employee_assignments_client").on(table.clientId),
+    index("idx_employee_assignments_employee").on(table.employeeId),
+  ]
+);
+
+export const employeeAssignmentsRelations = relations(employeeAssignments, ({ one }) => ({
+  client: one(users, {
+    fields: [employeeAssignments.clientId],
+    references: [users.id],
+    relationName: "assignedClient",
+  }),
+  employee: one(users, {
+    fields: [employeeAssignments.employeeId],
+    references: [users.id],
+    relationName: "assignedEmployee",
+  }),
+}));
+
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users)
   .omit({
@@ -237,3 +265,6 @@ export type JobApplicationWithUsers = JobApplication & {
 export type ClientProfileWithUser = ClientProfile & {
   user?: User;
 };
+
+export type EmployeeAssignment = typeof employeeAssignments.$inferSelect;
+export type InsertEmployeeAssignment = typeof employeeAssignments.$inferInsert;

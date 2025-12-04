@@ -44,6 +44,8 @@ export type EmployeeStats = {
   myApplications: number;
   inProgress: number;
   successRate: number;
+  totalAppsRemaining?: number;
+  assignedClients?: { name: string; appsRemaining: number }[];
 };
 
 export type ClientStats = {
@@ -75,6 +77,14 @@ export type EmployeePerformanceData = {
   earnings: number;
   interviews: number;
   totalApplications: number;
+  assignedClients: string[];
+  applicationsToday: number;
+  applicationsThisMonth: number;
+  interviewsThisMonth: number;
+  earningsThisMonth: number;
+  activeClientsCount: number;
+  totalApplicationsRemaining: number;
+  effectiveWorkload: number;
 };
 
 export type EmployeePerformanceAnalytics = {
@@ -124,6 +134,7 @@ export type ClientPerformanceData = {
   hired: number;
   successRate: number;
   priority: "High" | "Medium" | "Low";
+  assignedEmployees: { id: string; name: string }[];
 };
 
 export type ClientPerformanceAnalytics = {
