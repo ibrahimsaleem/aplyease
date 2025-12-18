@@ -8,7 +8,7 @@ The AI-powered resume generator has been successfully implemented allowing emplo
 1. ✅ Added `geminiApiKey` to `storage.ts` updateUser method
 2. ✅ Modified `/api/auth/user` to fetch fresh user data from database (ensures API key is always current)
 3. ✅ Added `refetchQueries` to navigation header after saving API key
-4. ✅ Updated to use `@google/genai` package with `gemini-2.5-flash` model (more stable and newer API)
+4. ✅ Updated to use `@google/genai` package with `gemini-1.5-flash` model (more stable and newer API)
 
 ## What Was Implemented
 
@@ -35,7 +35,7 @@ Created two new API endpoints in `server/routes.ts`:
 
 ### 3. Gemini AI Integration ✅
 - Installed `@google/genai` package (newer SDK)
-- Uses model: `gemini-2.5-flash` (latest stable model)
+- Uses model: `gemini-1.5-flash` (latest stable model)
 - Constructs intelligent prompt combining:
   - Client's base LaTeX resume
   - Job description

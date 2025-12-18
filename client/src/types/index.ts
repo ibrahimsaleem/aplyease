@@ -54,6 +54,7 @@ export type ClientStats = {
   interviews: number;
   hired: number;
   applicationsRemaining?: number;
+  assignedEmployees?: { name: string; email: string }[];
 };
 
 export type ApplicationFilters = {

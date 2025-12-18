@@ -141,6 +141,7 @@ export interface IStorage {
   // Employee Assignment operations
   assignEmployee(clientId: string, employeeId: string): Promise<EmployeeAssignment>;
   unassignEmployee(clientId: string, employeeId: string): Promise<void>;
+  getEmployeeAssignments(employeeId: string): Promise<User[]>;
   getClientAssignments(clientId: string): Promise<User[]>;
 }
 
@@ -203,6 +204,8 @@ export class DatabaseStorage implements IStorage {
           ...((userData as any).applicationsRemaining !== undefined ? { applicationsRemaining: (userData as any).applicationsRemaining } : {}),
           ...((userData as any).isActive !== undefined ? { isActive: (userData as any).isActive } : {}),
           ...((userData as any).geminiApiKey !== undefined ? { geminiApiKey: (userData as any).geminiApiKey } : {}),
+          ...((userData as any).preferredGeminiModel !== undefined ? { preferredGeminiModel: (userData as any).preferredGeminiModel } : {}),
+          ...((userData as any).fallbackGeminiApiKey !== undefined ? { fallbackGeminiApiKey: (userData as any).fallbackGeminiApiKey } : {}),
           ...((userData as any).passwordHash !== undefined ? { passwordHash: (userData as any).passwordHash } : {}),
           updatedAt: new Date(),
         } as any)
@@ -580,6 +583,7 @@ export class DatabaseStorage implements IStorage {
     inProgress: number;
     interviews: number;
     hired: number;
+    assignedEmployees?: { name: string; email: string }[];
   }> {
     return retryOperation(async () => {
       const [totalApps] = await db
@@ -617,11 +621,17 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
+      const assignedEmployees = await this.getClientAssignments(clientId);
+
       return {
         totalApplications: totalApps.count,
         inProgress: inProgress.count,
         interviews: interviews.count,
         hired: hired.count,
+        assignedEmployees: assignedEmployees.map(emp => ({
+          name: emp.name,
+          email: emp.email
+        })),
       };
     });
   }
@@ -1516,6 +1526,7 @@ export class DatabaseStorage implements IStorage {
       return result.map((r) => r.user);
     });
   }
+
 }
 
 export const storage = new DatabaseStorage();

@@ -152,7 +152,7 @@ export type OptimizationIteration = {
 - Clear error messages with actionable guidance
 
 ### Performance
-- Uses `gemini-2.5-flash` for fast processing
+- Uses `gemini-1.5-flash` for fast processing
 - Auto-evaluation eliminates extra button clicks
 - Efficient state management
 - No unnecessary re-renders

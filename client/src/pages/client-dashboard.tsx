@@ -75,10 +75,37 @@ export default function ClientDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <NavigationHeader user={user} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* Client Stats */}
         {stats && <StatsCards stats={stats} type="client" />}
+
+        {/* Assigned Team Section */}
+        {stats && stats.assignedEmployees && stats.assignedEmployees.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">My Dedicated Team</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats.assignedEmployees.map((employee, i) => (
+                <div key={i} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{employee.name}</p>
+                    <a
+                      href={`mailto:${employee.email}`}
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                    >
+                      {employee.email}
+                    </a>
+                  </div>
+                  <div className="bg-blue-50 p-2 rounded-full">
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold">
+                      {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Mobile View */}
         {isMobile ? (
@@ -89,7 +116,7 @@ export default function ClientDashboard() {
                 Read-only view of job applications submitted on your behalf
               </p>
             </div>
-            
+
             <MobileApplicationsList
               filters={filters}
               readonly={true}

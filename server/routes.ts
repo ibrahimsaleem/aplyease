@@ -371,25 +371,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/users/:userId/gemini-key", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
-      const { apiKey } = req.body;
+      const { apiKey, preferredModel, fallbackApiKey } = req.body;
       const currentUser = (req.user ?? req.session.user)!;
 
-      // Users can only update their own API key
+      // Users can only update their own settings
       if (currentUser.id !== userId) {
-        return res.status(403).json({ message: "You can only update your own API key" });
+        return res.status(403).json({ message: "You can only update your own settings" });
       }
 
-      if (!apiKey || typeof apiKey !== 'string') {
-        return res.status(400).json({ message: "API key is required" });
+      const updateData: any = {};
+      if (apiKey !== undefined) updateData.geminiApiKey = apiKey;
+      if (preferredModel !== undefined) updateData.preferredGeminiModel = preferredModel;
+      if (fallbackApiKey !== undefined) updateData.fallbackGeminiApiKey = fallbackApiKey;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No settings provided to update" });
       }
 
-      await storage.updateUser(userId, { geminiApiKey: apiKey } as any);
-      res.json({ message: "Gemini API key saved successfully" });
+      await storage.updateUser(userId, updateData);
+      res.json({ message: "Gemini settings saved successfully" });
     } catch (error) {
-      console.error("Error saving Gemini API key:", error);
-      res.status(500).json({ message: "Failed to save API key" });
+      console.error("Error saving Gemini settings:", error);
+      res.status(500).json({ message: "Failed to save settings" });
     }
   });
+
+  // Helper function to retry Gemini operations with exponential backoff and fallback key support
+  async function retryGemini<T>(
+    operation: (apiKey: string) => Promise<T>,
+    primaryApiKey: string,
+    fallbackApiKey?: string | null,
+    maxAttempts = 3
+  ): Promise<T> {
+    let currentApiKey = primaryApiKey;
+    let usingFallback = false;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await operation(currentApiKey);
+      } catch (error: any) {
+        const isQuotaError = error.message?.includes('quota') || error.status === 429;
+        const isOverloadedError =
+          error.message?.includes('overloaded') ||
+          error.message?.includes('UNAVAILABLE') ||
+          error.status === 503;
+
+        // If it's a quota error or we've tried a few times with overload, try the fallback key if available
+        if ((isQuotaError || (isOverloadedError && attempt >= 2)) && fallbackApiKey && !usingFallback) {
+          console.log(`Switching to fallback Gemini API key due to ${isQuotaError ? 'quota' : 'overload'}...`);
+          currentApiKey = fallbackApiKey;
+          usingFallback = true;
+          // Don't increment attempt counter when switching to fallback for the first time
+          // but do a small delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        if (isOverloadedError && attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`Gemini overloaded/unavailable. Retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error("Max retry attempts reached");
+  }
 
   // Resume generation with Gemini AI
   app.post("/api/generate-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
@@ -402,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Job description is required" });
       }
 
-      // Get current user's Gemini API key
+      // Get current user's Gemini settings
       const user = await storage.getUser(currentUser.id);
       if (!user || !user.geminiApiKey) {
         return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
@@ -416,7 +464,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Initialize Gemini AI
       const { GoogleGenAI } = await import("@google/genai");
-      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
 
       // Construct prompt
       const prompt = `Resume Tailoring Prompt
@@ -429,62 +476,41 @@ OPTIMIZATION REQUIREMENTS
 ONE-PAGE MAXIMUM: Ensure the resume remains within a single page while retaining all user-provided content, including experience and projects.
 
 JOB-SPECIFIC ALIGNMENT:
-
 Integrate key terms and phrases from the job description naturally throughout the resume.
-
 Reorder and prioritize experiences/skills to match job requirements.
-
 Replace generic statements with job-relevant accomplishments.
-
 Adjust section ordering if necessary to emphasize the most relevant qualifications first.
 
 QUANTIFIABLE ACHIEVEMENTS:
-
 Convert general statements into specific, measurable outcomes (e.g., “Increased efficiency by 35%”).
-
 Add metrics and specific results wherever possible.
-
 Emphasize achievements that directly relate to the job requirements.
 
 SPACE OPTIMIZATION (Without Removing Content):
-
 Utilize line space efficiently (avoid lines with just one or two words).
-
 Balance content density while maintaining readability.
-
 Eliminate redundancies and non-essential information.
-
 Use full lines of text rather than leaving white space.
-
 Adjust formatting elements like font size, margin adjustments, and section spacing to fit within one page.
 
 COURSEWORK RELEVANCE:
-
 Adjust coursework listings to showcase an academic background relevant to the position.
-
 Replace less relevant courses with more applicable ones based on the job description.
 
 LANGUAGE ENHANCEMENT:
-
 Use action verbs and impactful language that mirrors job description terminology.
-
 Replace passive voice with active, accomplishment-focused statements.
-
 Eliminate filler words and redundancies for maximum impact.
 
 PERFECT LATEX FORMATTING:
-
 Maintain proper LaTeX syntax and correct escaping of special characters.
-
 Preserve document structure while optimizing content.
-
 Ensure formatting consistency throughout the document.
 
 Output Instructions
-
 Return only the complete, optimized LaTeX code.
-
 Do not include explanations, comments, markdown syntax, or code block markers.
+
 Base Resume:
 ${clientProfile.baseResumeLatex}
 
@@ -494,10 +520,17 @@ ${jobDescription}
 Generate the tailored LaTeX resume:`;
 
       // Generate content
-      const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({
+            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            contents: prompt,
+          });
+        },
+        user.geminiApiKey,
+        user.fallbackGeminiApiKey
+      );
 
       let generatedLatex = response.text;
 
@@ -514,6 +547,9 @@ Generate the tailored LaTeX resume:`;
       }
       if (error.message?.includes('quota')) {
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes('overloaded') || error.message?.includes('UNAVAILABLE')) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
       }
 
       res.status(500).json({
@@ -538,7 +574,7 @@ Generate the tailored LaTeX resume:`;
         return res.status(400).json({ message: "Job description is required" });
       }
 
-      // Get current user's Gemini API key
+      // Get current user's Gemini settings
       const user = await storage.getUser(currentUser.id);
       if (!user || !user.geminiApiKey) {
         return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
@@ -546,7 +582,6 @@ Generate the tailored LaTeX resume:`;
 
       // Initialize Gemini AI
       const { GoogleGenAI } = await import("@google/genai");
-      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
 
       // Construct evaluation prompt
       const prompt = `You are an expert ATS (Applicant Tracking System) resume evaluator with 15+ years of experience. Analyze this LaTeX resume against the job description.
@@ -582,10 +617,17 @@ ${latex}
 Provide your evaluation in valid JSON format only, no other text:`;
 
       // Generate evaluation
-      const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({
+            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            contents: prompt,
+          });
+        },
+        user.geminiApiKey,
+        user.fallbackGeminiApiKey
+      );
 
       let evaluationText = response.text.trim();
 
@@ -605,6 +647,9 @@ Provide your evaluation in valid JSON format only, no other text:`;
       }
       if (error.message?.includes('quota')) {
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes('overloaded') || error.message?.includes('UNAVAILABLE')) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
       }
       if (error instanceof SyntaxError) {
         return res.status(500).json({
@@ -639,7 +684,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
         return res.status(400).json({ message: "Previous feedback is required" });
       }
 
-      // Get current user's Gemini API key
+      // Get current user's Gemini settings
       const user = await storage.getUser(currentUser.id);
       if (!user || !user.geminiApiKey) {
         return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
@@ -647,7 +692,6 @@ Provide your evaluation in valid JSON format only, no other text:`;
 
       // Initialize Gemini AI
       const { GoogleGenAI } = await import("@google/genai");
-      const genAI = new GoogleGenAI({ apiKey: user.geminiApiKey });
 
       const { score, strengths, improvements, missingElements } = previousFeedback;
 
@@ -685,10 +729,17 @@ ${latex}
 Return ONLY the optimized LaTeX code without explanations, comments, or markdown:`;
 
       // Generate optimized resume
-      const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({
+            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            contents: prompt,
+          });
+        },
+        user.geminiApiKey,
+        user.fallbackGeminiApiKey
+      );
 
       let optimizedLatex = response.text;
 
@@ -705,6 +756,9 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       }
       if (error.message?.includes('quota')) {
         return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes('overloaded') || error.message?.includes('UNAVAILABLE')) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
       }
 
       res.status(500).json({

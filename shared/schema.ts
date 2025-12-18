@@ -41,6 +41,8 @@ export const users = pgTable(
     isActive: boolean("is_active").default(sql`true`).notNull(),
     passwordHash: text("password_hash").notNull(),
     geminiApiKey: text("gemini_api_key"),
+    preferredGeminiModel: text("preferred_gemini_model").default(sql`'gemini-2.5-flash'`).notNull(),
+    fallbackGeminiApiKey: text("fallback_gemini_api_key"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
