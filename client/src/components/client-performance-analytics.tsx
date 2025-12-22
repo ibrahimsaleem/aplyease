@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -144,15 +144,22 @@ export function ClientPerformanceAnalytics() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+            <BarChart
+              data={chartData}
+              layout="horizontal"
+              margin={{ top: 16, right: 12, left: 12, bottom: 48 }}
+            >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis type="number" />
-              <YAxis
+              <XAxis
                 dataKey="name"
                 type="category"
-                width={120}
                 tick={{ fontSize: 12 }}
+                interval={0}
+                angle={-35}
+                textAnchor="end"
+                height={60}
               />
+              <YAxis type="number" tick={{ fontSize: 12 }} />
               <Tooltip
                 cursor={{ fill: 'transparent' }}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
@@ -162,9 +169,16 @@ export function ClientPerformanceAnalytics() {
                 dataKey="applicationsRemaining"
                 name="Applications Remaining"
                 fill="#3b82f6"
-                radius={[0, 4, 4, 0]}
-                barSize={20}
-              />
+                radius={[4, 4, 0, 0]}
+                barSize={24}
+              >
+                <LabelList
+                  dataKey="applicationsRemaining"
+                  position="top"
+                  fill="#0f172a"
+                  fontSize={12}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
