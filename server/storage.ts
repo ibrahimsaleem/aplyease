@@ -1,6 +1,6 @@
 import { users, jobApplications, clientProfiles, employeeAssignments, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type EmployeeAssignment, type InsertEmployeeAssignment } from "../shared/schema";
 import { db } from "./db";
-import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, type SQL } from "drizzle-orm";
+import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { hashPassword } from "./auth";
 import { cache } from "./cache";
@@ -678,110 +678,96 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
-      // Get all assignments to calculate client load distribution
-      const allAssignments = await db.select().from(employeeAssignments);
-      const clientEmployeeCounts = new Map<string, number>();
+      if (activeEmployees.length === 0) {
+        return {
+          totalPayout: 0,
+          employees: [],
+          weeklyPerformance: await this.getWeeklyPerformance(),
+          dailyPerformance: await this.getDailyPerformance()
+        };
+      }
 
-      allAssignments.forEach(assignment => {
+      const employeeIds = activeEmployees.map(e => e.id);
+
+      // Fetch all applications for these employees
+      const allApplications = await db
+        .select({
+          employeeId: jobApplications.employeeId,
+          status: jobApplications.status,
+          dateApplied: jobApplications.dateApplied,
+        })
+        .from(jobApplications)
+        .where(inArray(jobApplications.employeeId, employeeIds));
+
+      // Fetch all assignments
+      const allAssignments = await db
+        .select({
+          employeeId: employeeAssignments.employeeId,
+          clientId: employeeAssignments.clientId,
+          clientName: users.name,
+          clientAppsRemaining: users.applicationsRemaining,
+        })
+        .from(employeeAssignments)
+        .innerJoin(users, eq(employeeAssignments.clientId, users.id))
+        .where(inArray(employeeAssignments.employeeId, employeeIds));
+
+      // Get all assignments to calculate client load distribution
+      const globalAssignments = await db.select().from(employeeAssignments);
+      const clientEmployeeCounts = new Map<string, number>();
+      globalAssignments.forEach(assignment => {
         const currentCount = clientEmployeeCounts.get(assignment.clientId) || 0;
         clientEmployeeCounts.set(assignment.clientId, currentCount + 1);
       });
 
-      const employeeStats = await Promise.all(
-        activeEmployees.map(async (employee) => {
-          // Get total applications for this employee
-          const [totalApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(eq(jobApplications.employeeId, employee.id));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
 
-          // Get interviews for this employee
-          const [interviews] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                eq(jobApplications.status, "Interview")
-              )
-            );
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
 
-          // Calculate success rate (interviews/total)
-          const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
+      const employeeStats = activeEmployees.map(employee => {
+        const empApps = allApplications.filter(app => app.employeeId === employee.id);
 
-          // Calculate earnings ($0.20 per application)
-          const earnings = totalApps.count * 0.2;
+        const totalAppsCount = empApps.length;
+        const interviewsCount = empApps.filter(app => app.status === "Interview").length;
+        const successRate = totalAppsCount > 0 ? (interviewsCount / totalAppsCount) * 100 : 0;
+        const earnings = totalAppsCount * 0.2;
 
-          // Get applications for today
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const [todayApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, today.toISOString().split('T')[0])
-              )
-            );
+        const todayAppsCount = empApps.filter(app => app.dateApplied >= todayStr).length;
 
-          // Get applications for this month
-          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          const [monthApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, startOfMonth.toISOString().split('T')[0])
-              )
-            );
+        const monthApps = empApps.filter(app => app.dateApplied >= startOfMonthStr);
+        const monthAppsCount = monthApps.length;
+        const monthInterviewsCount = monthApps.filter(app => app.status === "Interview").length;
+        const monthEarnings = monthAppsCount * 0.2;
 
-          // Get interviews for this month
-          const [monthInterviews] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                eq(jobApplications.status, "Interview"),
-                gte(jobApplications.dateApplied, startOfMonth.toISOString().split('T')[0])
-              )
-            );
+        const assignedClientsData = allAssignments.filter(a => a.employeeId === employee.id);
+        const activeClientsCount = assignedClientsData.length;
+        const totalApplicationsRemaining = assignedClientsData.reduce((sum, client) => sum + (client.clientAppsRemaining || 0), 0);
 
-          // Calculate earnings for this month
-          const monthEarnings = monthApps.count * 0.2;
+        const effectiveWorkload = assignedClientsData.reduce((sum, client) => {
+          const employeeCount = clientEmployeeCounts.get(client.clientId) || 1;
+          return sum + ((client.clientAppsRemaining || 0) / employeeCount);
+        }, 0);
 
-          // Get assigned clients details
-          const assignedClientsData = await this.getEmployeeAssignments(employee.id);
-          const activeClientsCount = assignedClientsData.length;
-          const totalApplicationsRemaining = assignedClientsData.reduce((sum, client) => sum + (client.applicationsRemaining || 0), 0);
-
-          // Calculate effective workload (weighted by number of employees assigned to each client)
-          const effectiveWorkload = assignedClientsData.reduce((sum, client) => {
-            const employeeCount = clientEmployeeCounts.get(client.id) || 1; // Default to 1 to avoid division by zero
-            return sum + ((client.applicationsRemaining || 0) / employeeCount);
-          }, 0);
-
-          return {
-            id: employee.id,
-            name: employee.name,
-            applicationsSubmitted: totalApps.count,
-            successRate: Math.round(successRate * 100) / 100, // Round to 2 decimal places
-            earnings: Math.round(earnings * 100) / 100, // Round to 2 decimal places
-            interviews: interviews.count,
-            totalApplications: totalApps.count,
-            assignedClients: assignedClientsData.map(c => c.name),
-            applicationsToday: todayApps.count,
-            applicationsThisMonth: monthApps.count,
-            interviewsThisMonth: monthInterviews.count,
-            earningsThisMonth: Math.round(monthEarnings * 100) / 100,
-            activeClientsCount,
-            totalApplicationsRemaining,
-            effectiveWorkload: Math.round(effectiveWorkload),
-          };
-        })
-      );
+        return {
+          id: employee.id,
+          name: employee.name,
+          applicationsSubmitted: totalAppsCount,
+          successRate: Math.round(successRate * 100) / 100,
+          earnings: Math.round(earnings * 100) / 100,
+          interviews: interviewsCount,
+          totalApplications: totalAppsCount,
+          assignedClients: assignedClientsData.map(c => c.clientName),
+          applicationsToday: todayAppsCount,
+          applicationsThisMonth: monthAppsCount,
+          interviewsThisMonth: monthInterviewsCount,
+          earningsThisMonth: Math.round(monthEarnings * 100) / 100,
+          activeClientsCount,
+          totalApplicationsRemaining,
+          effectiveWorkload: Math.round(effectiveWorkload),
+        };
+      });
 
       // Calculate total payout
       const totalPayout = employeeStats.reduce((sum, employee) => sum + employee.earnings, 0);
@@ -837,77 +823,84 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
-      const clientStats = await Promise.all(
-        activeClients.map(async (client) => {
-          // Get total applications for this client
-          const [totalApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(eq(jobApplications.clientId, client.id));
+      if (activeClients.length === 0) {
+        return { totalClients: 0, clients: [] };
+      }
 
-          // Get in progress applications
-          const [inProgress] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.clientId, client.id),
-                sql`${jobApplications.status} IN ('Applied', 'Screening')`
-              )
-            );
+      const clientIds = activeClients.map(c => c.id);
 
-          // Get interviews for this client
-          const [interviews] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.clientId, client.id),
-                eq(jobApplications.status, "Interview")
-              )
-            );
-
-          // Get hired applications
-          const [hired] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.clientId, client.id),
-                eq(jobApplications.status, "Hired")
-              )
-            );
-
-          // Calculate success rate (hired/total)
-          const successRate = totalApps.count > 0 ? (hired.count / totalApps.count) * 100 : 0;
-
-          // Determine priority based on applications remaining and activity
-          let priority: "High" | "Medium" | "Low";
-          const appsRemaining = (client as any).applicationsRemaining ?? 0;
-
-          if (appsRemaining <= 2 || (totalApps.count === 0 && appsRemaining <= 5)) {
-            priority = "High";
-          } else if (appsRemaining <= 5 || totalApps.count === 0) {
-            priority = "Medium";
-          } else {
-            priority = "Low";
-          }
-
-          return {
-            id: client.id,
-            name: client.name,
-            company: client.company || undefined,
-            applicationsRemaining: appsRemaining,
-            totalApplications: totalApps.count,
-            inProgress: inProgress.count,
-            interviews: interviews.count,
-            hired: hired.count,
-            successRate: Math.round(successRate * 100) / 100,
-            priority,
-            assignedEmployees: (await this.getClientAssignments(client.id)).map(e => ({ id: e.id, name: e.name })),
-          };
+      // Fetch all applications for these clients
+      const allApplications = await db
+        .select({
+          clientId: jobApplications.clientId,
+          status: jobApplications.status,
         })
-      );
+        .from(jobApplications)
+        .where(inArray(jobApplications.clientId, clientIds));
+
+      // Fetch all assignments for these clients
+      const allAssignments = await db
+        .select({
+          clientId: employeeAssignments.clientId,
+          employeeId: employeeAssignments.employeeId,
+          employeeName: users.name,
+        })
+        .from(employeeAssignments)
+        .innerJoin(users, eq(employeeAssignments.employeeId, users.id))
+        .where(inArray(employeeAssignments.clientId, clientIds));
+
+      const clientStats = activeClients.map((client) => {
+        // Filter applications for this client in memory
+        const clientApps = allApplications.filter(app => app.clientId === client.id);
+
+        const totalApplications = clientApps.length;
+
+        const inProgress = clientApps.filter(app =>
+          ['Applied', 'Screening'].includes(app.status)
+        ).length;
+
+        const interviews = clientApps.filter(app =>
+          app.status === "Interview"
+        ).length;
+
+        const hired = clientApps.filter(app =>
+          app.status === "Hired"
+        ).length;
+
+        // Calculate success rate (hired/total)
+        const successRate = totalApplications > 0 ? (hired / totalApplications) * 100 : 0;
+
+        // Get assigned employees for this client
+        const assignedEmployees = allAssignments
+          .filter(a => a.clientId === client.id)
+          .map(a => ({ id: a.employeeId, name: a.employeeName }));
+
+        // Determine priority based on applications remaining and activity
+        let priority: "High" | "Medium" | "Low";
+        const appsRemaining = (client as any).applicationsRemaining ?? 0;
+
+        if (appsRemaining <= 2 || (totalApplications === 0 && appsRemaining <= 5)) {
+          priority = "High";
+        } else if (appsRemaining <= 5 || totalApplications === 0) {
+          priority = "Medium";
+        } else {
+          priority = "Low";
+        }
+
+        return {
+          id: client.id,
+          name: client.name,
+          company: client.company || undefined,
+          applicationsRemaining: appsRemaining,
+          totalApplications,
+          inProgress,
+          interviews,
+          hired,
+          successRate: Math.round(successRate * 100) / 100,
+          priority,
+          assignedEmployees,
+        };
+      });
 
       // Sort clients by applications remaining (descending)
       const sortedClients = clientStats.sort((a, b) => {
@@ -955,103 +948,90 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
+      if (activeEmployees.length === 0) {
+        return {
+          totalApplicationsToday: 0,
+          totalApplicationsYesterday: 0,
+          totalApplicationsLast3Days: 0,
+          totalApplicationsLast7Days: 0,
+          employees: [],
+        };
+      }
+
+      const employeeIds = activeEmployees.map(e => e.id);
+
       // Calculate date ranges
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
 
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
 
       const threeDaysAgo = new Date(today);
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const threeDaysAgoStr = threeDaysAgo.toISOString().split('T')[0];
 
       const sevenDaysAgo = new Date(today);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
-      const employeeStats = await Promise.all(
-        activeEmployees.map(async (employee) => {
-          // Get applications for today
-          const [todayApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, today.toISOString().split('T')[0])
-              )
-            );
-
-          // Get applications for yesterday
-          const [yesterdayApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, yesterday.toISOString().split('T')[0]),
-                lt(jobApplications.dateApplied, today.toISOString().split('T')[0])
-              )
-            );
-
-          // Get applications for last 3 days
-          const [last3DaysApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, threeDaysAgo.toISOString().split('T')[0])
-              )
-            );
-
-          // Get applications for last 7 days
-          const [last7DaysApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                gte(jobApplications.dateApplied, sevenDaysAgo.toISOString().split('T')[0])
-              )
-            );
-
-          // Get total applications for this employee
-          const [totalApps] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(eq(jobApplications.employeeId, employee.id));
-
-          // Get interviews for this employee
-          const [interviews] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employee.id),
-                eq(jobApplications.status, "Interview")
-              )
-            );
-
-          // Calculate success rate (interviews/total)
-          const successRate = totalApps.count > 0 ? (interviews.count / totalApps.count) * 100 : 0;
-
-          // Calculate earnings ($0.20 per application)
-          const earnings = totalApps.count * 0.2;
-
-          return {
-            id: employee.id,
-            name: employee.name,
-            applicationsToday: todayApps.count,
-            applicationsYesterday: yesterdayApps.count,
-            applicationsLast3Days: last3DaysApps.count,
-            applicationsLast7Days: last7DaysApps.count,
-            totalApplications: totalApps.count,
-            successRate: Math.round(successRate * 100) / 100,
-            earnings: Math.round(earnings * 100) / 100,
-            interviews: interviews.count,
-          };
+      // 1. Recent applications (last 7 days)
+      const recentApplications = await db
+        .select({
+          employeeId: jobApplications.employeeId,
+          dateApplied: jobApplications.dateApplied,
         })
-      );
+        .from(jobApplications)
+        .where(
+          and(
+            inArray(jobApplications.employeeId, employeeIds),
+            gte(jobApplications.dateApplied, sevenDaysAgoStr)
+          )
+        );
+
+      // 2. Total stats (grouped by employee)
+      const totalStats = await db
+        .select({
+          employeeId: jobApplications.employeeId,
+          totalCount: count(),
+          interviewsCount: sql<number>`count(case when ${jobApplications.status} = 'Interview' then 1 end)`,
+        })
+        .from(jobApplications)
+        .where(inArray(jobApplications.employeeId, employeeIds))
+        .groupBy(jobApplications.employeeId);
+
+      const statsMap = new Map(totalStats.map(s => [s.employeeId, s]));
+
+      const employeeStats = activeEmployees.map(employee => {
+        const empRecentApps = recentApplications.filter(app => app.employeeId === employee.id);
+
+        const appsToday = empRecentApps.filter(app => app.dateApplied >= todayStr).length;
+        const appsYesterday = empRecentApps.filter(app => app.dateApplied >= yesterdayStr && app.dateApplied < todayStr).length;
+        const appsLast3Days = empRecentApps.filter(app => app.dateApplied >= threeDaysAgoStr).length;
+        const appsLast7Days = empRecentApps.filter(app => app.dateApplied >= sevenDaysAgoStr).length;
+
+        const stats = statsMap.get(employee.id);
+        const totalAppsCount = stats ? Number(stats.totalCount) : 0;
+        const interviewsCount = stats ? Number(stats.interviewsCount) : 0;
+
+        const successRate = totalAppsCount > 0 ? (interviewsCount / totalAppsCount) * 100 : 0;
+        const earnings = totalAppsCount * 0.2;
+
+        return {
+          id: employee.id,
+          name: employee.name,
+          applicationsToday: appsToday,
+          applicationsYesterday: appsYesterday,
+          applicationsLast3Days: appsLast3Days,
+          applicationsLast7Days: appsLast7Days,
+          totalApplications: totalAppsCount,
+          successRate: Math.round(successRate * 100) / 100,
+          earnings: Math.round(earnings * 100) / 100,
+          interviews: interviewsCount,
+        };
+      });
 
       // Calculate totals
       const totalApplicationsToday = employeeStats.reduce((sum, emp) => sum + emp.applicationsToday, 0);
@@ -1203,63 +1183,77 @@ export class DatabaseStorage implements IStorage {
 
         console.log(`Found ${allEmployees.length} employees`);
 
+        if (allEmployees.length === 0) {
+          return [];
+        }
+
         // Get rates from environment variables
         const baseRate = parseFloat(process.env.BASE_RATE_PER_APPLICATION_USD || '0.2');
         const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
         const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
-        const monthlyTarget = dailyTarget * 30; // Approximate monthly target
+
+        // Fetch all applications for the month for all employees
+        const monthlyApplications = await db
+          .select({
+            employeeId: jobApplications.employeeId,
+            dateApplied: jobApplications.dateApplied,
+          })
+          .from(jobApplications)
+          .where(
+            and(
+              gte(jobApplications.dateApplied, startDate),
+              lte(jobApplications.dateApplied, endDate),
+              inArray(jobApplications.employeeId, allEmployees.map(e => e.id))
+            )
+          );
 
         // Calculate daily payouts for each employee this month
-        const employeeStats = await Promise.all(
-          allEmployees.map(async (employee) => {
-            let totalApplications = 0;
-            let totalPayout = 0;
-            let daysMetTarget = 0;
+        const employeeStats = allEmployees.map(employee => {
+          const employeeApps = monthlyApplications.filter(app => app.employeeId === employee.id);
 
-            // Get all days in the month and calculate daily payouts
-            for (let day = 1; day <= endOfMonth.getDate(); day++) {
-              const currentDate = new Date(targetYear, targetMonth, day);
-              const dateString = currentDate.toISOString().split('T')[0];
+          // Group by date
+          const appsByDate = new Map<string, number>();
+          employeeApps.forEach(app => {
+            const date = app.dateApplied; // Assuming dateApplied is YYYY-MM-DD string
+            appsByDate.set(date, (appsByDate.get(date) || 0) + 1);
+          });
 
-              // Get applications for this specific day
-              const [dailyApplicationCount] = await db
-                .select({ count: count() })
-                .from(jobApplications)
-                .where(
-                  and(
-                    eq(jobApplications.employeeId, employee.id),
-                    eq(jobApplications.dateApplied, dateString)
-                  )
-                );
+          let totalApplications = 0;
+          let totalPayout = 0;
+          let daysMetTarget = 0;
 
-              const dailyApplications = dailyApplicationCount.count;
-              totalApplications += dailyApplications;
+          // Get all days in the month and calculate daily payouts
+          for (let day = 1; day <= endOfMonth.getDate(); day++) {
+            const currentDate = new Date(targetYear, targetMonth, day);
+            const dateString = currentDate.toISOString().split('T')[0];
 
-              // Calculate daily payout based on daily target
-              // If employee applied >= 15 applications on this day: $0.20 per application
-              // If employee applied < 15 applications on this day: $0.15 per application
-              const dailyMetTarget = dailyApplications >= dailyTarget;
-              if (dailyMetTarget) daysMetTarget++;
+            const dailyApplications = appsByDate.get(dateString) || 0;
+            totalApplications += dailyApplications;
 
-              const dailyRate = dailyMetTarget ? baseRate : belowTargetRate;
-              const dailyPayout = dailyApplications * dailyRate;
-              totalPayout += dailyPayout;
-            }
+            // Calculate daily payout based on daily target
+            // If employee applied >= 15 applications on this day: $0.20 per application
+            // If employee applied < 15 applications on this day: $0.15 per application
+            const dailyMetTarget = dailyApplications >= dailyTarget;
+            if (dailyMetTarget) daysMetTarget++;
 
-            const isAboveTarget = daysMetTarget > (endOfMonth.getDate() / 2); // More than half the days met target
+            const dailyRate = dailyMetTarget ? baseRate : belowTargetRate;
+            const dailyPayout = dailyApplications * dailyRate;
+            totalPayout += dailyPayout;
+          }
 
-            return {
-              employeeId: employee.id,
-              employeeName: employee.name,
-              applicationsThisMonth: totalApplications,
-              totalPayout,
-              baseRate,
-              belowTargetRate,
-              dailyTarget,
-              isAboveTarget
-            };
-          })
-        );
+          const isAboveTarget = daysMetTarget > (endOfMonth.getDate() / 2); // More than half the days met target
+
+          return {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            applicationsThisMonth: totalApplications,
+            totalPayout,
+            baseRate,
+            belowTargetRate,
+            dailyTarget,
+            isAboveTarget
+          };
+        });
 
         return employeeStats;
       } catch (error) {
@@ -1322,6 +1316,27 @@ export class DatabaseStorage implements IStorage {
         const belowTargetRate = parseFloat(process.env.BELOW_TARGET_RATE_USD || '0.15');
         const dailyTarget = parseInt(process.env.DAILY_TARGET_APPLICATIONS || '15');
 
+        // Fetch all applications for the month for this employee
+        const monthlyApplications = await db
+          .select({
+            dateApplied: jobApplications.dateApplied,
+          })
+          .from(jobApplications)
+          .where(
+            and(
+              eq(jobApplications.employeeId, employeeId),
+              gte(jobApplications.dateApplied, startDate),
+              lte(jobApplications.dateApplied, endDate)
+            )
+          );
+
+        // Group by date
+        const appsByDate = new Map<string, number>();
+        monthlyApplications.forEach(app => {
+          const date = app.dateApplied;
+          appsByDate.set(date, (appsByDate.get(date) || 0) + 1);
+        });
+
         const dailyBreakdown = [];
         let totalApplications = 0;
         let totalPayout = 0;
@@ -1333,18 +1348,8 @@ export class DatabaseStorage implements IStorage {
           const dateString = currentDate.toISOString().split('T')[0];
           const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
 
-          // Get applications for this day
-          const [applicationCount] = await db
-            .select({ count: count() })
-            .from(jobApplications)
-            .where(
-              and(
-                eq(jobApplications.employeeId, employeeId),
-                eq(jobApplications.dateApplied, dateString)
-              )
-            );
+          const applicationsCount = appsByDate.get(dateString) || 0;
 
-          const applicationsCount = applicationCount.count;
           // Daily payout logic: >= 15 applications = $0.20/app, < 15 applications = $0.15/app
           const metTarget = applicationsCount >= dailyTarget;
           const rateApplied = metTarget ? baseRate : belowTargetRate;
