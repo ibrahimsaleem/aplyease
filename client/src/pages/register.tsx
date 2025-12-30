@@ -11,6 +11,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const PACKAGE_OPTIONS: Array<{
+    value: string;
+    label: string;
+    price: number;
+    applications: number;
+}> = [
+    { value: "basic", label: "Basic", price: 125, applications: 250 },
+    { value: "standard", label: "Standard", price: 299, applications: 500 },
+    { value: "premium", label: "Premium", price: 350, applications: 1000 },
+    { value: "ultimate", label: "Ultimate Bundle", price: 599, applications: 1000 },
+];
+
 const registerSchema = z.object({
     name: z.string().min(2, "Name is required"),
     email: z.string().email("Invalid email address"),
@@ -184,10 +196,11 @@ export default function RegisterPage() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="basic">Basic ($125)</SelectItem>
-                                                    <SelectItem value="standard">Standard ($299)</SelectItem>
-                                                    <SelectItem value="premium">Premium ($350)</SelectItem>
-                                                    <SelectItem value="ultimate">Ultimate Bundle ($599)</SelectItem>
+                                                    {PACKAGE_OPTIONS.map((pkg) => (
+                                                        <SelectItem key={pkg.value} value={pkg.value}>
+                                                            {pkg.label} (${pkg.price}) — {pkg.applications} applications
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
