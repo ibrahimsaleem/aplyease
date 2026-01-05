@@ -38,6 +38,8 @@ export const users = pgTable(
     company: text("company"),
     packageTier: text("package_tier"),
     applicationsRemaining: integer("applications_remaining").notNull().default(sql`0`),
+    amountPaid: integer("amount_paid").notNull().default(sql`0`), // Payment made by client (in cents)
+    amountDue: integer("amount_due").notNull().default(sql`0`), // Remaining payment due (in cents)
     isActive: boolean("is_active").default(sql`true`).notNull(),
     passwordHash: text("password_hash").notNull(),
     geminiApiKey: text("gemini_api_key"),
@@ -186,6 +188,8 @@ export const insertUserSchema = createInsertSchema(users)
   .extend({
     password: z.string().min(6, "Password must be at least 6 characters").regex(/^(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter and one number"),
     applicationsRemaining: z.number().int().min(0).optional(),
+    amountPaid: z.number().int().min(0).optional(),
+    amountDue: z.number().int().min(0).optional(),
     packageTier: z.string().optional(),
   });
 

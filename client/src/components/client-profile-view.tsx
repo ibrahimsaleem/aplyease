@@ -3,8 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Pencil, Eye, EyeOff } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign } from "lucide-react";
 import type { ClientProfile, ClientStats } from "@/types";
+
+// Helper function to format cents to dollars
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(cents / 100);
+};
 
 interface ClientProfileViewProps {
   profile: ClientProfile;
@@ -44,7 +52,7 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
 
         {/* Quick Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
               <p className="text-xs sm:text-sm text-slate-600">Applications Left</p>
               <p className="text-xl sm:text-2xl font-bold">{stats.applicationsRemaining ?? 0}</p>
@@ -60,6 +68,22 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
             <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
               <p className="text-xs sm:text-sm text-slate-600">Hired</p>
               <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.hired}</p>
+            </div>
+            <div className="bg-emerald-50 p-3 sm:p-4 rounded-lg border border-emerald-200">
+              <p className="text-xs sm:text-sm text-emerald-600 flex items-center gap-1">
+                <DollarSign className="w-3 h-3" />
+                Amount Paid
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-700">{formatCurrency(stats.amountPaid ?? 0)}</p>
+            </div>
+            <div className="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
+              <p className="text-xs sm:text-sm text-amber-600 flex items-center gap-1">
+                <DollarSign className="w-3 h-3" />
+                Amount Due
+              </p>
+              <p className={`text-xl sm:text-2xl font-bold ${(stats.amountDue ?? 0) > 0 ? 'text-amber-700' : 'text-slate-400'}`}>
+                {formatCurrency(stats.amountDue ?? 0)}
+              </p>
             </div>
           </div>
         )}

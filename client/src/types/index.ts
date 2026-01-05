@@ -6,6 +6,9 @@ export type User = {
   company?: string;
   isActive: boolean;
   geminiApiKey?: string;
+  applicationsRemaining?: number;
+  amountPaid?: number; // Payment made by client (in cents)
+  amountDue?: number; // Remaining payment due (in cents)
   createdAt: string;
   updatedAt: string;
 };
@@ -54,6 +57,8 @@ export type ClientStats = {
   interviews: number;
   hired: number;
   applicationsRemaining?: number;
+  amountPaid?: number; // Payment made by client (in cents)
+  amountDue?: number; // Remaining payment due (in cents)
   assignedEmployees?: { name: string; email: string }[];
 };
 
@@ -129,6 +134,8 @@ export type ClientPerformanceData = {
   name: string;
   company?: string;
   applicationsRemaining: number;
+  amountPaid: number; // Payment made by client (in cents)
+  amountDue: number; // Remaining payment due (in cents)
   totalApplications: number;
   inProgress: number;
   interviews: number;
