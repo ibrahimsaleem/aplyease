@@ -99,6 +99,8 @@ export interface IStorage {
     inProgress: number;
     interviews: number;
     hired: number;
+    amountPaid?: number;
+    amountDue?: number;
   }>;
 
   getEmployeePerformanceAnalytics(): Promise<{
@@ -202,6 +204,8 @@ export class DatabaseStorage implements IStorage {
           ...((userData as any).role !== undefined ? { role: (userData as any).role } : {}),
           ...((userData as any).company !== undefined ? { company: (userData as any).company } : {}),
           ...((userData as any).applicationsRemaining !== undefined ? { applicationsRemaining: (userData as any).applicationsRemaining } : {}),
+          ...((userData as any).amountPaid !== undefined ? { amountPaid: (userData as any).amountPaid } : {}),
+          ...((userData as any).amountDue !== undefined ? { amountDue: (userData as any).amountDue } : {}),
           ...((userData as any).isActive !== undefined ? { isActive: (userData as any).isActive } : {}),
           ...((userData as any).geminiApiKey !== undefined ? { geminiApiKey: (userData as any).geminiApiKey } : {}),
           ...((userData as any).preferredGeminiModel !== undefined ? { preferredGeminiModel: (userData as any).preferredGeminiModel } : {}),
@@ -583,6 +587,8 @@ export class DatabaseStorage implements IStorage {
     inProgress: number;
     interviews: number;
     hired: number;
+    amountPaid?: number;
+    amountDue?: number;
     assignedEmployees?: { name: string; email: string }[];
   }> {
     return retryOperation(async () => {
@@ -623,11 +629,16 @@ export class DatabaseStorage implements IStorage {
 
       const assignedEmployees = await this.getClientAssignments(clientId);
 
+      // Get user payment info
+      const [client] = await db.select().from(users).where(eq(users.id, clientId));
+
       return {
         totalApplications: totalApps.count,
         inProgress: inProgress.count,
         interviews: interviews.count,
         hired: hired.count,
+        amountPaid: (client as any)?.amountPaid ?? 0,
+        amountDue: (client as any)?.amountDue ?? 0,
         assignedEmployees: assignedEmployees.map(emp => ({
           name: emp.name,
           email: emp.email
@@ -797,6 +808,8 @@ export class DatabaseStorage implements IStorage {
       name: string;
       company?: string;
       applicationsRemaining: number;
+      amountPaid: number;
+      amountDue: number;
       totalApplications: number;
       inProgress: number;
       interviews: number;
@@ -814,6 +827,8 @@ export class DatabaseStorage implements IStorage {
           name: users.name,
           company: users.company,
           applicationsRemaining: users.applicationsRemaining,
+          amountPaid: users.amountPaid,
+          amountDue: users.amountDue,
         })
         .from(users)
         .where(
@@ -892,6 +907,8 @@ export class DatabaseStorage implements IStorage {
           name: client.name,
           company: client.company || undefined,
           applicationsRemaining: appsRemaining,
+          amountPaid: (client as any).amountPaid ?? 0,
+          amountDue: (client as any).amountDue ?? 0,
           totalApplications,
           inProgress,
           interviews,

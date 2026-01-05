@@ -37,6 +37,8 @@ const createUserSchema = z.object({
   company: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
+  amountPaid: z.coerce.number().int().min(0).optional(),
+  amountDue: z.coerce.number().int().min(0).optional(),
 });
 
 // Schema for editing existing users - password is optional
@@ -47,6 +49,8 @@ const editUserSchema = z.object({
   company: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
+  amountPaid: z.coerce.number().int().min(0).optional(),
+  amountDue: z.coerce.number().int().min(0).optional(),
 });
 
 type UserFormData = z.infer<typeof createUserSchema>;
@@ -71,6 +75,8 @@ export function UserManagement() {
       company: "",
       password: "",
       applicationsRemaining: 0,
+      amountPaid: 0,
+      amountDue: 0,
     },
   });
 
@@ -219,6 +225,13 @@ export function UserManagement() {
       applicationsRemaining: data.applicationsRemaining
         ? Number(data.applicationsRemaining)
         : undefined,
+      // Convert payment fields to numbers if they exist
+      amountPaid: data.amountPaid !== undefined
+        ? Number(data.amountPaid)
+        : undefined,
+      amountDue: data.amountDue !== undefined
+        ? Number(data.amountDue)
+        : undefined,
     };
 
     if (editingUser) {
@@ -242,6 +255,8 @@ export function UserManagement() {
       company: user.company || "",
       password: "", // Don't populate password for editing
       applicationsRemaining: (user as any).applicationsRemaining ?? 0,
+      amountPaid: (user as any).amountPaid ?? 0,
+      amountDue: (user as any).amountDue ?? 0,
     });
     setIsDialogOpen(true);
   };
@@ -423,6 +438,54 @@ export function UserManagement() {
                           </FormItem>
                         )}
                       />
+                    )}
+
+                    {/* Payment fields (for CLIENT only) */}
+                    {form.watch("role") === "CLIENT" && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="amountPaid"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Amount Paid ($)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min={0} 
+                                  step={0.01}
+                                  {...field}
+                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
+                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  data-testid="input-user-amount-paid" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="amountDue"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Amount Due ($)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min={0} 
+                                  step={0.01}
+                                  {...field}
+                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
+                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  data-testid="input-user-amount-due" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
                     )}
 
                     <FormField

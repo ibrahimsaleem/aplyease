@@ -3,9 +3,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Users, Target, FileText, BarChart3 } from "lucide-react";
+import { AlertTriangle, Users, Target, FileText, BarChart3, DollarSign } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { ClientPerformanceAnalytics } from "@/types";
+
+// Helper function to format cents to dollars
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(cents / 100);
+};
 
 export function ClientPerformanceAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<ClientPerformanceAnalytics>({
@@ -48,6 +56,8 @@ export function ClientPerformanceAnalytics() {
   const averageSuccessRate = analytics.clients.length > 0
     ? analytics.clients.reduce((sum, client) => sum + client.successRate, 0) / analytics.clients.length
     : 0;
+  const totalAmountPaid = analytics.clients.reduce((sum, client) => sum + (client.amountPaid || 0), 0);
+  const totalAmountDue = analytics.clients.reduce((sum, client) => sum + (client.amountDue || 0), 0);
 
   // Prepare chart data: Sort by applications remaining (descending)
   const chartData = [...analytics.clients]
@@ -134,6 +144,47 @@ export function ClientPerformanceAnalytics() {
         </Card>
       </div>
 
+      {/* Payment Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Total Payments Received</p>
+                <p className="text-3xl font-bold text-emerald-900" data-testid="text-total-paid">
+                  {formatCurrency(totalAmountPaid)}
+                </p>
+                <p className="text-sm text-emerald-600 mt-1">
+                  From all clients
+                </p>
+              </div>
+              <div className="bg-emerald-100 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-600">Total Amount Due</p>
+                <p className="text-3xl font-bold text-amber-900" data-testid="text-total-due">
+                  {formatCurrency(totalAmountDue)}
+                </p>
+                <p className="text-sm text-amber-600 mt-1">
+                  Pending from clients
+                </p>
+              </div>
+              <div className="bg-amber-100 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Applications Remaining Chart */}
       <Card>
         <CardHeader>
@@ -196,8 +247,9 @@ export function ClientPerformanceAnalytics() {
                 <TableHead>Client</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Assigned Employees</TableHead>
-                <TableHead>Company</TableHead>
                 <TableHead className="text-center">Apps Left</TableHead>
+                <TableHead className="text-right">Paid</TableHead>
+                <TableHead className="text-right">Due</TableHead>
                 <TableHead className="text-center">Total Apps</TableHead>
                 <TableHead className="text-center">In Progress</TableHead>
                 <TableHead className="text-center">Interviews</TableHead>
@@ -240,12 +292,21 @@ export function ClientPerformanceAnalytics() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{client.company || "-"}</TableCell>
                     <TableCell className="text-center">
                       <span className={`font-semibold ${client.applicationsRemaining <= 2 ? "text-red-600" :
                         client.applicationsRemaining <= 5 ? "text-amber-600" : "text-green-600"
                         }`}>
                         {client.applicationsRemaining}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="font-semibold text-emerald-600">
+                        {formatCurrency(client.amountPaid || 0)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={`font-semibold ${(client.amountDue || 0) > 0 ? "text-amber-600" : "text-slate-400"}`}>
+                        {formatCurrency(client.amountDue || 0)}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">{client.totalApplications}</TableCell>
