@@ -37,8 +37,8 @@ const createUserSchema = z.object({
   company: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
-  amountPaid: z.coerce.number().int().min(0).optional(),
-  amountDue: z.coerce.number().int().min(0).optional(),
+  amountPaidDollars: z.coerce.number().min(0).optional(), // Store in dollars for easier input
+  amountDueDollars: z.coerce.number().min(0).optional(), // Store in dollars for easier input
 });
 
 // Schema for editing existing users - password is optional
@@ -49,8 +49,8 @@ const editUserSchema = z.object({
   company: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
-  amountPaid: z.coerce.number().int().min(0).optional(),
-  amountDue: z.coerce.number().int().min(0).optional(),
+  amountPaidDollars: z.coerce.number().min(0).optional(), // Store in dollars for easier input
+  amountDueDollars: z.coerce.number().min(0).optional(), // Store in dollars for easier input
 });
 
 type UserFormData = z.infer<typeof createUserSchema>;
@@ -75,8 +75,8 @@ export function UserManagement() {
       company: "",
       password: "",
       applicationsRemaining: 0,
-      amountPaid: 0,
-      amountDue: 0,
+      amountPaidDollars: 0,
+      amountDueDollars: 0,
     },
   });
 
@@ -219,20 +219,23 @@ export function UserManagement() {
     }
 
     // Prepare data with proper types
-    const submitData = {
+    const submitData: any = {
       ...data,
       // Convert applicationsRemaining to number if it exists
       applicationsRemaining: data.applicationsRemaining
         ? Number(data.applicationsRemaining)
         : undefined,
-      // Convert payment fields to numbers if they exist
-      amountPaid: data.amountPaid !== undefined
-        ? Number(data.amountPaid)
+      // Convert dollars to cents for storage
+      amountPaid: data.amountPaidDollars !== undefined
+        ? Math.round(Number(data.amountPaidDollars) * 100)
         : undefined,
-      amountDue: data.amountDue !== undefined
-        ? Number(data.amountDue)
+      amountDue: data.amountDueDollars !== undefined
+        ? Math.round(Number(data.amountDueDollars) * 100)
         : undefined,
     };
+    // Remove the dollar fields as we send cents to the API
+    delete submitData.amountPaidDollars;
+    delete submitData.amountDueDollars;
 
     if (editingUser) {
       // Remove password from update if it's empty
@@ -255,8 +258,9 @@ export function UserManagement() {
       company: user.company || "",
       password: "", // Don't populate password for editing
       applicationsRemaining: (user as any).applicationsRemaining ?? 0,
-      amountPaid: (user as any).amountPaid ?? 0,
-      amountDue: (user as any).amountDue ?? 0,
+      // Convert cents to dollars for display
+      amountPaidDollars: ((user as any).amountPaid ?? 0) / 100,
+      amountDueDollars: ((user as any).amountDue ?? 0) / 100,
     });
     setIsDialogOpen(true);
   };
@@ -445,7 +449,7 @@ export function UserManagement() {
                       <>
                         <FormField
                           control={form.control}
-                          name="amountPaid"
+                          name="amountPaidDollars"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Amount Paid ($)</FormLabel>
@@ -453,10 +457,10 @@ export function UserManagement() {
                                 <Input 
                                   type="number" 
                                   min={0} 
-                                  step={0.01}
+                                  step={1}
+                                  placeholder="e.g. 50, 200, 1000"
                                   {...field}
-                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
-                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                   data-testid="input-user-amount-paid" 
                                 />
                               </FormControl>
@@ -466,7 +470,7 @@ export function UserManagement() {
                         />
                         <FormField
                           control={form.control}
-                          name="amountDue"
+                          name="amountDueDollars"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Amount Due ($)</FormLabel>
@@ -474,10 +478,10 @@ export function UserManagement() {
                                 <Input 
                                   type="number" 
                                   min={0} 
-                                  step={0.01}
+                                  step={1}
+                                  placeholder="e.g. 50, 200, 1000"
                                   {...field}
-                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
-                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                   data-testid="input-user-amount-due" 
                                 />
                               </FormControl>
