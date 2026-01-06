@@ -138,7 +138,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">In Progress</p>
+                <p className="text-sm font-medium text-slate-600">Applications Submitted</p>
                 <p className="text-3xl font-bold text-slate-900" data-testid="text-in-progress">
                   {empStats.inProgress}
                 </p>
@@ -147,24 +147,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
             </div>
-            <p className="text-sm text-slate-600 mt-2">Awaiting response</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Success Rate</p>
-                <p className="text-3xl font-bold text-slate-900" data-testid="text-success-rate">
-                  {empStats.successRate}%
-                </p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-            <p className="text-sm text-green-600 mt-2">Above average</p>
+            <p className="text-sm text-slate-600 mt-2">Applications submitted</p>
           </CardContent>
         </Card>
 
@@ -236,7 +219,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
         <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs md:text-sm font-medium text-slate-600">In Progress</p>
+              <p className="text-xs md:text-sm font-medium text-slate-600">Applications Submitted</p>
               <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-in-progress">
                 {clientStats.inProgress}
               </p>
@@ -245,7 +228,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
               <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
             </div>
           </div>
-          <p className="text-xs md:text-sm text-slate-600 mt-2">Awaiting updates</p>
+          <p className="text-xs md:text-sm text-slate-600 mt-2">Applications submitted</p>
         </CardContent>
       </Card>
 
@@ -263,28 +246,6 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
             </div>
           </div>
           <p className="text-xs md:text-sm text-slate-600 mt-2">Scheduled</p>
-        </CardContent>
-      </Card>
-
-      <Card className="touch-manipulation sm:col-span-2 lg:col-span-4">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm font-medium text-slate-600">Hired</p>
-              <p className="text-2xl md:text-3xl font-bold text-slate-900" data-testid="text-hired">
-                {clientStats.hired}
-              </p>
-            </div>
-            <div className="bg-green-100 p-2 md:p-3 rounded-lg flex-shrink-0">
-              <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-xs md:text-sm text-green-600 mt-2">
-            {clientStats.totalApplications > 0
-              ? `${((clientStats.hired / clientStats.totalApplications) * 100).toFixed(1)}% success rate`
-              : "0% success rate"
-            }
-          </p>
         </CardContent>
       </Card>
     </div>
