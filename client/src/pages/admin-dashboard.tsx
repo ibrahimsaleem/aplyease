@@ -8,6 +8,7 @@ import { UserManagement } from "@/components/user-management";
 const EmployeePerformanceAnalytics = lazy(() => import("@/components/employee-performance-analytics").then(m => ({ default: m.EmployeePerformanceAnalytics })));
 const ClientPerformanceAnalytics = lazy(() => import("@/components/client-performance-analytics").then(m => ({ default: m.ClientPerformanceAnalytics })));
 const MonthlyPayoutAnalytics = lazy(() => import("@/components/monthly-payout-analytics").then(m => ({ default: m.MonthlyPayoutAnalytics })));
+const FinancialOverview = lazy(() => import("@/components/financial-overview").then(m => ({ default: m.FinancialOverview })));
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
@@ -45,6 +46,9 @@ export default function AdminDashboard() {
             <TabsTrigger value="users" data-testid="tab-users">
               User Management
             </TabsTrigger>
+            <TabsTrigger value="financial" data-testid="tab-financial">
+              Financial
+            </TabsTrigger>
             <TabsTrigger value="employee-analytics" data-testid="tab-employee-analytics">
               Employee Analytics
             </TabsTrigger>
@@ -68,6 +72,12 @@ export default function AdminDashboard() {
 
           <TabsContent value="users" className="space-y-6">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="financial" className="space-y-6">
+            <Suspense fallback={<div>Loading financial overview...</div>}>
+              <FinancialOverview />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="employee-analytics" className="space-y-6">
