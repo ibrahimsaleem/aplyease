@@ -16,6 +16,10 @@ import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics } from "@
 // USD to INR conversion
 const USD_TO_INR = 87;
 
+// Portal launch date - data recording started from August 2025
+const PORTAL_START_YEAR = 2025;
+const PORTAL_START_MONTH = 8; // August
+
 // Color palette for charts
 const COLORS = {
   revenue: "#10b981",
@@ -24,6 +28,9 @@ const COLORS = {
   due: "#ef4444",
   chart: ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"]
 };
+
+// Month names
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Helper to format currency
 const formatUSD = (cents: number) => {
@@ -45,6 +52,32 @@ const formatINR = (cents: number) => {
   }).format(inr);
 };
 
+// Get months with data for a given year
+const getActiveMonths = (year: number, currentDate: Date) => {
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+  
+  if (year < PORTAL_START_YEAR) return [];
+  
+  let startMonth = 1;
+  let endMonth = 12;
+  
+  // For 2025, start from August
+  if (year === PORTAL_START_YEAR) {
+    startMonth = PORTAL_START_MONTH;
+  }
+  
+  // For current year, end at current month
+  if (year === currentYear) {
+    endMonth = currentMonth;
+  }
+  
+  // Future year has no data
+  if (year > currentYear) return [];
+  
+  return Array.from({ length: endMonth - startMonth + 1 }, (_, i) => startMonth + i);
+};
+
 interface MonthlyPayoutData {
   employeeId: string;
   employeeName: string;
@@ -55,6 +88,12 @@ interface MonthlyPayoutData {
 export function FinancialOverview() {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
+
+  // Get active months for selected year
+  const activeMonths = useMemo(() => 
+    getActiveMonths(parseInt(selectedYear), currentDate),
+    [selectedYear, currentDate]
+  );
 
   // Fetch client performance data
   const { data: clientData, isLoading: clientLoading } = useQuery<ClientPerformanceAnalytics>({
@@ -74,28 +113,36 @@ export function FinancialOverview() {
     },
   });
 
-  // Fetch monthly payout data for all months of selected year
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
+  // Fetch monthly payout data only for active months
   const { data: monthlyPayouts } = useQuery({
-    queryKey: ["/api/analytics/monthly-payouts-all", selectedYear],
+    queryKey: ["/api/analytics/monthly-payouts-all", selectedYear, activeMonths],
     queryFn: async () => {
-      const results = await Promise.all(
-        months.map(month =>
-          apiRequest("GET", `/api/analytics/monthly-payout?month=${month}&year=${selectedYear}`)
-            .then(res => res.json())
-            .catch(() => [])
-        )
+      if (activeMonths.length === 0) return {};
+      
+      const results: Record<number, MonthlyPayoutData[]> = {};
+      await Promise.all(
+        activeMonths.map(async (month) => {
+          try {
+            const res = await apiRequest("GET", `/api/analytics/monthly-payout?month=${month}&year=${selectedYear}`);
+            results[month] = await res.json();
+          } catch {
+            results[month] = [];
+          }
+        })
       );
       return results;
     },
+    enabled: activeMonths.length > 0,
   });
 
-  // Generate year options
-  const years = Array.from({ length: 3 }, (_, i) => ({
-    value: (currentDate.getFullYear() - i).toString(),
-    label: (currentDate.getFullYear() - i).toString(),
-  }));
+  // Generate year options (from portal start year to current year)
+  const years = useMemo(() => {
+    const result = [];
+    for (let y = currentDate.getFullYear(); y >= PORTAL_START_YEAR; y--) {
+      result.push({ value: y.toString(), label: y.toString() });
+    }
+    return result;
+  }, [currentDate]);
 
   // Calculate financial metrics
   const financialMetrics = useMemo(() => {
@@ -106,43 +153,54 @@ export function FinancialOverview() {
         totalExpenses: 0,
         netProfit: 0,
         profitMargin: 0,
+        monthsOfData: 0,
       };
     }
 
     const totalRevenue = clientData.clients.reduce((sum, c) => sum + (c.amountPaid || 0), 0);
     const totalDue = clientData.clients.reduce((sum, c) => sum + (c.amountDue || 0), 0);
+    
+    // Use the actual payout data from all months
     const totalExpenses = employeeData?.totalPayout
       ? employeeData.totalPayout * 100 // Convert to cents
       : 0;
+    
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
+    // Calculate total months of data since portal launch
+    const now = new Date();
+    const startDate = new Date(PORTAL_START_YEAR, PORTAL_START_MONTH - 1, 1);
+    const monthsOfData = Math.max(1, 
+      (now.getFullYear() - startDate.getFullYear()) * 12 + 
+      (now.getMonth() - startDate.getMonth()) + 1
+    );
 
-    return { totalRevenue, totalDue, totalExpenses, netProfit, profitMargin };
+    return { totalRevenue, totalDue, totalExpenses, netProfit, profitMargin, monthsOfData };
   }, [clientData, employeeData]);
 
-  // Prepare monthly trend data
+  // Prepare monthly trend data - only for active months
   const monthlyTrendData = useMemo(() => {
-    if (!monthlyPayouts) return [];
+    if (!monthlyPayouts || activeMonths.length === 0) return [];
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // Calculate average monthly revenue based on actual months of operation
+    const avgMonthlyRevenue = financialMetrics.totalRevenue / financialMetrics.monthsOfData;
 
-    return monthNames.map((name, i) => {
-      const payoutData = monthlyPayouts[i] || [];
+    return activeMonths.map((month) => {
+      const payoutData = monthlyPayouts[month] || [];
       const expenses = Array.isArray(payoutData)
         ? payoutData.reduce((sum: number, emp: MonthlyPayoutData) => sum + (emp.totalPayout || 0), 0) * 100
         : 0;
 
-      // Estimate monthly revenue (simplified - assume even distribution)
-      const avgMonthlyRevenue = financialMetrics.totalRevenue / 12;
-
       return {
-        month: name,
+        month: MONTH_NAMES[month - 1],
+        monthNum: month,
         revenue: Math.round(avgMonthlyRevenue / 100),
         expenses: Math.round(expenses / 100),
         profit: Math.round((avgMonthlyRevenue - expenses) / 100),
       };
     });
-  }, [monthlyPayouts, financialMetrics.totalRevenue]);
+  }, [monthlyPayouts, activeMonths, financialMetrics.totalRevenue, financialMetrics.monthsOfData]);
 
   // Revenue distribution by client (top 5)
   const revenueByClient = useMemo(() => {
@@ -195,6 +253,12 @@ export function FinancialOverview() {
 
   return (
     <div className="space-y-6">
+      {/* All Time Summary Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-800">All Time Summary</h2>
+        <span className="text-sm text-slate-500">Since Aug 2025</span>
+      </div>
+
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Revenue */}
@@ -305,34 +369,45 @@ export function FinancialOverview() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Monthly Trends</CardTitle>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map(year => (
-                  <SelectItem key={year.value} value={year.value}>
-                    {year.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500">
+                Data from Aug 2025
+              </span>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map(year => (
+                    <SelectItem key={year.value} value={year.value}>
+                      {year.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip
-                formatter={(value: number) => [`$${value}`, '']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Bar dataKey="revenue" name="Revenue" fill={COLORS.revenue} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="Expenses" fill={COLORS.expenses} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {monthlyTrendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip
+                  formatter={(value: number) => [`$${value}`, '']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="revenue" name="Revenue" fill={COLORS.revenue} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expenses" name="Expenses" fill={COLORS.expenses} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex items-center justify-center text-slate-400">
+              No data available for {selectedYear}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -442,30 +517,36 @@ export function FinancialOverview() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip
-                formatter={(value: number) => [`$${value}`, 'Profit']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke={COLORS.profit}
-                strokeWidth={2}
-                dot={{ fill: COLORS.profit, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {monthlyTrendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip
+                  formatter={(value: number) => [`$${value}`, 'Profit']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="profit"
+                  stroke={COLORS.profit}
+                  strokeWidth={2}
+                  dot={{ fill: COLORS.profit, strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-slate-400">
+              No data available for {selectedYear}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Quick Stats Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="bg-slate-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -516,6 +597,22 @@ export function FinancialOverview() {
                 </p>
               </div>
               <div className="text-3xl text-slate-300">📈</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Months Active
+                </p>
+                <p className="text-xl font-bold text-slate-800 mt-1">
+                  {financialMetrics.monthsOfData}
+                </p>
+              </div>
+              <div className="text-3xl text-slate-300">📅</div>
             </div>
           </CardContent>
         </Card>
