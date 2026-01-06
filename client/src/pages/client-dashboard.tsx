@@ -8,12 +8,23 @@ import { MobileApplicationsList } from "@/components/mobile/mobile-applications-
 import { BottomNavigation } from "@/components/mobile/bottom-navigation";
 import { MobileSearch } from "@/components/mobile/mobile-search";
 import { MobileFilter } from "@/components/mobile/mobile-filter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
+import { DollarSign, Eye, EyeOff, Copy } from "lucide-react";
 import type { ClientStats, ApplicationFilters } from "@/types";
+
+// Helper function to format cents to dollars
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(cents / 100);
+};
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -24,6 +35,7 @@ export default function ClientDashboard() {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [filters, setFilters] = useState<Partial<ApplicationFilters>>({
     clientId: user?.id,
   });
@@ -79,6 +91,91 @@ export default function ClientDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* Client Stats */}
         {stats && <StatsCards stats={stats} type="client" />}
+
+        {/* Payment Information - Client Only */}
+        {stats && (stats.amountPaid !== undefined || stats.amountDue !== undefined) && (
+          <Card className="mb-8 border-2">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-emerald-50 p-3 rounded-lg">
+                    <DollarSign className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Payment Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-slate-600">Amount Paid</p>
+                        <p className="text-xl font-bold text-emerald-600">
+                          {formatCurrency(stats.amountPaid || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600">Amount Due</p>
+                        <p className="text-xl font-bold text-amber-600">
+                          {formatCurrency(stats.amountDue || 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {(stats.amountDue || 0) > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant={showPaymentInstructions ? "secondary" : "default"}
+                      size="sm"
+                      onClick={() => setShowPaymentInstructions(!showPaymentInstructions)}
+                      className="flex items-center gap-2"
+                    >
+                      {showPaymentInstructions ? (
+                        <>
+                          <EyeOff className="w-4 h-4" />
+                          Hide Payment Details
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          Show Payment Details
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Instructions - Collapsible */}
+              {showPaymentInstructions && (stats.amountDue || 0) > 0 && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-slate-900 leading-relaxed">
+                    Hi <span className="font-semibold">{user?.name}</span>,
+                  </p>
+                  <p className="text-slate-900 mt-2 leading-relaxed">
+                    You can <span className="font-semibold">Zelle the amount to</span>{" "}
+                    <span className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded border border-blue-300">
+                      <span className="font-semibold text-blue-700">mqkatytx@gmail.com</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-blue-100"
+                        onClick={() => {
+                          navigator.clipboard.writeText("mqkatytx@gmail.com");
+                          toast({
+                            title: "Copied!",
+                            description: "Zelle email copied to clipboard",
+                          });
+                        }}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </span>
+                    , and share the screenshot we will mark it paid once received. Thank you!
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Assigned Team Section */}
         {stats && stats.assignedEmployees && stats.assignedEmployees.length > 0 && (

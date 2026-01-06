@@ -1150,6 +1150,16 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
   app.get("/api/analytics/client-performance", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const analytics = await storage.getClientPerformanceAnalytics();
+      
+      // Strip payment data for employees
+      if (req.user?.role === "EMPLOYEE") {
+        analytics.clients = analytics.clients.map(client => ({
+          ...client,
+          amountPaid: undefined,
+          amountDue: undefined,
+        }));
+      }
+      
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching client performance analytics:", error);
