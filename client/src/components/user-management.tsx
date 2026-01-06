@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,66 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials, getRoleColor } from "@/lib/auth-utils";
 import type { User } from "@/types";
+
+// Currency input component that allows free typing
+function CurrencyInput({ 
+  value, 
+  onChange, 
+  ...props 
+}: { 
+  value: number | undefined; 
+  onChange: (cents: number) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  // Keep local text state for free typing
+  const [localValue, setLocalValue] = useState(() => {
+    return value !== undefined && value > 0 ? (value / 100).toString() : "";
+  });
+  
+  // Sync local value when form value changes externally (e.g., form reset)
+  useEffect(() => {
+    const formattedValue = value !== undefined && value > 0 ? (value / 100).toString() : "";
+    // Only update if the values are actually different (avoid cursor jumping)
+    const currentCents = parseFloat(localValue || "0") * 100;
+    if (Math.round(currentCents) !== (value || 0)) {
+      setLocalValue(formattedValue);
+    }
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow empty, numbers, and one decimal point with up to 2 decimal places
+    if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
+      setLocalValue(val);
+      const numVal = parseFloat(val || "0");
+      onChange(isNaN(numVal) ? 0 : Math.round(numVal * 100));
+    }
+  };
+
+  const handleBlur = () => {
+    // Format the value on blur (e.g., "50." becomes "50")
+    if (localValue && localValue !== "") {
+      const numVal = parseFloat(localValue);
+      if (!isNaN(numVal) && numVal > 0) {
+        // Remove trailing zeros and unnecessary decimal point
+        setLocalValue(numVal.toString());
+      } else {
+        setLocalValue("");
+      }
+    }
+  };
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      placeholder="0"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      {...props}
+    />
+  );
+}
 
 // Schema for creating new users - password is required
 const createUserSchema = z.object({
@@ -450,13 +510,9 @@ export function UserManagement() {
                             <FormItem>
                               <FormLabel>Amount Paid ($)</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min={0} 
-                                  step={0.01}
-                                  {...field}
-                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
-                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                <CurrencyInput 
+                                  value={field.value}
+                                  onChange={field.onChange}
                                   data-testid="input-user-amount-paid" 
                                 />
                               </FormControl>
@@ -471,13 +527,9 @@ export function UserManagement() {
                             <FormItem>
                               <FormLabel>Amount Due ($)</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min={0} 
-                                  step={0.01}
-                                  {...field}
-                                  value={field.value ? (field.value / 100).toFixed(2) : "0.00"}
-                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                <CurrencyInput 
+                                  value={field.value}
+                                  onChange={field.onChange}
                                   data-testid="input-user-amount-due" 
                                 />
                               </FormControl>
