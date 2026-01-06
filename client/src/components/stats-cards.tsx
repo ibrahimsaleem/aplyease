@@ -147,7 +147,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
             </div>
-            <p className="text-sm text-slate-600 mt-2">Applications submitted</p>
+            <p className="text-sm text-slate-600 mt-2">Awaiting response</p>
           </CardContent>
         </Card>
 
@@ -228,7 +228,7 @@ export function StatsCards({ stats, type }: StatsCardsProps) {
               <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
             </div>
           </div>
-          <p className="text-xs md:text-sm text-slate-600 mt-2">Applications submitted</p>
+          <p className="text-xs md:text-sm text-slate-600 mt-2">Awaiting response</p>
         </CardContent>
       </Card>
 
