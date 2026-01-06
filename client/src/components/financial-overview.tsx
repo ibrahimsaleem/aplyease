@@ -11,7 +11,7 @@ import {
   CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics } from "@/types";
+import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics, User } from "@/types";
 
 // USD to INR conversion
 const USD_TO_INR = 87;
@@ -104,6 +104,15 @@ export function FinancialOverview() {
     },
   });
 
+  // Fetch all users to get client creation dates (payment dates)
+  const { data: usersData, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users", "CLIENT"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/users?role=CLIENT");
+      return res.json();
+    },
+  });
+
   // Fetch employee performance data
   const { data: employeeData, isLoading: employeeLoading } = useQuery<EmployeePerformanceAnalytics>({
     queryKey: ["/api/analytics/employee-performance"],
@@ -144,6 +153,36 @@ export function FinancialOverview() {
     return result;
   }, [currentDate]);
 
+  // Calculate monthly revenue based on client creation dates (payment dates)
+  const monthlyRevenueMap = useMemo(() => {
+    const revenueMap: Record<string, number> = {}; // key: "YYYY-MM", value: cents
+    
+    if (!usersData || !clientData) return revenueMap;
+    
+    // Create a map of client IDs to their payment amounts from clientData
+    const clientPaymentMap: Record<string, number> = {};
+    clientData.clients.forEach(client => {
+      clientPaymentMap[client.id] = client.amountPaid || 0;
+    });
+    
+    // Map each client's payment to their creation month
+    usersData.forEach(user => {
+      if (user.role === "CLIENT" && user.createdAt) {
+        const createdDate = new Date(user.createdAt);
+        const yearMonth = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Use payment from clientData if available, otherwise from user data
+        const payment = clientPaymentMap[user.id] ?? (user.amountPaid || 0);
+        
+        if (payment > 0) {
+          revenueMap[yearMonth] = (revenueMap[yearMonth] || 0) + payment;
+        }
+      }
+    });
+    
+    return revenueMap;
+  }, [usersData, clientData]);
+
   // Calculate financial metrics
   const financialMetrics = useMemo(() => {
     if (!clientData) {
@@ -183,10 +222,14 @@ export function FinancialOverview() {
   const monthlyTrendData = useMemo(() => {
     if (!monthlyPayouts || activeMonths.length === 0) return [];
 
-    // Calculate average monthly revenue based on actual months of operation
-    const avgMonthlyRevenue = financialMetrics.totalRevenue / financialMetrics.monthsOfData;
+    const year = parseInt(selectedYear);
 
     return activeMonths.map((month) => {
+      // Get actual revenue for this month from client creation dates
+      const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
+      const revenue = monthlyRevenueMap[yearMonth] || 0;
+      
+      // Get expenses (employee payouts) for this month
       const payoutData = monthlyPayouts[month] || [];
       const expenses = Array.isArray(payoutData)
         ? payoutData.reduce((sum: number, emp: MonthlyPayoutData) => sum + (emp.totalPayout || 0), 0) * 100
@@ -195,16 +238,25 @@ export function FinancialOverview() {
       return {
         month: MONTH_NAMES[month - 1],
         monthNum: month,
-        revenue: Math.round(avgMonthlyRevenue / 100),
+        revenue: Math.round(revenue / 100),
         expenses: Math.round(expenses / 100),
-        profit: Math.round((avgMonthlyRevenue - expenses) / 100),
+        profit: Math.round((revenue - expenses) / 100),
       };
     });
-  }, [monthlyPayouts, activeMonths, financialMetrics.totalRevenue, financialMetrics.monthsOfData]);
+  }, [monthlyPayouts, activeMonths, selectedYear, monthlyRevenueMap]);
 
-  // Revenue distribution by client (top 5)
+  // Revenue distribution by client (top 5) with payment dates
   const revenueByClient = useMemo(() => {
-    if (!clientData) return [];
+    if (!clientData || !usersData) return [];
+
+    // Create map of user creation dates
+    const userDateMap: Record<string, string> = {};
+    usersData.forEach(user => {
+      if (user.createdAt) {
+        const date = new Date(user.createdAt);
+        userDateMap[user.id] = `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+      }
+    });
 
     return clientData.clients
       .filter(c => (c.amountPaid || 0) > 0)
@@ -213,8 +265,9 @@ export function FinancialOverview() {
       .map(c => ({
         name: c.name.split(' ')[0],
         value: (c.amountPaid || 0) / 100,
+        paidDate: userDateMap[c.id] || 'N/A',
       }));
-  }, [clientData]);
+  }, [clientData, usersData]);
 
   // Employee expense distribution (top 5)
   const expensesByEmployee = useMemo(() => {
@@ -230,7 +283,7 @@ export function FinancialOverview() {
       }));
   }, [employeeData]);
 
-  const isLoading = clientLoading || employeeLoading;
+  const isLoading = clientLoading || employeeLoading || usersLoading;
 
   if (isLoading) {
     return (
@@ -454,6 +507,7 @@ export function FinancialOverview() {
                     style={{ backgroundColor: COLORS.chart[i % COLORS.chart.length] }}
                   />
                   <span className="text-slate-600">{item.name}</span>
+                  <span className="text-slate-400">({item.paidDate})</span>
                 </div>
               ))}
             </div>
