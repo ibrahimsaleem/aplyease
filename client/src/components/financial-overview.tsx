@@ -1,37 +1,36 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
+  ResponsiveContainer, Legend
 } from "recharts";
 import {
   DollarSign, TrendingUp, TrendingDown, Wallet,
-  CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight
+  CreditCard, PiggyBank, Users, FileText, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics } from "@/types";
 
 // USD to INR conversion
 const USD_TO_INR = 87;
 
 // Color palette for charts
 const COLORS = {
-  revenue: "#10b981",
+  applications: "#3b82f6",
   expenses: "#f59e0b",
-  profit: "#3b82f6",
-  due: "#ef4444",
-  chart: ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"]
+  revenue: "#10b981",
+  profit: "#8b5cf6",
 };
 
-// Helper to format currency
+// Helper to format currency from cents
 const formatUSD = (cents: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(cents / 100);
 };
 
@@ -45,140 +44,62 @@ const formatINR = (cents: number) => {
   }).format(inr);
 };
 
-interface MonthlyPayoutData {
-  employeeId: string;
-  employeeName: string;
-  applicationsThisMonth: number;
-  totalPayout: number;
+interface FinancialOverviewData {
+  totalApplications: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: number;
+  totalDue: number;
+  ratePerApplication: number;
+  employeePayouts: Array<{
+    id: string;
+    name: string;
+    email: string;
+    applicationsSubmitted: number;
+    totalPayout: number;
+  }>;
+  monthlyData: Array<{
+    month: string;
+    applications: number;
+    expenses: number;
+    revenue: number;
+  }>;
+  clientPayments: Array<{
+    id: string;
+    name: string;
+    company: string | null;
+    amountPaid: number;
+    amountDue: number;
+    applicationsUsed: number;
+  }>;
 }
 
 export function FinancialOverview() {
-  const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
-
-  // Fetch client performance data
-  const { data: clientData, isLoading: clientLoading } = useQuery<ClientPerformanceAnalytics>({
-    queryKey: ["/api/analytics/client-performance"],
+  // Fetch comprehensive financial data
+  const { data: financialData, isLoading, error } = useQuery<FinancialOverviewData>({
+    queryKey: ["/api/analytics/financial-overview"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/analytics/client-performance");
+      const res = await apiRequest("GET", "/api/analytics/financial-overview");
       return res.json();
     },
   });
 
-  // Fetch employee performance data
-  const { data: employeeData, isLoading: employeeLoading } = useQuery<EmployeePerformanceAnalytics>({
-    queryKey: ["/api/analytics/employee-performance"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/analytics/employee-performance");
-      return res.json();
-    },
-  });
-
-  // Fetch monthly payout data for all months of selected year
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  const { data: monthlyPayouts } = useQuery({
-    queryKey: ["/api/analytics/monthly-payouts-all", selectedYear],
-    queryFn: async () => {
-      const results = await Promise.all(
-        months.map(month =>
-          apiRequest("GET", `/api/analytics/monthly-payout?month=${month}&year=${selectedYear}`)
-            .then(res => res.json())
-            .catch(() => [])
-        )
-      );
-      return results;
-    },
-  });
-
-  // Generate year options
-  const years = Array.from({ length: 3 }, (_, i) => ({
-    value: (currentDate.getFullYear() - i).toString(),
-    label: (currentDate.getFullYear() - i).toString(),
-  }));
-
-  // Calculate financial metrics
-  const financialMetrics = useMemo(() => {
-    if (!clientData) {
-      return {
-        totalRevenue: 0,
-        totalDue: 0,
-        totalExpenses: 0,
-        netProfit: 0,
-        profitMargin: 0,
-      };
-    }
-
-    const totalRevenue = clientData.clients.reduce((sum, c) => sum + (c.amountPaid || 0), 0);
-    const totalDue = clientData.clients.reduce((sum, c) => sum + (c.amountDue || 0), 0);
-    const totalExpenses = employeeData?.totalPayout
-      ? employeeData.totalPayout * 100 // Convert to cents
-      : 0;
-    const netProfit = totalRevenue - totalExpenses;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-
-    return { totalRevenue, totalDue, totalExpenses, netProfit, profitMargin };
-  }, [clientData, employeeData]);
-
-  // Prepare monthly trend data
-  const monthlyTrendData = useMemo(() => {
-    if (!monthlyPayouts) return [];
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    return monthNames.map((name, i) => {
-      const payoutData = monthlyPayouts[i] || [];
-      const expenses = Array.isArray(payoutData)
-        ? payoutData.reduce((sum: number, emp: MonthlyPayoutData) => sum + (emp.totalPayout || 0), 0) * 100
-        : 0;
-
-      // Estimate monthly revenue (simplified - assume even distribution)
-      const avgMonthlyRevenue = financialMetrics.totalRevenue / 12;
-
-      return {
-        month: name,
-        revenue: Math.round(avgMonthlyRevenue / 100),
-        expenses: Math.round(expenses / 100),
-        profit: Math.round((avgMonthlyRevenue - expenses) / 100),
-      };
-    });
-  }, [monthlyPayouts, financialMetrics.totalRevenue]);
-
-  // Revenue distribution by client (top 5)
-  const revenueByClient = useMemo(() => {
-    if (!clientData) return [];
-
-    return clientData.clients
-      .filter(c => (c.amountPaid || 0) > 0)
-      .sort((a, b) => (b.amountPaid || 0) - (a.amountPaid || 0))
-      .slice(0, 5)
-      .map(c => ({
-        name: c.name.split(' ')[0],
-        value: (c.amountPaid || 0) / 100,
-      }));
-  }, [clientData]);
-
-  // Employee expense distribution (top 5)
-  const expensesByEmployee = useMemo(() => {
-    if (!employeeData) return [];
-
-    return employeeData.employees
-      .filter(e => (e.earnings || 0) > 0)
-      .sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
-      .slice(0, 5)
-      .map(e => ({
-        name: e.name.split(' ')[0],
-        value: e.earnings || 0,
-      }));
-  }, [employeeData]);
-
-  const isLoading = clientLoading || employeeLoading;
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    if (!financialData?.monthlyData) return [];
+    return financialData.monthlyData.map(item => ({
+      month: item.month,
+      applications: item.applications,
+      expenses: Math.round(item.expenses / 100), // Convert to dollars for display
+    }));
+  }, [financialData]);
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {[...Array(6)].map((_, i) => (
             <Card key={i}>
               <CardContent className="p-6">
                 <div className="animate-pulse space-y-3">
@@ -193,293 +114,368 @@ export function FinancialOverview() {
     );
   }
 
+  if (error || !financialData) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <CardContent className="p-6">
+          <p className="text-red-600">Failed to load financial data. Please try again.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const rateInCents = financialData.ratePerApplication * 100;
+
   return (
     <div className="space-y-6">
-      {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Total Revenue */}
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-          <CardContent className="p-6">
+      {/* Key Metrics Cards - 6 columns */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {/* Total Applications */}
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-emerald-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-emerald-900">
-                  {formatUSD(financialMetrics.totalRevenue)}
-                </p>
-                <p className="text-sm font-semibold text-emerald-700 mt-1">
-                  {formatINR(financialMetrics.totalRevenue)}
+                <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Applications</p>
+                <p className="text-2xl font-bold text-blue-900 mt-1">
+                  {financialData.totalApplications.toLocaleString()}
                 </p>
               </div>
-              <div className="bg-emerald-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-emerald-600" />
+              <div className="bg-blue-100 p-2 rounded-lg">
+                <FileText className="w-5 h-5 text-blue-600" />
               </div>
             </div>
-            <div className="mt-3 flex items-center text-xs text-emerald-600">
+            <p className="text-xs text-blue-600 mt-2">
+              @ ${financialData.ratePerApplication.toFixed(2)}/app
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Revenue (Sales) */}
+        <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Total Sales</p>
+                <p className="text-2xl font-bold text-emerald-900 mt-1">
+                  {formatUSD(financialData.totalRevenue)}
+                </p>
+                <p className="text-xs font-semibold text-emerald-700 mt-0.5">
+                  {formatINR(financialData.totalRevenue)}
+                </p>
+              </div>
+              <div className="bg-emerald-100 p-2 rounded-lg">
+                <DollarSign className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+            <div className="flex items-center text-xs text-emerald-600 mt-2">
               <ArrowUpRight className="w-3 h-3 mr-1" />
               <span>Client payments received</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Total Expenses */}
+        {/* Total Expenses (Employee Payouts) */}
         <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-600">Total Expenses</p>
-                <p className="text-2xl font-bold text-amber-900">
-                  {formatUSD(financialMetrics.totalExpenses)}
+                <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Total Expenses</p>
+                <p className="text-2xl font-bold text-amber-900 mt-1">
+                  {formatUSD(financialData.totalExpenses)}
                 </p>
-                <p className="text-sm font-semibold text-amber-700 mt-1">
-                  {formatINR(financialMetrics.totalExpenses)}
+                <p className="text-xs font-semibold text-amber-700 mt-0.5">
+                  {formatINR(financialData.totalExpenses)}
                 </p>
               </div>
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <CreditCard className="w-6 h-6 text-amber-600" />
+              <div className="bg-amber-100 p-2 rounded-lg">
+                <CreditCard className="w-5 h-5 text-amber-600" />
               </div>
             </div>
-            <div className="mt-3 flex items-center text-xs text-amber-600">
+            <div className="flex items-center text-xs text-amber-600 mt-2">
               <ArrowDownRight className="w-3 h-3 mr-1" />
-              <span>Employee payouts</span>
+              <span>Paid to employees</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Net Profit */}
-        <Card className={`bg-gradient-to-br ${financialMetrics.netProfit >= 0 ? 'from-blue-50 to-indigo-50 border-blue-200' : 'from-red-50 to-rose-50 border-red-200'}`}>
-          <CardContent className="p-6">
+        <Card className={`bg-gradient-to-br ${financialData.netProfit >= 0 ? 'from-purple-50 to-violet-50 border-purple-200' : 'from-red-50 to-rose-50 border-red-200'}`}>
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm font-medium ${financialMetrics.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                <p className={`text-xs font-medium uppercase tracking-wide ${financialData.netProfit >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
                   Net Profit
                 </p>
-                <p className={`text-2xl font-bold ${financialMetrics.netProfit >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
-                  {formatUSD(financialMetrics.netProfit)}
+                <p className={`text-2xl font-bold mt-1 ${financialData.netProfit >= 0 ? 'text-purple-900' : 'text-red-900'}`}>
+                  {formatUSD(financialData.netProfit)}
                 </p>
-                <p className={`text-sm font-semibold mt-1 ${financialMetrics.netProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
-                  {formatINR(financialMetrics.netProfit)}
+                <p className={`text-xs font-semibold mt-0.5 ${financialData.netProfit >= 0 ? 'text-purple-700' : 'text-red-700'}`}>
+                  {formatINR(financialData.netProfit)}
                 </p>
               </div>
-              <div className={`p-3 rounded-lg ${financialMetrics.netProfit >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                {financialMetrics.netProfit >= 0 ? (
-                  <TrendingUp className="w-6 h-6 text-blue-600" />
+              <div className={`p-2 rounded-lg ${financialData.netProfit >= 0 ? 'bg-purple-100' : 'bg-red-100'}`}>
+                {financialData.netProfit >= 0 ? (
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
                 ) : (
-                  <TrendingDown className="w-6 h-6 text-red-600" />
+                  <TrendingDown className="w-5 h-5 text-red-600" />
                 )}
               </div>
             </div>
-            <div className={`mt-3 flex items-center text-xs ${financialMetrics.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+            <div className={`flex items-center text-xs mt-2 ${financialData.netProfit >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
               <PiggyBank className="w-3 h-3 mr-1" />
-              <span>{financialMetrics.profitMargin.toFixed(1)}% margin</span>
+              <span>{financialData.profitMargin.toFixed(1)}% margin</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Amount Due */}
+        {/* Pending Dues */}
         <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">Pending Dues</p>
-                <p className="text-2xl font-bold text-red-900">
-                  {formatUSD(financialMetrics.totalDue)}
+                <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Pending Dues</p>
+                <p className="text-2xl font-bold text-red-900 mt-1">
+                  {formatUSD(financialData.totalDue)}
                 </p>
-                <p className="text-sm font-semibold text-red-700 mt-1">
-                  {formatINR(financialMetrics.totalDue)}
+                <p className="text-xs font-semibold text-red-700 mt-0.5">
+                  {formatINR(financialData.totalDue)}
                 </p>
               </div>
-              <div className="bg-red-100 p-3 rounded-lg">
-                <Wallet className="w-6 h-6 text-red-600" />
+              <div className="bg-red-100 p-2 rounded-lg">
+                <Wallet className="w-5 h-5 text-red-600" />
               </div>
             </div>
-            <div className="mt-3 flex items-center text-xs text-red-600">
+            <div className="flex items-center text-xs text-red-600 mt-2">
               <ArrowUpRight className="w-3 h-3 mr-1" />
               <span>Outstanding from clients</span>
             </div>
           </CardContent>
         </Card>
+
+        {/* Total Employees */}
+        <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Active Employees</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">
+                  {financialData.employeePayouts.length}
+                </p>
+              </div>
+              <div className="bg-slate-100 p-2 rounded-lg">
+                <Users className="w-5 h-5 text-slate-600" />
+              </div>
+            </div>
+            <div className="flex items-center text-xs text-slate-600 mt-2">
+              <span>Contributing to payroll</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Year Selector */}
+      {/* Monthly Applications & Expenses Chart */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Monthly Trends</CardTitle>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map(year => (
-                  <SelectItem key={year.value} value={year.value}>
-                    {year.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart className="w-5 h-5 text-blue-500" />
+            Monthly Applications & Expenses (Last 12 Months)
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
               <Tooltip
-                formatter={(value: number) => [`$${value}`, '']}
+                formatter={(value: number, name: string) => {
+                  if (name === 'expenses') return [`$${value}`, 'Employee Payouts'];
+                  return [value, 'Applications'];
+                }}
                 contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
-              <Bar dataKey="revenue" name="Revenue" fill={COLORS.revenue} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="Expenses" fill={COLORS.expenses} radius={[4, 4, 0, 0]} />
+              <Legend />
+              <Bar yAxisId="left" dataKey="applications" name="Applications" fill={COLORS.applications} radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="right" dataKey="expenses" name="Expenses ($)" fill={COLORS.expenses} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* Distribution Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Revenue by Client */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-500" />
-              Top Clients by Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {revenueByClient.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={revenueByClient}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {revenueByClient.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value}`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[220px] flex items-center justify-center text-slate-400">
-                No revenue data
-              </div>
-            )}
-            <div className="flex flex-wrap gap-3 justify-center mt-2">
-              {revenueByClient.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-1.5 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS.chart[i % COLORS.chart.length] }}
-                  />
-                  <span className="text-slate-600">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Expenses by Employee */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-amber-500" />
-              Top Employees by Payout
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {expensesByEmployee.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={expensesByEmployee}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {expensesByEmployee.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value}`, 'Payout']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[220px] flex items-center justify-center text-slate-400">
-                No expense data
-              </div>
-            )}
-            <div className="flex flex-wrap gap-3 justify-center mt-2">
-              {expensesByEmployee.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-1.5 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS.chart[i % COLORS.chart.length] }}
-                  />
-                  <span className="text-slate-600">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Profit Trend Line */}
+      {/* Employee Payouts Table */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-500" />
-            Profit Trend - {selectedYear}
+            <Users className="w-5 h-5 text-amber-500" />
+            Employee Payouts Breakdown
+            <Badge variant="outline" className="ml-2 text-xs">
+              ${financialData.ratePerApplication.toFixed(2)} per application
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip
-                formatter={(value: number) => [`$${value}`, 'Profit']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke={COLORS.profit}
-                strokeWidth={2}
-                dot={{ fill: COLORS.profit, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold">Employee</TableHead>
+                  <TableHead className="font-semibold text-center">Applications</TableHead>
+                  <TableHead className="font-semibold text-right">Payout (USD)</TableHead>
+                  <TableHead className="font-semibold text-right">Payout (INR)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {financialData.employeePayouts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-slate-400 py-8">
+                      No employee data available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  financialData.employeePayouts.map((employee, index) => (
+                    <TableRow key={employee.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-slate-900">{employee.name}</p>
+                          <p className="text-xs text-slate-500">{employee.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="font-mono">
+                          {employee.applicationsSubmitted.toLocaleString()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-amber-700">
+                        {formatUSD(employee.totalPayout)}
+                      </TableCell>
+                      <TableCell className="text-right text-slate-600">
+                        {formatINR(employee.totalPayout)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {financialData.employeePayouts.length > 0 && (
+            <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-amber-800">Total Employee Payouts</span>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-amber-900">{formatUSD(financialData.totalExpenses)}</p>
+                  <p className="text-sm text-amber-700">{formatINR(financialData.totalExpenses)}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Quick Stats Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Client Payments Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-emerald-500" />
+            Client Payments Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold">Client</TableHead>
+                  <TableHead className="font-semibold text-center">Apps Used</TableHead>
+                  <TableHead className="font-semibold text-right">Paid</TableHead>
+                  <TableHead className="font-semibold text-right">Due</TableHead>
+                  <TableHead className="font-semibold text-right">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {financialData.clientPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-slate-400 py-8">
+                      No client data available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  financialData.clientPayments.map((client, index) => (
+                    <TableRow key={client.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-slate-900">{client.name}</p>
+                          {client.company && (
+                            <p className="text-xs text-slate-500">{client.company}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="font-mono">
+                          {client.applicationsUsed.toLocaleString()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-emerald-700">
+                        {formatUSD(client.amountPaid)}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-red-600">
+                        {formatUSD(client.amountDue)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {client.amountDue > 0 ? (
+                          <Badge variant="destructive" className="text-xs">Outstanding</Badge>
+                        ) : client.amountPaid > 0 ? (
+                          <Badge variant="default" className="bg-emerald-500 text-xs">Paid</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">No Payment</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {financialData.clientPayments.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-emerald-800">Total Received</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-emerald-900">{formatUSD(financialData.totalRevenue)}</p>
+                    <p className="text-sm text-emerald-700">{formatINR(financialData.totalRevenue)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-red-800">Total Outstanding</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-red-900">{formatUSD(financialData.totalDue)}</p>
+                    <p className="text-sm text-red-700">{formatINR(financialData.totalDue)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Summary */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="bg-slate-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  Avg Revenue/Client
+                  Avg Apps/Employee
                 </p>
                 <p className="text-xl font-bold text-slate-800 mt-1">
-                  {clientData && clientData.clients.length > 0
-                    ? formatUSD(financialMetrics.totalRevenue / clientData.clients.length)
-                    : '$0'}
+                  {financialData.employeePayouts.length > 0
+                    ? Math.round(financialData.totalApplications / financialData.employeePayouts.length).toLocaleString()
+                    : '0'}
                 </p>
               </div>
-              <div className="text-3xl text-slate-300">📊</div>
             </div>
           </CardContent>
         </Card>
@@ -492,12 +488,11 @@ export function FinancialOverview() {
                   Avg Payout/Employee
                 </p>
                 <p className="text-xl font-bold text-slate-800 mt-1">
-                  {employeeData && employeeData.employees.length > 0
-                    ? `$${(financialMetrics.totalExpenses / 100 / employeeData.employees.length).toFixed(0)}`
+                  {financialData.employeePayouts.length > 0
+                    ? formatUSD(financialData.totalExpenses / financialData.employeePayouts.length)
                     : '$0'}
                 </p>
               </div>
-              <div className="text-3xl text-slate-300">💼</div>
             </div>
           </CardContent>
         </Card>
@@ -510,12 +505,26 @@ export function FinancialOverview() {
                   Collection Rate
                 </p>
                 <p className="text-xl font-bold text-slate-800 mt-1">
-                  {(financialMetrics.totalRevenue + financialMetrics.totalDue) > 0
-                    ? `${((financialMetrics.totalRevenue / (financialMetrics.totalRevenue + financialMetrics.totalDue)) * 100).toFixed(0)}%`
+                  {(financialData.totalRevenue + financialData.totalDue) > 0
+                    ? `${((financialData.totalRevenue / (financialData.totalRevenue + financialData.totalDue)) * 100).toFixed(0)}%`
                     : '0%'}
                 </p>
               </div>
-              <div className="text-3xl text-slate-300">📈</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Cost per App Value
+                </p>
+                <p className="text-xl font-bold text-slate-800 mt-1">
+                  ${financialData.ratePerApplication.toFixed(2)}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

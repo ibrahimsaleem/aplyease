@@ -1180,6 +1180,17 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
     }
   });
 
+  // Comprehensive financial overview stats (Admin only)
+  app.get("/api/analytics/financial-overview", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const analytics = await storage.getFinancialOverviewStats();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching financial overview stats:", error);
+      res.status(500).json({ message: "Failed to fetch financial overview stats" });
+    }
+  });
+
   // Employee daily payout breakdown
   app.get("/api/analytics/employee-daily-payout/:employeeId", requireAuth, async (req, res) => {
     try {

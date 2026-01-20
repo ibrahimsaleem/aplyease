@@ -1549,6 +1549,166 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getFinancialOverviewStats(): Promise<{
+    totalApplications: number;
+    totalRevenue: number;
+    totalExpenses: number;
+    netProfit: number;
+    profitMargin: number;
+    totalDue: number;
+    ratePerApplication: number;
+    employeePayouts: Array<{
+      id: string;
+      name: string;
+      email: string;
+      applicationsSubmitted: number;
+      totalPayout: number;
+    }>;
+    monthlyData: Array<{
+      month: string;
+      applications: number;
+      expenses: number;
+      revenue: number;
+    }>;
+    clientPayments: Array<{
+      id: string;
+      name: string;
+      company: string | null;
+      amountPaid: number;
+      amountDue: number;
+      applicationsUsed: number;
+    }>;
+  }> {
+    return retryOperation(async () => {
+      const RATE_PER_APPLICATION = 0.20; // $0.20 per application
+
+      // Get total applications count
+      const [totalAppsResult] = await db.select({ count: count() }).from(jobApplications);
+      const totalApplications = totalAppsResult.count;
+
+      // Calculate total expenses (employees get $0.20 per application)
+      const totalExpenses = totalApplications * RATE_PER_APPLICATION * 100; // in cents
+
+      // Get all clients with their payment info
+      const allClients = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          company: users.company,
+          amountPaid: users.amountPaid,
+          amountDue: users.amountDue,
+        })
+        .from(users)
+        .where(eq(users.role, "CLIENT"));
+
+      // Calculate total revenue and due
+      const totalRevenue = allClients.reduce((sum, c) => sum + (c.amountPaid || 0), 0);
+      const totalDue = allClients.reduce((sum, c) => sum + (c.amountDue || 0), 0);
+      const netProfit = totalRevenue - totalExpenses;
+      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+      // Get client applications count
+      const clientAppCounts = await db
+        .select({
+          clientId: jobApplications.clientId,
+          count: count(),
+        })
+        .from(jobApplications)
+        .groupBy(jobApplications.clientId);
+
+      const clientAppMap = new Map(clientAppCounts.map(c => [c.clientId, c.count]));
+
+      const clientPayments = allClients.map(client => ({
+        id: client.id,
+        name: client.name,
+        company: client.company,
+        amountPaid: client.amountPaid || 0,
+        amountDue: client.amountDue || 0,
+        applicationsUsed: clientAppMap.get(client.id) || 0,
+      })).sort((a, b) => b.amountPaid - a.amountPaid);
+
+      // Get all employees with their applications count
+      const employeeApps = await db
+        .select({
+          employeeId: jobApplications.employeeId,
+          count: count(),
+        })
+        .from(jobApplications)
+        .groupBy(jobApplications.employeeId);
+
+      const employeeAppMap = new Map(employeeApps.map(e => [e.employeeId, e.count]));
+
+      const allEmployees = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.role, "EMPLOYEE"));
+
+      const employeePayouts = allEmployees.map(employee => {
+        const appsCount = employeeAppMap.get(employee.id) || 0;
+        return {
+          id: employee.id,
+          name: employee.name,
+          email: employee.email,
+          applicationsSubmitted: appsCount,
+          totalPayout: appsCount * RATE_PER_APPLICATION * 100, // in cents
+        };
+      }).sort((a, b) => b.applicationsSubmitted - a.applicationsSubmitted);
+
+      // Get monthly data for the last 12 months
+      const monthlyData: Array<{
+        month: string;
+        applications: number;
+        expenses: number;
+        revenue: number;
+      }> = [];
+
+      const now = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const startOfMonth = date.toISOString().split('T')[0];
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const [monthApps] = await db
+          .select({ count: count() })
+          .from(jobApplications)
+          .where(
+            and(
+              gte(jobApplications.dateApplied, startOfMonth),
+              lte(jobApplications.dateApplied, endOfMonth)
+            )
+          );
+
+        const monthName = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const monthAppsCount = monthApps.count;
+        const monthExpenses = monthAppsCount * RATE_PER_APPLICATION * 100; // in cents
+
+        monthlyData.push({
+          month: monthName,
+          applications: monthAppsCount,
+          expenses: monthExpenses,
+          revenue: 0, // Revenue is not tied to specific months in current data model
+        });
+      }
+
+      return {
+        totalApplications,
+        totalRevenue,
+        totalExpenses,
+        netProfit,
+        profitMargin,
+        totalDue,
+        ratePerApplication: RATE_PER_APPLICATION,
+        employeePayouts,
+        monthlyData,
+        clientPayments,
+      };
+    });
+  }
+
 }
 
 export const storage = new DatabaseStorage();
