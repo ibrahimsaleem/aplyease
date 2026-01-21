@@ -1552,15 +1552,18 @@ export class DatabaseStorage implements IStorage {
   // Payment transaction methods
   async recordPayment(clientId: string, amount: number, recordedBy?: string, notes?: string): Promise<PaymentTransaction> {
     return retryOperation(async () => {
+      const values: any = {
+        clientId,
+        amount,
+        paymentDate: new Date(),
+      };
+      
+      if (recordedBy) values.recordedBy = recordedBy;
+      if (notes) values.notes = notes;
+
       const [transaction] = await db
         .insert(paymentTransactions)
-        .values({
-          clientId,
-          amount,
-          recordedBy,
-          notes,
-          paymentDate: new Date(),
-        })
+        .values(values)
         .returning();
       return transaction;
     });
