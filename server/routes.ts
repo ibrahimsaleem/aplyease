@@ -620,7 +620,7 @@ Generate the tailored LaTeX resume:`;
         async (apiKey) => {
           const genAI = new GoogleGenAI({ apiKey });
           return await genAI.models.generateContent({
-            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            model: user.preferredGeminiModel || "gemini-1.5-flash",
             contents: prompt,
           });
         },
@@ -733,7 +733,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
         async (apiKey) => {
           const genAI = new GoogleGenAI({ apiKey });
           return await genAI.models.generateContent({
-            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            model: user.preferredGeminiModel || "gemini-1.5-flash",
             contents: prompt,
           });
         },
@@ -854,7 +854,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
         async (apiKey) => {
           const genAI = new GoogleGenAI({ apiKey });
           return await genAI.models.generateContent({
-            model: user.preferredGeminiModel || "gemini-2.5-flash",
+            model: user.preferredGeminiModel || "gemini-1.5-flash",
             contents: prompt,
           });
         },
