@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2 } from "lucide-react";
 import { ResumeGenerator } from "@/components/resume-generator";
@@ -32,24 +34,25 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
   const queryClient = useQueryClient();
   const [showFullLatex, setShowFullLatex] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState(user?.geminiApiKey || "");
+  const [preferredModel, setPreferredModel] = useState((user as any)?.preferredGeminiModel || "gemini-1.5-flash");
   const [showApiKey, setShowApiKey] = useState(false);
 
-  const saveGeminiKey = useMutation({
-    mutationFn: async (apiKey: string) => {
-      const response = await apiRequest("PUT", `/api/users/${user?.id}/gemini-key`, { apiKey });
+  const saveGeminiSettings = useMutation({
+    mutationFn: async (data: { apiKey: string; preferredModel: string }) => {
+      const response = await apiRequest("PUT", `/api/users/${user?.id}/gemini-key`, data);
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Gemini API key saved successfully",
+        description: "Gemini settings saved successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to save API key",
+        description: error.message || "Failed to save settings",
         variant: "destructive",
       });
     },
@@ -422,38 +425,64 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
                 <CardTitle>AI Resume Generator Configuration</CardTitle>
               </div>
               <CardDescription>
-                Configure your Gemini API key to use the AI Resume Generator feature
+                Configure your Gemini API key and preferred AI model for resume generation
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1">
-                  <Input
-                    type={showApiKey ? "text" : "password"}
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder="Enter your Gemini API key"
-                    className="font-mono text-sm"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                  <Button
-                    onClick={() => saveGeminiKey.mutate(geminiApiKey)}
-                    disabled={saveGeminiKey.isPending || !geminiApiKey}
-                    size="sm"
-                  >
-                    {saveGeminiKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Save Key
-                  </Button>
+              <div>
+                <Label htmlFor="preferredModel" className="text-sm font-medium mb-2 block">
+                  Preferred AI Model
+                </Label>
+                <Select value={preferredModel} onValueChange={setPreferredModel}>
+                  <SelectTrigger id="preferredModel">
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Balanced - Recommended)</SelectItem>
+                    <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (High Intelligence)</SelectItem>
+                    <SelectItem value="gemini-1.0-pro">Gemini 1.0 Pro (Legacy Stable)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Higher models are more capable but may have stricter rate limits.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="apiKey" className="text-sm font-medium mb-2 block">
+                  Gemini API Key
+                </Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1">
+                    <Input
+                      id="apiKey"
+                      type={showApiKey ? "text" : "password"}
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="Enter your Gemini API key"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      onClick={() => saveGeminiSettings.mutate({ apiKey: geminiApiKey, preferredModel })}
+                      disabled={saveGeminiSettings.isPending || !geminiApiKey}
+                      size="sm"
+                    >
+                      {saveGeminiSettings.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Save Settings
+                    </Button>
+                  </div>
                 </div>
               </div>
+
               <p className="text-xs text-slate-500">
                 Get your free API key from{" "}
                 <a
