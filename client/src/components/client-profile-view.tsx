@@ -438,8 +438,14 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Balanced - Recommended)</SelectItem>
+                    <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro Preview (Most Powerful)</SelectItem>
+                    <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash Preview (Fastest Intelligent)</SelectItem>
+                    <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced Thinking)</SelectItem>
+                    <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Best Price-Performance)</SelectItem>
+                    <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Cost-Efficient)</SelectItem>
+                    <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen Workhorse)</SelectItem>
                     <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (High Intelligence)</SelectItem>
+                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Balanced)</SelectItem>
                     <SelectItem value="gemini-1.0-pro">Gemini 1.0 Pro (Legacy Stable)</SelectItem>
                   </SelectContent>
                 </Select>
