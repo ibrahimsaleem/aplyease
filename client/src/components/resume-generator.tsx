@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye } from "lucide-react";
+import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play } from "lucide-react";
 import { ResumeEvaluationDisplay } from "./resume-evaluation-display";
 import type { ResumeEvaluation, OptimizationIteration } from "@/types";
 
@@ -349,6 +349,26 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
                   </span>
                 )}
               </div>
+
+              {/* Quick Next Steps */}
+              <Alert className="bg-green-50 border-green-200">
+                <Sparkles className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <p className="font-semibold text-green-900 mb-1">✨ Resume Ready!</p>
+                  <p className="text-sm text-green-800">
+                    Click "View LaTeX" or "Copy Code" above, then paste into{" "}
+                    <a 
+                      href="https://www.overleaf.com/login" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="underline font-medium hover:text-green-600"
+                    >
+                      Overleaf
+                    </a>
+                    {" "}to create your PDF.
+                  </p>
+                </AlertDescription>
+              </Alert>
             </div>
           )}
         </CardContent>
@@ -365,8 +385,46 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
           </DialogHeader>
           
           <div className="flex-1 min-h-0 space-y-4">
+            {/* How to Use Instructions */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <FileText className="h-4 w-4 text-blue-600" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-semibold text-blue-900">📝 How to Create Your Resume PDF:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                    <li>Click "Copy Code" button above to copy the LaTeX code</li>
+                    <li>Go to <a href="https://www.overleaf.com/login" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-blue-600">Overleaf.com</a> and log in (it's free!)</li>
+                    <li>Click "New Project" → "Blank Project"</li>
+                    <li>Delete the default content and paste your copied LaTeX code</li>
+                    <li>Click the green "Recompile" button to generate your PDF</li>
+                    <li>Download your professional resume!</li>
+                  </ol>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                      onClick={() => window.open("https://www.overleaf.com/login", "_blank")}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Open Overleaf
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                      onClick={() => window.open("https://www.youtube.com/watch?v=4Y7MG70vZlA", "_blank")}
+                    >
+                      <Play className="w-3 h-3 mr-1" />
+                      Watch Tutorial
+                    </Button>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+
             <div className="relative h-full">
-              <div className="bg-slate-900 text-slate-100 p-4 rounded-lg h-[60vh] overflow-auto">
+              <div className="bg-slate-900 text-slate-100 p-4 rounded-lg h-[45vh] overflow-auto">
                 <pre className="text-sm font-mono whitespace-pre-wrap break-words">
                   <code>{currentLatex}</code>
                 </pre>
