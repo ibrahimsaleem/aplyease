@@ -18,6 +18,14 @@ interface ResumeGeneratorProps {
   userHasApiKey: boolean;
 }
 
+const CREDIT_PLANS = [
+  { name: "Starter", credits: 25, price: 25, perCredit: 1.00 },
+  { name: "Basic", credits: 50, price: 40, perCredit: 0.80 },
+  { name: "Standard", credits: 100, price: 70, perCredit: 0.70 },
+  { name: "Pro", credits: 250, price: 150, perCredit: 0.60 },
+  { name: "Unlimited", credits: 500, price: 250, perCredit: 0.50 },
+];
+
 export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: ResumeGeneratorProps) {
   const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState("");
@@ -27,6 +35,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
   const [optimizationHistory, setOptimizationHistory] = useState<OptimizationIteration[]>([]);
   const [showLatexDialog, setShowLatexDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const maxIterations = 10;
 
@@ -36,6 +45,10 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
       const response = await apiRequest("POST", `/api/generate-resume/${clientId}`, {
         jobDescription: jobDesc,
       });
+      if (response.status === 402) {
+        const errorData = await response.json();
+        throw { status: 402, ...errorData };
+      }
       return response.json();
     },
     onSuccess: async (data) => {
@@ -50,11 +63,15 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     },
     onError: (error: any) => {
       setIsProcessing(false);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate resume",
-        variant: "destructive",
-      });
+      if (error.status === 402) {
+        setShowCreditsDialog(true);
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to generate resume",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -441,6 +458,60 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
           
           <div className="flex justify-end">
             <Button onClick={() => setShowHistoryDialog(false)} variant="outline">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credits Exhausted Dialog */}
+      <Dialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Resume Credits Exhausted</DialogTitle>
+            <DialogDescription>
+              You've used all your resume generation credits. Purchase more credits to continue using the AI Resume Generator.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {CREDIT_PLANS.map((plan) => (
+                <Card key={plan.name} className="relative hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{plan.name}</CardTitle>
+                    <div className="text-3xl font-bold text-primary">
+                      ${plan.price}
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      {plan.credits} resume generations
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-sm text-slate-500">
+                        ${plan.perCredit.toFixed(2)} per generation
+                      </p>
+                      <Badge variant="secondary" className="w-full justify-center">
+                        {((1 / plan.perCredit) * 100 / 100).toFixed(0)}% value
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>How to purchase:</strong> Contact your administrator or email support to purchase resume credits. 
+                They can add credits to your account and process payment.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => setShowCreditsDialog(false)} variant="outline">
               Close
             </Button>
           </div>

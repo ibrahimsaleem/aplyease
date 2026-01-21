@@ -4,26 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
+  ResponsiveContainer
 } from "recharts";
 import {
   DollarSign, TrendingUp, TrendingDown, Wallet,
-  CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight
+  CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight,
+  Calendar
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics } from "@/types";
+import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics, MonthlyPaymentStats } from "@/types";
 
 // USD to INR conversion
 const USD_TO_INR = 87;
-
-// Color palette for charts
-const COLORS = {
-  revenue: "#10b981",
-  expenses: "#f59e0b",
-  profit: "#3b82f6",
-  due: "#ef4444",
-  chart: ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"]
-};
 
 // Helper to format currency
 const formatUSD = (cents: number) => {
@@ -44,13 +36,6 @@ const formatINR = (cents: number) => {
     maximumFractionDigits: 0,
   }).format(inr);
 };
-
-interface MonthlyPayoutData {
-  employeeId: string;
-  employeeName: string;
-  applicationsThisMonth: number;
-  totalPayout: number;
-}
 
 export function FinancialOverview() {
   const currentDate = new Date();
@@ -74,20 +59,12 @@ export function FinancialOverview() {
     },
   });
 
-  // Fetch monthly payout data for all months of selected year
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  const { data: monthlyPayouts } = useQuery({
-    queryKey: ["/api/analytics/monthly-payouts-all", selectedYear],
+  // Fetch monthly payment stats
+  const { data: monthlyPayments } = useQuery<MonthlyPaymentStats[]>({
+    queryKey: ["/api/payments/monthly-stats", selectedYear],
     queryFn: async () => {
-      const results = await Promise.all(
-        months.map(month =>
-          apiRequest("GET", `/api/analytics/monthly-payout?month=${month}&year=${selectedYear}`)
-            .then(res => res.json())
-            .catch(() => [])
-        )
-      );
-      return results;
+      const res = await apiRequest("GET", `/api/payments/monthly-stats?year=${selectedYear}`);
+      return res.json();
     },
   });
 
@@ -120,57 +97,22 @@ export function FinancialOverview() {
     return { totalRevenue, totalDue, totalExpenses, netProfit, profitMargin };
   }, [clientData, employeeData]);
 
-  // Prepare monthly trend data
-  const monthlyTrendData = useMemo(() => {
-    if (!monthlyPayouts) return [];
-
+  // Prepare monthly income chart data
+  const monthlyIncomeData = useMemo(() => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    if (!monthlyPayments) {
+      return monthNames.map(name => ({ month: name, income: 0 }));
+    }
 
     return monthNames.map((name, i) => {
-      const payoutData = monthlyPayouts[i] || [];
-      const expenses = Array.isArray(payoutData)
-        ? payoutData.reduce((sum: number, emp: MonthlyPayoutData) => sum + (emp.totalPayout || 0), 0) * 100
-        : 0;
-
-      // Estimate monthly revenue (simplified - assume even distribution)
-      const avgMonthlyRevenue = financialMetrics.totalRevenue / 12;
-
+      const monthData = monthlyPayments.find(m => m.month === i + 1);
       return {
         month: name,
-        revenue: Math.round(avgMonthlyRevenue / 100),
-        expenses: Math.round(expenses / 100),
-        profit: Math.round((avgMonthlyRevenue - expenses) / 100),
+        income: monthData ? Math.round(monthData.totalAmount / 100) : 0,
       };
     });
-  }, [monthlyPayouts, financialMetrics.totalRevenue]);
-
-  // Revenue distribution by client (top 5)
-  const revenueByClient = useMemo(() => {
-    if (!clientData) return [];
-
-    return clientData.clients
-      .filter(c => (c.amountPaid || 0) > 0)
-      .sort((a, b) => (b.amountPaid || 0) - (a.amountPaid || 0))
-      .slice(0, 5)
-      .map(c => ({
-        name: c.name.split(' ')[0],
-        value: (c.amountPaid || 0) / 100,
-      }));
-  }, [clientData]);
-
-  // Employee expense distribution (top 5)
-  const expensesByEmployee = useMemo(() => {
-    if (!employeeData) return [];
-
-    return employeeData.employees
-      .filter(e => (e.earnings || 0) > 0)
-      .sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
-      .slice(0, 5)
-      .map(e => ({
-        name: e.name.split(' ')[0],
-        value: e.earnings || 0,
-      }));
-  }, [employeeData]);
+  }, [monthlyPayments]);
 
   const isLoading = clientLoading || employeeLoading;
 
@@ -221,12 +163,12 @@ export function FinancialOverview() {
           </CardContent>
         </Card>
 
-        {/* Total Expenses */}
+        {/* Total Expenses (Salary Paid) */}
         <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-amber-600">Total Expenses</p>
+                <p className="text-sm font-medium text-amber-600">Salary Paid</p>
                 <p className="text-2xl font-bold text-amber-900">
                   {formatUSD(financialMetrics.totalExpenses)}
                 </p>
@@ -300,11 +242,14 @@ export function FinancialOverview() {
         </Card>
       </div>
 
-      {/* Year Selector */}
+      {/* Monthly Income Chart */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Monthly Trends</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-500" />
+              Monthly Income - {selectedYear}
+            </CardTitle>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -318,208 +263,25 @@ export function FinancialOverview() {
               </SelectContent>
             </Select>
           </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Payments received each month (based on recorded transactions)
+          </p>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <BarChart data={monthlyIncomeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
               <Tooltip
-                formatter={(value: number) => [`$${value}`, '']}
+                formatter={(value: number) => [`$${value}`, 'Income']}
                 contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
-              <Bar dataKey="revenue" name="Revenue" fill={COLORS.revenue} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="Expenses" fill={COLORS.expenses} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-
-      {/* Distribution Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Revenue by Client */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-500" />
-              Top Clients by Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {revenueByClient.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={revenueByClient}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {revenueByClient.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value}`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[220px] flex items-center justify-center text-slate-400">
-                No revenue data
-              </div>
-            )}
-            <div className="flex flex-wrap gap-3 justify-center mt-2">
-              {revenueByClient.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-1.5 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS.chart[i % COLORS.chart.length] }}
-                  />
-                  <span className="text-slate-600">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Expenses by Employee */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-amber-500" />
-              Top Employees by Payout
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {expensesByEmployee.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={expensesByEmployee}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {expensesByEmployee.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value}`, 'Payout']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[220px] flex items-center justify-center text-slate-400">
-                No expense data
-              </div>
-            )}
-            <div className="flex flex-wrap gap-3 justify-center mt-2">
-              {expensesByEmployee.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-1.5 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: COLORS.chart[i % COLORS.chart.length] }}
-                  />
-                  <span className="text-slate-600">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Profit Trend Line */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-500" />
-            Profit Trend - {selectedYear}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip
-                formatter={(value: number) => [`$${value}`, 'Profit']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke={COLORS.profit}
-                strokeWidth={2}
-                dot={{ fill: COLORS.profit, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Quick Stats Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  Avg Revenue/Client
-                </p>
-                <p className="text-xl font-bold text-slate-800 mt-1">
-                  {clientData && clientData.clients.length > 0
-                    ? formatUSD(financialMetrics.totalRevenue / clientData.clients.length)
-                    : '$0'}
-                </p>
-              </div>
-              <div className="text-3xl text-slate-300">📊</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  Avg Payout/Employee
-                </p>
-                <p className="text-xl font-bold text-slate-800 mt-1">
-                  {employeeData && employeeData.employees.length > 0
-                    ? `$${(financialMetrics.totalExpenses / 100 / employeeData.employees.length).toFixed(0)}`
-                    : '$0'}
-                </p>
-              </div>
-              <div className="text-3xl text-slate-300">💼</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  Collection Rate
-                </p>
-                <p className="text-xl font-bold text-slate-800 mt-1">
-                  {(financialMetrics.totalRevenue + financialMetrics.totalDue) > 0
-                    ? `${((financialMetrics.totalRevenue / (financialMetrics.totalRevenue + financialMetrics.totalDue)) * 100).toFixed(0)}%`
-                    : '0%'}
-                </p>
-              </div>
-              <div className="text-3xl text-slate-300">📈</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

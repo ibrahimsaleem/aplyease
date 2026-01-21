@@ -1,4 +1,4 @@
-import { users, jobApplications, clientProfiles, employeeAssignments, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type EmployeeAssignment, type InsertEmployeeAssignment } from "../shared/schema";
+import { users, jobApplications, clientProfiles, employeeAssignments, paymentTransactions, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type EmployeeAssignment, type InsertEmployeeAssignment, type PaymentTransaction, type InsertPaymentTransaction } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -1546,6 +1546,81 @@ export class DatabaseStorage implements IStorage {
         .where(eq(employeeAssignments.employeeId, employeeId));
 
       return result.map((r) => r.user);
+    });
+  }
+
+  // Payment transaction methods
+  async recordPayment(clientId: string, amount: number, recordedBy?: string, notes?: string): Promise<PaymentTransaction> {
+    return retryOperation(async () => {
+      const [transaction] = await db
+        .insert(paymentTransactions)
+        .values({
+          clientId,
+          amount,
+          recordedBy,
+          notes,
+          paymentDate: new Date(),
+        })
+        .returning();
+      return transaction;
+    });
+  }
+
+  async getPaymentHistory(clientId?: string): Promise<PaymentTransaction[]> {
+    return retryOperation(async () => {
+      if (clientId) {
+        return await db
+          .select()
+          .from(paymentTransactions)
+          .where(eq(paymentTransactions.clientId, clientId))
+          .orderBy(desc(paymentTransactions.paymentDate));
+      }
+      return await db
+        .select()
+        .from(paymentTransactions)
+        .orderBy(desc(paymentTransactions.paymentDate));
+    });
+  }
+
+  async getMonthlyPaymentStats(year: number): Promise<Array<{ month: number; totalAmount: number; transactionCount: number }>> {
+    return retryOperation(async () => {
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year + 1, 0, 1);
+
+      const result = await db
+        .select({
+          month: sql<number>`EXTRACT(MONTH FROM ${paymentTransactions.paymentDate})::int`,
+          totalAmount: sql<number>`COALESCE(SUM(${paymentTransactions.amount}), 0)::int`,
+          transactionCount: count(),
+        })
+        .from(paymentTransactions)
+        .where(
+          and(
+            gte(paymentTransactions.paymentDate, startOfYear),
+            lt(paymentTransactions.paymentDate, endOfYear)
+          )
+        )
+        .groupBy(sql`EXTRACT(MONTH FROM ${paymentTransactions.paymentDate})`);
+
+      // Fill in missing months with zeros
+      const monthlyStats = Array.from({ length: 12 }, (_, i) => ({
+        month: i + 1,
+        totalAmount: 0,
+        transactionCount: 0,
+      }));
+
+      for (const row of result) {
+        const monthIndex = row.month - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+          monthlyStats[monthIndex] = {
+            month: row.month,
+            totalAmount: Number(row.totalAmount),
+            transactionCount: Number(row.transactionCount),
+          };
+        }
+      }
+
+      return monthlyStats;
     });
   }
 

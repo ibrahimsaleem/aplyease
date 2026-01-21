@@ -255,7 +255,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
     try {
       const { id } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
       const userData = updateUserSchema.parse(req.body);
+
+      // Get current user data to check for payment changes
+      const existingUser = await storage.getUser(id);
 
       // If password is provided, hash it before updating
       const updateData: any = { ...userData };
@@ -268,6 +272,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      // Record payment transaction if amountPaid changed
+      if (updateData.amountPaid !== undefined && existingUser) {
+        const previousAmount = (existingUser as any).amountPaid || 0;
+        const newAmount = updateData.amountPaid;
+        const paymentDifference = newAmount - previousAmount;
+        
+        if (paymentDifference > 0) {
+          // Only record positive payments (increases)
+          await storage.recordPayment(
+            id,
+            paymentDifference,
+            currentUser.id,
+            `Payment recorded by admin`
+          );
+        }
       }
 
       res.json(user);
@@ -396,6 +417,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resume credits endpoints
+  app.get("/api/resume-credits", requireAuth, async (req, res) => {
+    try {
+      const currentUser = (req.user ?? req.session.user)!;
+      const user = await storage.getUser(currentUser.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const resumeCredits = (user as any).resumeCredits ?? 0;
+      res.json({ resumeCredits });
+    } catch (error) {
+      console.error("Error fetching resume credits:", error);
+      res.status(500).json({ message: "Failed to fetch resume credits" });
+    }
+  });
+
+  app.post("/api/users/:id/resume-credits", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { credits, plan } = req.body;
+
+      if (!credits || typeof credits !== 'number' || credits <= 0) {
+        return res.status(400).json({ message: "Valid credits amount is required" });
+      }
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const currentCredits = (user as any).resumeCredits ?? 0;
+      const newCredits = currentCredits + credits;
+
+      await storage.updateUser(id, { resumeCredits: newCredits } as any);
+
+      res.json({ 
+        message: `Added ${credits} resume credits`,
+        resumeCredits: newCredits,
+        plan: plan || 'Custom'
+      });
+    } catch (error) {
+      console.error("Error adding resume credits:", error);
+      res.status(500).json({ message: "Failed to add resume credits" });
+    }
+  });
+
   // Helper function to retry Gemini operations with exponential backoff and fallback key support
   async function retryGemini<T>(
     operation: (apiKey: string) => Promise<T>,
@@ -440,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Resume generation with Gemini AI
-  app.post("/api/generate-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+  app.post("/api/generate-resume/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { jobDescription } = req.body;
@@ -450,10 +519,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Job description is required" });
       }
 
+      // Check permissions: ADMIN, EMPLOYEE, or CLIENT (only for their own profile)
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       // Get current user's Gemini settings
       const user = await storage.getUser(currentUser.id);
       if (!user || !user.geminiApiKey) {
         return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Check resume credits for CLIENT users
+      if (currentUser.role === "CLIENT") {
+        const resumeCredits = (user as any).resumeCredits ?? 0;
+        if (resumeCredits <= 0) {
+          return res.status(402).json({ 
+            message: "Insufficient resume credits",
+            resumeCredits: 0,
+            plans: [
+              { name: "Starter", credits: 25, price: 25, perCredit: 1.00 },
+              { name: "Basic", credits: 50, price: 40, perCredit: 0.80 },
+              { name: "Standard", credits: 100, price: 70, perCredit: 0.70 },
+              { name: "Pro", credits: 250, price: 150, perCredit: 0.60 },
+              { name: "Unlimited", credits: 500, price: 250, perCredit: 0.50 }
+            ]
+          });
+        }
       }
 
       // Get client's base resume LaTeX
@@ -537,6 +633,13 @@ Generate the tailored LaTeX resume:`;
       // Clean up any markdown code blocks if present
       generatedLatex = generatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
 
+      // Decrement resume credits for CLIENT users
+      if (currentUser.role === "CLIENT") {
+        const currentCredits = (user as any).resumeCredits ?? 0;
+        const newCredits = Math.max(0, currentCredits - 1);
+        await storage.updateUser(currentUser.id, { resumeCredits: newCredits } as any);
+      }
+
       res.json({ latex: generatedLatex });
     } catch (error: any) {
       console.error("Error generating resume:", error);
@@ -560,7 +663,7 @@ Generate the tailored LaTeX resume:`;
   });
 
   // Resume evaluation with Gemini AI (Agent 2)
-  app.post("/api/evaluate-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+  app.post("/api/evaluate-resume/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { latex, jobDescription } = req.body;
@@ -572,6 +675,15 @@ Generate the tailored LaTeX resume:`;
 
       if (!jobDescription || typeof jobDescription !== 'string') {
         return res.status(400).json({ message: "Job description is required" });
+      }
+
+      // Check permissions: ADMIN, EMPLOYEE, or CLIENT (only for their own profile)
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       // Get current user's Gemini settings
@@ -666,7 +778,7 @@ Provide your evaluation in valid JSON format only, no other text:`;
   });
 
   // Resume optimization with Gemini AI (Agent 3)
-  app.post("/api/optimize-resume/:clientId", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
+  app.post("/api/optimize-resume/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
       const { latex, jobDescription, previousFeedback } = req.body;
@@ -682,6 +794,15 @@ Provide your evaluation in valid JSON format only, no other text:`;
 
       if (!previousFeedback || typeof previousFeedback !== 'object') {
         return res.status(400).json({ message: "Previous feedback is required" });
+      }
+
+      // Check permissions: ADMIN, EMPLOYEE, or CLIENT (only for their own profile)
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       // Get current user's Gemini settings
@@ -1279,6 +1400,62 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       }
       console.error("Error updating client profile:", error);
       res.status(500).json({ message: "Failed to update client profile" });
+    }
+  });
+
+  // Payment Transaction Routes (Admin only)
+  app.get("/api/payments", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { clientId } = req.query;
+      const payments = await storage.getPaymentHistory(clientId as string | undefined);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ message: "Failed to fetch payment history" });
+    }
+  });
+
+  app.get("/api/payments/monthly-stats", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const stats = await storage.getMonthlyPaymentStats(year);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching monthly payment stats:", error);
+      res.status(500).json({ message: "Failed to fetch monthly payment stats" });
+    }
+  });
+
+  // Manual payment recording endpoint (for recording past payments)
+  app.post("/api/payments", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const currentUser = (req.user ?? req.session.user)!;
+      const { clientId, amount, notes } = req.body;
+
+      if (!clientId || amount === undefined) {
+        return res.status(400).json({ message: "clientId and amount are required" });
+      }
+
+      const payment = await storage.recordPayment(
+        clientId,
+        amount,
+        currentUser.id,
+        notes || "Manual payment record"
+      );
+
+      // Also update the user's amountPaid
+      const client = await storage.getUser(clientId);
+      if (client) {
+        const currentAmountPaid = (client as any).amountPaid || 0;
+        await storage.updateUser(clientId, {
+          amountPaid: currentAmountPaid + amount,
+        } as any);
+      }
+
+      res.json(payment);
+    } catch (error) {
+      console.error("Error recording payment:", error);
+      res.status(500).json({ message: "Failed to record payment" });
     }
   });
 

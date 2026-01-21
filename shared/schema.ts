@@ -45,6 +45,7 @@ export const users = pgTable(
     geminiApiKey: text("gemini_api_key"),
     preferredGeminiModel: text("preferred_gemini_model").default(sql`'gemini-2.5-flash'`).notNull(),
     fallbackGeminiApiKey: text("fallback_gemini_api_key"),
+    resumeCredits: integer("resume_credits").notNull().default(sql`10`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -164,6 +165,24 @@ export const employeeAssignments = pgTable(
   ]
 );
 
+// Payment Transactions table - tracks payment history for monthly income reporting
+export const paymentTransactions = pgTable(
+  "payment_transactions",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    clientId: uuid("client_id").notNull().references(() => users.id),
+    amount: integer("amount").notNull(), // Amount in cents
+    paymentDate: timestamp("payment_date").defaultNow().notNull(),
+    notes: text("notes"),
+    recordedBy: uuid("recorded_by").references(() => users.id), // Admin who recorded the payment
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_payment_transactions_client").on(table.clientId),
+    index("idx_payment_transactions_date").on(table.paymentDate),
+  ]
+);
+
 export const employeeAssignmentsRelations = relations(employeeAssignments, ({ one }) => ({
   client: one(users, {
     fields: [employeeAssignments.clientId],
@@ -174,6 +193,19 @@ export const employeeAssignmentsRelations = relations(employeeAssignments, ({ on
     fields: [employeeAssignments.employeeId],
     references: [users.id],
     relationName: "assignedEmployee",
+  }),
+}));
+
+export const paymentTransactionsRelations = relations(paymentTransactions, ({ one }) => ({
+  client: one(users, {
+    fields: [paymentTransactions.clientId],
+    references: [users.id],
+    relationName: "paymentClient",
+  }),
+  recordedByUser: one(users, {
+    fields: [paymentTransactions.recordedBy],
+    references: [users.id],
+    relationName: "paymentRecordedBy",
   }),
 }));
 
@@ -274,3 +306,6 @@ export type ClientProfileWithUser = ClientProfile & {
 
 export type EmployeeAssignment = typeof employeeAssignments.$inferSelect;
 export type InsertEmployeeAssignment = typeof employeeAssignments.$inferInsert;
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;

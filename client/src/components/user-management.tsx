@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search, Trash2, Users } from "lucide-react";
+import { Plus, Edit, Search, Trash2, Users, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -115,6 +115,14 @@ const editUserSchema = z.object({
 
 type UserFormData = z.infer<typeof createUserSchema>;
 
+const CREDIT_PLANS = [
+  { name: "Starter", credits: 25, price: 25 },
+  { name: "Basic", credits: 50, price: 40 },
+  { name: "Standard", credits: 100, price: 70 },
+  { name: "Pro", credits: 250, price: 150 },
+  { name: "Unlimited", credits: 500, price: 250 },
+];
+
 export function UserManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -123,6 +131,9 @@ export function UserManagement() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [managingEmployeesClient, setManagingEmployeesClient] = useState<User | null>(null);
+  const [creditsDialogUser, setCreditsDialogUser] = useState<User | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [customCredits, setCustomCredits] = useState<string>("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -257,6 +268,30 @@ export function UserManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addResumeCredits = useMutation({
+    mutationFn: async ({ userId, credits, plan }: { userId: string; credits: number; plan: string }) => {
+      const response = await apiRequest("POST", `/api/users/${userId}/resume-credits`, { credits, plan });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: data.message || "Resume credits added successfully",
+      });
+      setCreditsDialogUser(null);
+      setSelectedPlan("");
+      setCustomCredits("");
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add resume credits",
         variant: "destructive",
       });
     },
@@ -638,15 +673,26 @@ export function UserManagement() {
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       {user.role === "CLIENT" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setManagingEmployeesClient(user)}
-                          title="Manage Employees"
-                          data-testid="button-manage-employees"
-                        >
-                          <Users className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setManagingEmployeesClient(user)}
+                            title="Manage Employees"
+                            data-testid="button-manage-employees"
+                          >
+                            <Users className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCreditsDialogUser(user)}
+                            title="Add Resume Credits"
+                            data-testid="button-resume-credits"
+                          >
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="ghost"
@@ -724,6 +770,81 @@ export function UserManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
+
+      <Dialog open={!!creditsDialogUser} onOpenChange={(open) => !open && setCreditsDialogUser(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Add Resume Credits - {creditsDialogUser?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <p className="text-sm text-slate-600 mb-1">Current Resume Credits</p>
+              <p className="text-2xl font-bold text-purple-700">{(creditsDialogUser as any)?.resumeCredits ?? 0}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Plan</label>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {CREDIT_PLANS.map((plan) => (
+                  <Card
+                    key={plan.name}
+                    className={`cursor-pointer transition-all ${
+                      selectedPlan === plan.name ? 'ring-2 ring-purple-600 bg-purple-50' : 'hover:shadow-md'
+                    }`}
+                    onClick={() => {
+                      setSelectedPlan(plan.name);
+                      setCustomCredits("");
+                    }}
+                  >
+                    <CardHeader className="p-4">
+                      <CardTitle className="text-base">{plan.name}</CardTitle>
+                      <div className="text-2xl font-bold text-primary">${plan.price}</div>
+                      <p className="text-xs text-slate-600">{plan.credits} credits</p>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Or Enter Custom Credits</label>
+              <Input
+                type="number"
+                placeholder="Enter number of credits"
+                value={customCredits}
+                onChange={(e) => {
+                  setCustomCredits(e.target.value);
+                  setSelectedPlan("");
+                }}
+                min="1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCreditsDialogUser(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const plan = CREDIT_PLANS.find(p => p.name === selectedPlan);
+                  const credits = customCredits ? parseInt(customCredits) : plan?.credits;
+                  if (credits && credits > 0 && creditsDialogUser) {
+                    addResumeCredits.mutate({
+                      userId: creditsDialogUser.id,
+                      credits,
+                      plan: selectedPlan || 'Custom'
+                    });
+                  }
+                }}
+                disabled={addResumeCredits.isPending || (!selectedPlan && !customCredits)}
+              >
+                {addResumeCredits.isPending ? "Adding..." : "Add Credits"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ManageEmployeesDialog
         client={managingEmployeesClient}

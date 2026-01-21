@@ -9,6 +9,7 @@ export type User = {
   applicationsRemaining?: number;
   amountPaid?: number; // Payment made by client (in cents)
   amountDue?: number; // Remaining payment due (in cents)
+  resumeCredits?: number; // AI Resume Generator credits
   createdAt: string;
   updatedAt: string;
 };
@@ -191,4 +192,20 @@ export type OptimizationIteration = {
   latex: string;
   evaluation: ResumeEvaluation;
   timestamp: string;
+};
+
+export type PaymentTransaction = {
+  id: string;
+  clientId: string;
+  amount: number; // in cents
+  paymentDate: string;
+  notes?: string;
+  recordedBy?: string;
+  createdAt: string;
+};
+
+export type MonthlyPaymentStats = {
+  month: number;
+  totalAmount: number;
+  transactionCount: number;
 };

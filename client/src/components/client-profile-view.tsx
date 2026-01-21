@@ -2,8 +2,13 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2 } from "lucide-react";
+import { ResumeGenerator } from "@/components/resume-generator";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import type { ClientProfile, ClientStats } from "@/types";
 
 // Helper function to format cents to dollars
@@ -22,8 +27,33 @@ interface ClientProfileViewProps {
 }
 
 export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }: ClientProfileViewProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showFullLatex, setShowFullLatex] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState(user?.geminiApiKey || "");
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  const saveGeminiKey = useMutation({
+    mutationFn: async (apiKey: string) => {
+      const response = await apiRequest("PUT", `/api/users/${user?.id}/gemini-key`, { apiKey });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Gemini API key saved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save API key",
+        variant: "destructive",
+      });
+    },
+  });
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -53,6 +83,13 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mt-4 sm:mt-6">
+            <div className="bg-purple-50 p-3 sm:p-4 rounded-lg border border-purple-200">
+              <p className="text-xs sm:text-sm text-purple-600 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Resume Credits
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-purple-700">{user?.resumeCredits ?? 0}</p>
+            </div>
             <div className="bg-slate-50 p-3 sm:p-4 rounded-lg">
               <p className="text-xs sm:text-sm text-slate-600">Applications Left</p>
               <p className="text-xl sm:text-2xl font-bold">{stats.applicationsRemaining ?? 0}</p>
@@ -374,6 +411,71 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
               </pre>
             </CardContent>
           </Card>
+        )}
+
+        {/* Gemini API Key Configuration */}
+        {isOwnProfile && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-blue-600" />
+                <CardTitle>AI Resume Generator Configuration</CardTitle>
+              </div>
+              <CardDescription>
+                Configure your Gemini API key to use the AI Resume Generator feature
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1">
+                  <Input
+                    type={showApiKey ? "text" : "password"}
+                    value={geminiApiKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    placeholder="Enter your Gemini API key"
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                  >
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button
+                    onClick={() => saveGeminiKey.mutate(geminiApiKey)}
+                    disabled={saveGeminiKey.isPending || !geminiApiKey}
+                    size="sm"
+                  >
+                    {saveGeminiKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Save Key
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Get your free API key from{" "}
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Google AI Studio
+                </a>
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI Resume Generator */}
+        {isOwnProfile && (
+          <ResumeGenerator
+            clientId={user?.id!}
+            hasBaseResume={!!profile.baseResumeLatex}
+            userHasApiKey={!!user?.geminiApiKey}
+          />
         )}
 
         {/* Additional Notes */}
