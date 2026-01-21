@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,7 @@ const CREDIT_PLANS = [
 
 export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: ResumeGeneratorProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [jobDescription, setJobDescription] = useState("");
   const [currentLatex, setCurrentLatex] = useState("");
   const [evaluationResult, setEvaluationResult] = useState<ResumeEvaluation | null>(null);
@@ -54,6 +55,8 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     onSuccess: async (data) => {
       setCurrentLatex(data.latex);
       setIterationCount(1);
+      // Invalidate user query to refresh credits
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Resume Generated!",
         description: "Evaluating resume quality...",
