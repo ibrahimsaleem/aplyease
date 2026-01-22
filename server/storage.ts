@@ -211,6 +211,7 @@ export class DatabaseStorage implements IStorage {
           ...((userData as any).preferredGeminiModel !== undefined ? { preferredGeminiModel: (userData as any).preferredGeminiModel } : {}),
           ...((userData as any).fallbackGeminiApiKey !== undefined ? { fallbackGeminiApiKey: (userData as any).fallbackGeminiApiKey } : {}),
           ...((userData as any).passwordHash !== undefined ? { passwordHash: (userData as any).passwordHash } : {}),
+          ...((userData as any).resumeCredits !== undefined ? { resumeCredits: (userData as any).resumeCredits } : {}),
           updatedAt: new Date(),
         } as any)
         .where(eq(users.id, id))
