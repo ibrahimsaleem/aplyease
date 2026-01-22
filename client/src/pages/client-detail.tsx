@@ -440,6 +440,8 @@ export default function ClientDetail() {
               clientId={clientId!}
               hasBaseResume={!!profile.baseResumeLatex}
               userHasApiKey={!!user.geminiApiKey}
+              resumeCredits={undefined}
+              userRole={user.role}
             />
           )}
 

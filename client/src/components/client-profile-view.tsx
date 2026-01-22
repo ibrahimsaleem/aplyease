@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2 } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2, Info, Zap, Target, TrendingUp, FileText, CheckCircle2 } from "lucide-react";
 import { ResumeGenerator } from "@/components/resume-generator";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -504,13 +504,122 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </Card>
         )}
 
-        {/* AI Resume Generator */}
+        {/* AI Resume Tailoring Tool Section */}
         {isOwnProfile && (
-          <ResumeGenerator
-            clientId={user?.id!}
-            hasBaseResume={!!profile.baseResumeLatex}
-            userHasApiKey={!!user?.geminiApiKey}
-          />
+          <>
+            {/* Section Divider */}
+            <div className="lg:col-span-2 my-8">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t-2 border-purple-200"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-slate-50 px-6 py-2 rounded-full border-2 border-purple-200">
+                    <div className="flex items-center gap-2 text-purple-700 font-semibold">
+                      <Sparkles className="w-5 h-5" />
+                      <span>AI Resume Tailoring Tool</span>
+                    </div>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tool Description Card */}
+            <Card className="lg:col-span-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-purple-600" />
+                  <CardTitle className="text-purple-900">What is the AI Resume Tailoring Tool?</CardTitle>
+                </div>
+                <CardDescription>
+                  An intelligent system that optimizes your resume for specific job descriptions using advanced AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-purple-600" />
+                      How It Works
+                    </h4>
+                    <ol className="space-y-2 text-sm text-slate-700">
+                      <li className="flex items-start gap-2">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-purple-600 text-white rounded-full text-xs font-bold">1</span>
+                        <span>Paste a job description</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-purple-600 text-white rounded-full text-xs font-bold">2</span>
+                        <span>AI analyzes requirements and tailors your resume</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-purple-600 text-white rounded-full text-xs font-bold">3</span>
+                        <span>Receive an ATS-optimized score (0-100)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-purple-600 text-white rounded-full text-xs font-bold">4</span>
+                        <span>Iterate to improve the score further</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-purple-600 text-white rounded-full text-xs font-bold">5</span>
+                        <span>Copy LaTeX code to Overleaf and create PDF</span>
+                      </li>
+                    </ol>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-purple-600" />
+                      Key Features
+                    </h4>
+                    <ul className="space-y-2 text-sm text-slate-700">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>Tailors resume content to match job requirements</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>Optimizes for Applicant Tracking Systems (ATS)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>Provides detailed feedback and improvement suggestions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>Iterative optimization for best results</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>Professional LaTeX formatting</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-purple-100 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-5 h-5 text-purple-700 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="font-semibold text-purple-900 mb-1">Credits System</h5>
+                      <p className="text-sm text-purple-800">
+                        Each resume generation uses <strong>1 credit</strong>. You have <strong>{user?.resumeCredits ?? 0} credits</strong> remaining. 
+                        Evaluating and optimizing your resume after generation does not use additional credits.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Resume Generator */}
+            <ResumeGenerator
+              clientId={user?.id!}
+              hasBaseResume={!!profile.baseResumeLatex}
+              userHasApiKey={!!user?.geminiApiKey}
+              resumeCredits={user?.resumeCredits}
+              userRole={user?.role}
+            />
+          </>
         )}
 
         {/* Additional Notes */}

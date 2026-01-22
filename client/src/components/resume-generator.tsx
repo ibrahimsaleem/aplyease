@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play } from "lucide-react";
+import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play, Lock, Mail } from "lucide-react";
 import { ResumeEvaluationDisplay } from "./resume-evaluation-display";
 import type { ResumeEvaluation, OptimizationIteration } from "@/types";
 
@@ -16,6 +16,8 @@ interface ResumeGeneratorProps {
   clientId: string;
   hasBaseResume: boolean;
   userHasApiKey: boolean;
+  resumeCredits?: number;
+  userRole?: string;
 }
 
 const CREDIT_PLANS = [
@@ -26,7 +28,7 @@ const CREDIT_PLANS = [
   { name: "Unlimited", credits: 500, price: 250, perCredit: 0.50 },
 ];
 
-export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: ResumeGeneratorProps) {
+export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resumeCredits, userRole }: ResumeGeneratorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [jobDescription, setJobDescription] = useState("");
@@ -212,10 +214,11 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
 
   const hasResults = currentLatex && evaluationResult;
   const canOptimize = hasResults && iterationCount < maxIterations && !isProcessing;
+  const isLocked = userRole === "CLIENT" && (resumeCredits === 0 || resumeCredits === undefined);
 
   return (
     <>
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-2 relative">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-600" />
@@ -225,7 +228,45 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
             Paste a job description to generate and iteratively optimize a tailored LaTeX resume for this client
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 relative">
+          {/* Locked Overlay when credits are exhausted */}
+          {isLocked && (
+            <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-b-lg">
+              <div className="text-center p-8 max-w-md">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-4">
+                  <Lock className="w-10 h-10 text-red-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                  Your Resume Tailoring AI Credits Are Over
+                </h3>
+                <Badge variant="destructive" className="mb-4 text-base py-1 px-3">
+                  0 Credits Remaining
+                </Badge>
+                <p className="text-slate-600 mb-6">
+                  Purchase more credits to continue using the AI Resume Generator and create tailored resumes for your job applications.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    onClick={() => setShowCreditsDialog(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                    size="lg"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    View Plans
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = "mailto:support@aplyease.com?subject=Resume Credits Request"}
+                    variant="outline"
+                    size="lg"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Contact Admin
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {!userHasApiKey && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -254,7 +295,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste the full job description here..."
               className="min-h-[200px] font-mono text-sm"
-              disabled={!userHasApiKey || !hasBaseResume || isProcessing}
+              disabled={!userHasApiKey || !hasBaseResume || isProcessing || isLocked}
             />
           </div>
 
@@ -262,7 +303,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
           <div className="flex gap-2">
             <Button
               onClick={handleGenerate}
-              disabled={isProcessing || !userHasApiKey || !hasBaseResume}
+              disabled={isProcessing || !userHasApiKey || !hasBaseResume || isLocked}
               className="flex-1"
               size="lg"
             >
