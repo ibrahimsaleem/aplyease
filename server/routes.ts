@@ -534,10 +534,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
       }
 
-      // Check resume credits for CLIENT users
-      if (currentUser.role === "CLIENT") {
+      // Check resume credits for CLIENT users (use database user's role as source of truth)
+      if (user.role === "CLIENT") {
         const resumeCredits = (user as any).resumeCredits ?? 0;
+        console.log(`[Credit Check] User ${user.id} (${user.email}) has ${resumeCredits} credits`);
         if (resumeCredits <= 0) {
+          console.log(`[Credit Check] Insufficient credits for user ${user.id}`);
           return res.status(402).json({ 
             message: "Insufficient resume credits",
             resumeCredits: 0,
@@ -634,10 +636,15 @@ Generate the tailored LaTeX resume:`;
       generatedLatex = generatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
 
       // Decrement resume credits for CLIENT users
-      if (currentUser.role === "CLIENT") {
+      // Use database user's role as source of truth
+      if (user.role === "CLIENT") {
         const currentCredits = (user as any).resumeCredits ?? 0;
         const newCredits = Math.max(0, currentCredits - 1);
-        await storage.updateUser(currentUser.id, { resumeCredits: newCredits } as any);
+        console.log(`[Credit Deduction] User ${user.id} (${user.email}): ${currentCredits} -> ${newCredits}`);
+        await storage.updateUser(user.id, { resumeCredits: newCredits } as any);
+        console.log(`[Credit Deduction] Successfully updated credits for user ${user.id}`);
+      } else {
+        console.log(`[Credit Deduction] Skipping - User ${user.id} has role: ${user.role}`);
       }
 
       res.json({ latex: generatedLatex });

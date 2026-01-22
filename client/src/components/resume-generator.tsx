@@ -55,8 +55,9 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey }: Resu
     onSuccess: async (data) => {
       setCurrentLatex(data.latex);
       setIterationCount(1);
-      // Invalidate user query to refresh credits
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Immediately invalidate and refetch user query to refresh credits
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Resume Generated!",
         description: "Evaluating resume quality...",
