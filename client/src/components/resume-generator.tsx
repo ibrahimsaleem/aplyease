@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play, Lock, Mail } from "lucide-react";
+import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play, Lock, Mail, MessageCircle } from "lucide-react";
 import { ResumeEvaluationDisplay } from "./resume-evaluation-display";
 import type { ResumeEvaluation, OptimizationIteration } from "@/types";
 
@@ -255,12 +255,20 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
                     View Plans
                   </Button>
                   <Button 
+                    onClick={() => window.open("https://wa.me/17138537974?text=Hi!%20I%20need%20to%20purchase%20resume%20credits%20for%20my%20account.", "_blank")}
+                    className="bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    WhatsApp Admin
+                  </Button>
+                  <Button 
                     onClick={() => window.location.href = "mailto:support@aplyease.com?subject=Resume Credits Request"}
                     variant="outline"
                     size="lg"
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    Contact Admin
+                    Email Admin
                   </Button>
                 </div>
               </div>
@@ -607,13 +615,27 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>How to purchase:</strong> Contact your administrator or email support to purchase resume credits. 
+                <strong>How to purchase:</strong> Contact your administrator via WhatsApp or email to purchase resume credits. 
                 They can add credits to your account and process payment.
               </AlertDescription>
             </Alert>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            <Button 
+              onClick={() => window.open("https://wa.me/17138537974?text=Hi!%20I%20want%20to%20purchase%20resume%20credits.", "_blank")}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              WhatsApp Admin
+            </Button>
+            <Button 
+              onClick={() => window.location.href = "mailto:support@aplyease.com?subject=Resume Credits Purchase"}
+              variant="outline"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Email Admin
+            </Button>
             <Button onClick={() => setShowCreditsDialog(false)} variant="outline">
               Close
             </Button>
