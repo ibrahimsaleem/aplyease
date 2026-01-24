@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { RefreshCw } from "lucide-react"
 import { ApplicationCard } from "./application-card"
@@ -26,6 +26,10 @@ export function MobileApplicationsList({
     sortOrder: "desc",
     ...initialFilters,
   })
+  
+  // Ref to store scroll position before loading more
+  const scrollPositionRef = useRef<number>(0)
+  const isLoadingMoreRef = useRef<boolean>(false)
 
   // Update filters when initialFilters change
   useEffect(() => {
@@ -79,9 +83,26 @@ export function MobileApplicationsList({
 
   const { isPulling, pullDistance } = usePullToRefresh(handleRefresh)
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
+    // Store current scroll position before loading more
+    scrollPositionRef.current = window.scrollY
+    isLoadingMoreRef.current = true
     setCurrentLimit(prev => prev + 10)
-  }
+  }, [])
+
+  // Restore scroll position after loading more data
+  useEffect(() => {
+    if (isLoadingMoreRef.current && !isLoading && data) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: 'instant'
+        })
+        isLoadingMoreRef.current = false
+      })
+    }
+  }, [isLoading, data])
 
   const handleStatusUpdate = (id: string, status: JobApplication["status"]) => {
     updateStatus.mutate({ id, status })
