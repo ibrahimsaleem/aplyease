@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,10 @@ export function ApplicationTable({
   });
   const [searchInput, setSearchInput] = useState<string>(initialFilters.search || "");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
+  
+  // Ref to store scroll position before loading more
+  const scrollPositionRef = useRef<number>(0);
+  const isLoadingMoreRef = useRef<boolean>(false);
 
   // Update filters when currentLimit changes (for load more mode)
   useEffect(() => {
@@ -148,9 +152,26 @@ export function ApplicationTable({
     }));
   };
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
+    // Store current scroll position before loading more
+    scrollPositionRef.current = window.scrollY;
+    isLoadingMoreRef.current = true;
     setCurrentLimit(prev => prev + 10);
-  };
+  }, []);
+
+  // Restore scroll position after loading more data
+  useEffect(() => {
+    if (isLoadingMoreRef.current && !isLoading && data) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: 'instant'
+        });
+        isLoadingMoreRef.current = false;
+      });
+    }
+  }, [isLoading, data]);
 
   const handleExport = async () => {
     try {
