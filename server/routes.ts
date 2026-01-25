@@ -1815,15 +1815,10 @@ OUTPUT:
         return res.status(404).json({ message: "Client profile not found" });
       }
 
-      // Update only the baseResumeLatex field using raw SQL
-      const [updated] = await db
-        .update(clientProfiles)
-        .set({ 
-          baseResumeLatex,
-          updatedAt: new Date(),
-        })
-        .where(eq(clientProfiles.userId, userId))
-        .returning();
+      // Update only the baseResumeLatex field using storage method
+      const updated = await storage.upsertClientProfile(userId, {
+        baseResumeLatex,
+      } as UpdateClientProfile);
 
       console.log("[Save Base LaTeX] Successfully updated profile for userId:", userId);
       res.json(updated);
