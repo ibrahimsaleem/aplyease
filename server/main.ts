@@ -30,6 +30,8 @@ app.use(cors({
       origin.endsWith('.onrender.com') ||
       origin.endsWith('.web.app') ||
       origin.endsWith('.firebaseapp.com') ||
+      origin === 'https://hireease.me' ||
+      origin === 'https://www.hireease.me' ||
       origin === 'http://localhost:5173' ||
       origin === 'http://localhost:5000' ||
       process.env.NODE_ENV === 'development'
@@ -42,6 +44,9 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+// Ensure preflight OPTIONS requests are handled
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -129,14 +134,14 @@ process.on('uncaughtException', (error) => {
   // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error('Error:', err);
-    
+
     // Handle specific database connection errors
-    if (err.message?.includes('Connection terminated unexpectedly') || 
-        err.message?.includes('connection') ||
-        err.code === 'ECONNRESET' ||
-        err.code === 'ENOTFOUND') {
+    if (err.message?.includes('Connection terminated unexpectedly') ||
+      err.message?.includes('connection') ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'ENOTFOUND') {
       console.error('Database connection error detected');
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: {
           code: '503',
           message: 'Database temporarily unavailable. Please try again in a moment.',
