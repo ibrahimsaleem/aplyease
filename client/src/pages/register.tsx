@@ -45,7 +45,7 @@ const clientRegisterSchema = z.object({
 const employeeRegisterSchema = z.object({
     name: z.string().min(2, "Name is required"),
     email: z.string().email("Invalid email address"),
-    whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code, e.g., +1234567890)"),
+    whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code)"),
     password: z.string().min(6, "Password must be at least 6 characters").regex(/^(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter and one number"),
     confirmPassword: z.string(),
     confirmPassword2: z.string(),
@@ -534,7 +534,7 @@ export default function RegisterPage() {
                                         <FormItem>
                                             <FormLabel>WhatsApp Number</FormLabel>
                                             <FormControl>
-                                                <Input type="tel" placeholder="+1 234 567 8900" {...field} />
+                                                <Input type="tel" placeholder="+91 98765 43210" {...field} />
                                             </FormControl>
                                             <p className="text-xs text-slate-500 mt-1">
                                                 Include country code. Clients will use this to contact you.

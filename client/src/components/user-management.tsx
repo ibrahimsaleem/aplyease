@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search, Trash2, Users, Sparkles, UserCheck, Clock, AlertCircle } from "lucide-react";
+import { Plus, Edit, Search, Trash2, Users, Sparkles, UserCheck, Clock, AlertCircle, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -96,7 +96,7 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
-  whatsappNumber: z.string().optional(),
+  whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code)"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
@@ -109,7 +109,7 @@ const editUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
-  whatsappNumber: z.string().optional(),
+  whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code)"),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
@@ -535,7 +535,7 @@ export function UserManagement() {
                             <FormControl>
                               <Input
                                 type="tel"
-                                placeholder="+1 234 567 8900"
+                                placeholder="+91 98765 43210"
                                 {...field}
                                 data-testid="input-user-whatsapp"
                               />
@@ -680,6 +680,16 @@ export function UserManagement() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {(emp as any).whatsappNumber && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white border-none"
+                        title="Contact on WhatsApp"
+                        onClick={() => window.open(`https://wa.me/${(emp as any).whatsappNumber.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(emp.name)},%20regarding%20your%20application%20to%20HireEase...`, '_blank')}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
