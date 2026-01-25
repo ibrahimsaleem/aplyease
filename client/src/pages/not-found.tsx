@@ -19,15 +19,15 @@ export default function NotFound() {
             The page you're looking for doesn't exist or you don't have access to it.
           </p>
 
-          <Button 
+          <Button
             className="mt-6 w-full"
             onClick={() => setLocation("/")}
           >
             <Home className="w-4 h-4 mr-2" />
-            Go to Dashboard
+            Back to Home
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

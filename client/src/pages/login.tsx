@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Briefcase, Eye, EyeOff } from "lucide-react";
+import { Briefcase, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,12 @@ export default function LoginPage() {
 
   return (
     <FuturisticBackground className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
+      <div className="max-w-md w-full mx-4 relative">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
+            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+          </Button>
+        </Link>
         {/* Logo and Branding */}
         <div className="text-center mb-8">
           <Link href="/">

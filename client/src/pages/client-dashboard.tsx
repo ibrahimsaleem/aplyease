@@ -228,7 +228,7 @@ export default function ClientDashboard() {
                       href={`https://wa.me/${employee.whatsappNumber.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(employee.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                      className="inline-flex items-center gap-2 mt-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
                     >
                       <Phone className="w-4 h-4" />
                       Chat on WhatsApp

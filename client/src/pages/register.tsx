@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Briefcase, Eye, EyeOff, CheckCircle, Users, User } from "lucide-react";
+import { Briefcase, Eye, EyeOff, CheckCircle, Users, User, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -239,8 +239,13 @@ export default function RegisterPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
-                    className="max-w-lg w-full mx-4"
+                    className="max-w-lg w-full mx-4 relative"
                 >
+                    <Link href="/">
+                        <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
+                            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                        </Button>
+                    </Link>
                     <div className="text-center mb-8">
                         <Link href="/">
                             <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20">
@@ -298,7 +303,12 @@ export default function RegisterPage() {
     if (selectedRole === "CLIENT") {
         return (
             <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
-                <div className="max-w-md w-full mx-4">
+                <div className="max-w-md w-full mx-4 relative">
+                    <Link href="/">
+                        <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
+                            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                        </Button>
+                    </Link>
                     <div className="text-center mb-8">
                         <Link href="/">
                             <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
@@ -466,7 +476,12 @@ export default function RegisterPage() {
     // Employee registration form
     return (
         <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
-            <div className="max-w-md w-full mx-4">
+            <div className="max-w-md w-full mx-4 relative">
+                <Link href="/">
+                    <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
+                        <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                    </Button>
+                </Link>
                 <div className="text-center mb-8">
                     <Link href="/">
                         <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">

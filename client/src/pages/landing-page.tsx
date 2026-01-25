@@ -16,7 +16,10 @@ import {
   Linkedin,
   Zap,
   Target,
-  TrendingUp
+  TrendingUp,
+  Clock,
+  Globe,
+  Laptop
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,7 +185,7 @@ export default function LandingPage() {
                     Work With Us
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 h-14" asChild>
+                <Button size="lg" className="w-full sm:w-auto text-lg px-8 h-14 bg-green-600 hover:bg-green-700 text-white border-none" asChild>
                   <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service">Chat on WhatsApp</a>
                 </Button>
               </div>
@@ -258,6 +261,8 @@ export default function LandingPage() {
           </div>
         </section>
 
+
+
         {/* Testimonials */}
         <section className="py-16 md:py-24 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
@@ -297,6 +302,45 @@ export default function LandingPage() {
                   <div>
                     <p className="font-semibold text-slate-900">Azhar Ahmed</p>
                     <p className="text-sm text-slate-500">Lamar University</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex gap-1 mb-4 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <p className="text-slate-700 mb-4">"The resume tailoring is incredibly accurate. I got calls from companies I thought were out of my league."</p>
+                  <div>
+                    <p className="font-semibold text-slate-900">Saif Uddin</p>
+                    <p className="text-sm text-slate-500">Data Analyst, Lamar University</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex gap-1 mb-4 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <p className="text-slate-700 mb-4">"HireEase saved me mostly from the depression of job hunting. It just works."</p>
+                  <div>
+                    <p className="font-semibold text-slate-900">Aziz</p>
+                    <p className="text-sm text-slate-500">Industrial Engineer, University of Houston</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex gap-1 mb-4 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <p className="text-slate-700 mb-4">"The team helped me navigate the complex cybersecurity job market. Fantastic results."</p>
+                  <div>
+                    <p className="font-semibold text-slate-900">Manaswini Golla</p>
+                    <p className="text-sm text-slate-500">Master in Cybersecurity, University of Houston</p>
                   </div>
                 </CardContent>
               </Card>
@@ -462,6 +506,74 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Earn With Us Section */}
+        <section className="py-16 md:py-24 bg-gradient-to-b from-blue-50 to-white overflow-hidden relative">
+          <div className="container mx-auto px-4 md:px-6 relative z-10">
+            <div className="max-w-4xl mx-auto text-center mb-16">
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm px-4 py-1.5 mb-6 border-none">Hiring Now</Badge>
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-slate-900 leading-tight">
+                Turn Your Free Time Into <span className="text-primary">Real Income</span>
+              </h2>
+              <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Join our global team of Application Specialists. Earn competitive pay in USD, work from anywhere, on your own schedule.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-16">
+              <Card className="bg-white border-slate-200 shadow-lg hover:shadow-xl transition-all">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4 text-green-600">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Earn in USD</h3>
+                  <p className="text-slate-600">Get paid in stable currency for every application you process.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-slate-200 shadow-lg hover:shadow-xl transition-all">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4 text-primary">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Flexible Hours</h3>
+                  <p className="text-slate-600">Work whenever you want. Convert your free time into earnings.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-slate-200 shadow-lg hover:shadow-xl transition-all">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4 text-purple-600">
+                    <Globe className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Remote First</h3>
+                  <p className="text-slate-600">Work from home or anywhere in the world. All you need is internet.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-slate-200 shadow-lg hover:shadow-xl transition-all">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-4 text-amber-600">
+                    <Laptop className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Easy to Start</h3>
+                  <p className="text-slate-600">We provide all tools and training. No prior experience needed.</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <Link href="/signup?role=employee">
+                <Button size="lg" className="text-lg px-8 h-14">
+                  Start Earning Today <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <p className="mt-4 text-slate-500 text-sm">
+                Limited spots available. Join 200+ specialists worldwide.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Founder */}
         <section className="py-16 md:py-24 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
@@ -518,7 +630,7 @@ export default function LandingPage() {
                   </form>
                   <div className="pt-4 border-t border-slate-100">
                     <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service">
-                      <Button variant="outline" className="w-full h-12 text-base">
+                      <Button className="w-full h-12 text-base bg-green-600 hover:bg-green-700 text-white border-none">
                         <MessageSquare className="mr-2 h-5 w-5" />
                         Chat on WhatsApp
                       </Button>
