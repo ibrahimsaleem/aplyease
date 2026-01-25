@@ -1550,6 +1550,23 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async isEmployeeAssignedToClient(employeeId: string, clientId: string): Promise<boolean> {
+    return retryOperation(async () => {
+      const [result] = await db
+        .select()
+        .from(employeeAssignments)
+        .where(
+          and(
+            eq(employeeAssignments.employeeId, employeeId),
+            eq(employeeAssignments.clientId, clientId)
+          )
+        )
+        .limit(1);
+
+      return !!result;
+    });
+  }
+
   // Payment transaction methods
   async recordPayment(clientId: string, amount: number, recordedBy?: string, notes?: string): Promise<PaymentTransaction> {
     return retryOperation(async () => {

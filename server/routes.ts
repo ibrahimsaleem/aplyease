@@ -2,9 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
-import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema } from "../shared/schema";
+import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema, clientProfiles } from "../shared/schema";
 import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -896,6 +898,346 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
     }
   });
 
+  // Base LaTeX Generator - Convert plain text resume to LaTeX (EMPLOYEE/ADMIN only)
+  // Step 1: Only generates LaTeX from plain text, no custom instructions
+  app.post("/api/generate-base-latex/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { plainTextResume } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      // Log received data for debugging
+      console.log("[Base LaTeX Generator] Received request:");
+      console.log("  - plainTextResume length:", plainTextResume?.length || 0);
+
+      if (!plainTextResume || typeof plainTextResume !== 'string') {
+        return res.status(400).json({ message: "Plain text resume is required" });
+      }
+
+      // Only EMPLOYEE and ADMIN can use this feature
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE") {
+        return res.status(403).json({ message: "Access denied. Only employees and admins can generate base LaTeX resumes." });
+      }
+
+      // Get current user's Gemini settings
+      const user = await storage.getUser(currentUser.id);
+      if (!user || !user.geminiApiKey) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Initialize Gemini AI
+      const { GoogleGenAI } = await import("@google/genai");
+
+      // LaTeX template structure - OPTIMIZED VERSION with balanced spacing (no overlaps)
+      const latexTemplate = `\\documentclass[letterpaper,10pt]{article}
+
+\\usepackage{latexsym}
+\\usepackage[empty]{fullpage}
+\\usepackage{titlesec}
+\\usepackage[usenames,dvipsnames]{color}
+\\usepackage{enumitem}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{fancyhdr}
+\\usepackage{tabularx, multicol}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\renewcommand{\\footrulewidth}{0pt}
+
+% Optimized margins - tight but no overlap
+\\addtolength{\\oddsidemargin}{-0.5in}
+\\addtolength{\\evensidemargin}{-0.5in}
+\\addtolength{\\textwidth}{1in}
+\\addtolength{\\topmargin}{-0.6in}
+\\addtolength{\\textheight}{1.2in}
+
+\\urlstyle{same}
+\\raggedbottom
+\\raggedright
+\\setlength{\\tabcolsep}{0in}
+
+% Section formatting - balanced spacing
+\\titleformat{\\section}{
+  \\vspace{-8pt}\\scshape\\raggedright\\large
+}{}{0em}{}[\\color{black}\\titlerule \\vspace{-6pt}]
+
+% Custom commands with proper spacing
+\\newcommand{\\resumeItem}[1]{
+  \\item\\small{
+    {#1 \\vspace{-2pt}}
+  }
+}
+
+\\newcommand{\\resumeSubheading}[4]{
+  \\vspace{-2pt}\\item
+    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+      \\textbf{#1} & #2 \\\\
+      \\textit{\\small#3} & \\textit{\\small #4} \\\\
+    \\end{tabular*}\\vspace{-5pt}
+}
+
+\\newcommand{\\resumeProjectHeading}[2]{
+    \\item
+    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}
+      \\small#1 & #2 \\\\
+    \\end{tabular*}\\vspace{-5pt}
+}
+
+\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.1in, label={}]}
+\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
+\\newcommand{\\resumeItemListStart}{\\begin{itemize}[leftmargin=0.15in, topsep=0pt, parsep=0pt, itemsep=0pt]}
+\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-4pt}}
+
+\\begin{document}
+
+% HEADER - Name and Contact Info
+\\begin{center}
+    \\textbf{\\Huge \\scshape [FULL NAME]} \\\\ \\vspace{2pt}
+    \\small [PHONE] $|$ \\href{mailto:[EMAIL]}{\\underline{[EMAIL]}} $|$ [LOCATION] $|$ 
+    \\href{[LINKEDIN_URL]}{\\underline{linkedin.com/in/[USERNAME]}} $|$
+    \\href{[GITHUB_URL]}{\\underline{github.com/[USERNAME]}}
+\\end{center}
+
+% EDUCATION SECTION
+\\section{Education}
+  \\resumeSubHeadingListStart
+    \\resumeSubheading
+      {[UNIVERSITY NAME]}{[LOCATION]}
+      {[DEGREE]}{[DATES]}
+      \\resumeItemListStart
+        \\resumeItem{Relevant Coursework: [COURSES]}
+        \\resumeItem{GPA: [GPA] | [HONORS/AWARDS]}
+      \\resumeItemListEnd
+  \\resumeSubHeadingListEnd
+
+% EXPERIENCE SECTION
+\\section{Work Experience}
+\\resumeSubHeadingListStart
+    \\resumeSubheading
+      {[COMPANY NAME]}{[LOCATION]}
+      {[JOB TITLE]}{[DATES]}
+    \\resumeItemListStart
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+    \\resumeItemListEnd
+\\resumeSubHeadingListEnd
+
+% PROJECTS SECTION
+\\section{Projects}
+\\resumeSubHeadingListStart
+    \\resumeProjectHeading
+        {\\textbf{[PROJECT NAME]} $|$ \\emph{[TECHNOLOGIES]}}{[DATES]}
+    \\resumeItemListStart
+        \\resumeItem{[PROJECT DESCRIPTION with scope, scale, and impact]}
+        \\resumeItem{[TECHNICAL IMPLEMENTATION details and quantifiable results]}
+    \\resumeItemListEnd
+\\resumeSubHeadingListEnd
+
+% TECHNICAL SKILLS SECTION
+\\section{Technical Skills}
+\\begin{itemize}[leftmargin=0.1in, label={}, itemsep=-2pt]
+    \\small{\\item{
+     \\textbf{Languages:} [LANGUAGES] \\\\
+     \\textbf{Frameworks:} [FRAMEWORKS] \\\\
+     \\textbf{Databases:} [DATABASES] \\\\
+     \\textbf{Developer Tools:} [TOOLS] \\\\
+     \\textbf{Libraries:} [LIBRARIES]
+    }}
+\\end{itemize}
+
+\\end{document}`;
+
+      console.log("[Base LaTeX Generator] Building prompt for initial LaTeX generation...");
+
+      // Construct the prompt (no custom instructions - those come in Step 2)
+      const prompt = `You are an expert LaTeX resume formatter. Convert the following plain text resume into a professionally formatted LaTeX resume using EXACTLY the template structure provided below.
+
+CRITICAL REQUIREMENTS:
+1. **ONE PAGE MAXIMUM - THIS IS MANDATORY**: The resume MUST fit on exactly ONE page. This is non-negotiable.
+2. Use the EXACT LaTeX template structure provided - do not modify the preamble, custom commands, or formatting
+3. Extract ALL information from the plain text resume and organize it into the correct sections
+4. Maintain perfect LaTeX syntax with proper escaping of special characters (%, &, $, #, _, {, }, ~, ^)
+5. Use action verbs and quantify achievements where possible
+6. Organize sections in this order: Header (name/contact), Education, Experience, Projects, Technical Skills
+7. If certain sections are missing from the input, include them with placeholder comments or omit if truly not applicable
+8. Ensure ATS (Applicant Tracking System) compatibility by using simple formatting
+
+ONE-PAGE OPTIMIZATION & CONTENT QUALITY:
+- Limit each job/experience to 3-4 bullet points maximum
+- Each bullet point should be 1.5-2 lines long - detailed but not overflowing
+- Include SPECIFIC METRICS and NUMBERS in every bullet point (e.g., "improved efficiency by 40%", "processed 10K+ records", "reduced time from 2s to 0.5s")
+- Use the compact spacing already built into the template - DO NOT add extra \\vspace commands
+- Include only the most relevant and recent experiences
+- For projects section, include 2-3 most impressive projects with technical depth
+- Technical Skills section should be comprehensive - list ALL relevant skills from the input
+- Fill available space with valuable content - add context, scale, and impact to achievements
+- AVOID lines that are too short or too long - aim for balanced line lengths
+- Remove filler words but ADD meaningful details (team size, user count, performance gains)
+
+LATEX TEMPLATE TO FOLLOW EXACTLY:
+${latexTemplate}
+
+PLAIN TEXT RESUME TO CONVERT:
+${plainTextResume}
+
+OUTPUT INSTRUCTIONS:
+- Return ONLY the complete LaTeX code
+- Do NOT include any explanations, comments outside the LaTeX, or markdown code blocks
+- Ensure all special characters are properly escaped
+- The output should compile without errors in any standard LaTeX environment
+- VERIFY the content will fit on ONE PAGE before outputting`;
+
+      // Generate LaTeX
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({
+            model: user.preferredGeminiModel || "gemini-1.5-flash",
+            contents: prompt,
+          });
+        },
+        user.geminiApiKey,
+        user.fallbackGeminiApiKey
+      );
+
+      let generatedLatex = response.text;
+
+      // Clean up any markdown code blocks if present
+      generatedLatex = generatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
+
+      res.json({ latex: generatedLatex });
+    } catch (error: any) {
+      console.error("Error generating base LaTeX:", error);
+
+      // Handle specific Gemini API errors
+      if (error.message?.includes('API key')) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes('quota')) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes('overloaded') || error.message?.includes('UNAVAILABLE')) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
+      }
+
+      res.status(500).json({
+        message: "Failed to generate base LaTeX",
+        details: error.message || "Unknown error"
+      });
+    }
+  });
+
+  // Update/Refine Base LaTeX with custom instructions (EMPLOYEE/ADMIN only)
+  app.post("/api/update-base-latex/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { baseLatex, customInstructions } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      // Log received data for debugging
+      console.log("[Update Base LaTeX] Received request:");
+      console.log("  - baseLatex length:", baseLatex?.length || 0);
+      console.log("  - customInstructions:", customInstructions ? `"${customInstructions.substring(0, 100)}..."` : "(none)");
+
+      if (!baseLatex || typeof baseLatex !== 'string') {
+        return res.status(400).json({ message: "Base LaTeX code is required" });
+      }
+
+      if (!customInstructions || typeof customInstructions !== 'string' || !customInstructions.trim()) {
+        return res.status(400).json({ message: "Custom instructions are required to update the resume" });
+      }
+
+      // Only EMPLOYEE and ADMIN can use this feature
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE") {
+        return res.status(403).json({ message: "Access denied. Only employees and admins can update base LaTeX resumes." });
+      }
+
+      // Get current user's Gemini settings
+      const user = await storage.getUser(currentUser.id);
+      if (!user || !user.geminiApiKey) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      // Initialize Gemini AI
+      const { GoogleGenAI } = await import("@google/genai");
+
+      // Construct the update prompt
+      const prompt = `You are an expert LaTeX resume editor. Your task is to update and refine the following LaTeX resume based on the employee's specific instructions.
+
+CURRENT LATEX RESUME:
+${baseLatex}
+
+=== EMPLOYEE INSTRUCTIONS (FOLLOW THESE CAREFULLY) ===
+${customInstructions.trim()}
+=== END OF INSTRUCTIONS ===
+
+REQUIREMENTS:
+1. **ONE PAGE MAXIMUM**: The resume MUST still fit on exactly ONE page after modifications
+2. Follow the employee's instructions precisely - they know what the client needs
+3. Maintain perfect LaTeX syntax - ensure the code compiles without errors
+4. Properly escape all special characters (%, &, $, #, _, {, }, ~, ^)
+5. Keep the same template structure and formatting commands
+6. Do NOT remove any sections unless explicitly instructed
+7. Enhance content quality while following instructions
+
+COMMON INSTRUCTION TYPES TO HANDLE:
+- Emphasize/highlight specific skills or experiences
+- Add or modify keywords for ATS optimization
+- Adjust section ordering or prominence
+- Expand or condense certain sections
+- Change tone or language style
+- Add specific technical terms or certifications
+
+OUTPUT:
+- Return ONLY the complete updated LaTeX code
+- Do NOT include any explanations, comments, or markdown code blocks
+- Ensure the output compiles without errors`;
+
+      console.log("[Update Base LaTeX] Building prompt, sending to AI...");
+
+      // Generate updated LaTeX
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({
+            model: user.preferredGeminiModel || "gemini-1.5-flash",
+            contents: prompt,
+          });
+        },
+        user.geminiApiKey,
+        user.fallbackGeminiApiKey
+      );
+
+      let updatedLatex = response.text;
+
+      // Clean up any markdown code blocks if present
+      updatedLatex = updatedLatex.replace(/```latex\n?/g, '').replace(/```\n?/g, '').trim();
+
+      console.log("[Update Base LaTeX] Successfully generated updated LaTeX");
+      res.json({ latex: updatedLatex });
+    } catch (error: any) {
+      console.error("Error updating base LaTeX:", error);
+
+      // Handle specific Gemini API errors
+      if (error.message?.includes('API key')) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes('quota')) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes('overloaded') || error.message?.includes('UNAVAILABLE')) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
+      }
+
+      res.status(500).json({
+        message: "Failed to update base LaTeX",
+        details: error.message || "Unknown error"
+      });
+    }
+  });
+
   // Job application routes
   app.get("/api/applications", requireAuth, async (req, res) => {
     try {
@@ -1244,6 +1586,15 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
   // Get clients for employee dropdown
   app.get("/api/clients", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
+      const user = (req.user ?? req.session.user)!;
+      
+      if (user.role === "EMPLOYEE") {
+        // Return only assigned clients for employees
+        const assignedClients = await storage.getEmployeeAssignments(user.id);
+        return res.json(assignedClients.filter(u => u.isActive));
+      }
+      
+      // Admin sees all clients
       const clients = await storage.listUsers({ role: "CLIENT" });
       res.json(clients.filter(user => user.isActive));
     } catch (error) {
@@ -1277,15 +1628,26 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
   // Client analytics (Admin and Employee)
   app.get("/api/analytics/client-performance", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
+      const user = (req.user ?? req.session.user)!;
       const analytics = await storage.getClientPerformanceAnalytics();
       
-      // Strip payment data for employees
-      if (req.user?.role === "EMPLOYEE") {
-        analytics.clients = analytics.clients.map(client => ({
-          ...client,
-          amountPaid: undefined,
-          amountDue: undefined,
-        }));
+      // Filter and modify data for employees
+      if (user.role === "EMPLOYEE") {
+        // Get assigned clients
+        const assignedClients = await storage.getEmployeeAssignments(user.id);
+        const assignedClientIds = new Set(assignedClients.map(c => c.id));
+        
+        // Filter to only show assigned clients and strip payment data
+        analytics.clients = analytics.clients
+          .filter(client => assignedClientIds.has(client.id))
+          .map(client => ({
+            ...client,
+            amountPaid: undefined,
+            amountDue: undefined,
+          }));
+        
+        // Update total count to reflect filtered results
+        analytics.totalClients = analytics.clients.length;
       }
       
       res.json(analytics);
@@ -1331,7 +1693,16 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
   // Client profile routes
   app.get("/api/client-profiles", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
-      const profiles = await storage.listClientProfiles();
+      const user = (req.user ?? req.session.user)!;
+      let profiles = await storage.listClientProfiles();
+      
+      // Filter profiles for employees to only show assigned clients
+      if (user.role === "EMPLOYEE") {
+        const assignedClients = await storage.getEmployeeAssignments(user.id);
+        const assignedClientIds = new Set(assignedClients.map(c => c.id));
+        profiles = profiles.filter(p => assignedClientIds.has(p.userId));
+      }
+      
       // Parse JSON strings back to arrays for frontend
       const parsedProfiles = profiles.map(p => ({
         ...p,
@@ -1352,9 +1723,17 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       const { userId } = req.params;
       const user = (req.user ?? req.session.user)!;
 
-      // Clients can only see their own profile, employees and admins can see any
+      // Clients can only see their own profile
       if (user.role === "CLIENT" && user.id !== userId) {
         return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Employees can only see profiles of assigned clients
+      if (user.role === "EMPLOYEE") {
+        const isAssigned = await storage.isEmployeeAssignedToClient(user.id, userId);
+        if (!isAssigned) {
+          return res.status(403).json({ message: "Access denied" });
+        }
       }
 
       const profile = await storage.getClientProfile(userId);
@@ -1407,6 +1786,50 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       }
       console.error("Error updating client profile:", error);
       res.status(500).json({ message: "Failed to update client profile" });
+    }
+  });
+
+  // Update only baseResumeLatex field (EMPLOYEE/ADMIN only)
+  app.put("/api/client-profiles/:userId/base-latex", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { baseResumeLatex } = req.body;
+      const user = (req.user ?? req.session.user)!;
+
+      console.log("[Save Base LaTeX] Request from user:", user.id, "role:", user.role);
+      console.log("[Save Base LaTeX] Target userId:", userId);
+      console.log("[Save Base LaTeX] LaTeX length:", baseResumeLatex?.length || 0);
+
+      // Only EMPLOYEE and ADMIN can use this endpoint
+      if (user.role !== "ADMIN" && user.role !== "EMPLOYEE") {
+        return res.status(403).json({ message: "Access denied. Only employees and admins can save base LaTeX." });
+      }
+
+      if (!baseResumeLatex || typeof baseResumeLatex !== 'string') {
+        return res.status(400).json({ message: "baseResumeLatex is required" });
+      }
+
+      // Check if profile exists
+      const existingProfile = await storage.getClientProfile(userId);
+      if (!existingProfile) {
+        return res.status(404).json({ message: "Client profile not found" });
+      }
+
+      // Update only the baseResumeLatex field using raw SQL
+      const [updated] = await db
+        .update(clientProfiles)
+        .set({ 
+          baseResumeLatex,
+          updatedAt: new Date(),
+        })
+        .where(eq(clientProfiles.userId, userId))
+        .returning();
+
+      console.log("[Save Base LaTeX] Successfully updated profile for userId:", userId);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error saving base LaTeX:", error);
+      res.status(500).json({ message: "Failed to save base LaTeX" });
     }
   });
 

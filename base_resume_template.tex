@@ -1,0 +1,167 @@
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tabularx, multicol}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Optimized margins - tight but no overlap
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-0.6in}
+\addtolength{\textheight}{1.2in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Section formatting - balanced spacing
+\titleformat{\section}{
+  \vspace{-8pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-6pt}]
+
+% Custom commands with proper spacing
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeSubheadingOneLine}[2]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.1in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, topsep=0pt, parsep=0pt, itemsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Jake Ryan} \\ \vspace{2pt}
+    \small (123) 456-7890 $|$ \href{mailto:jake@su.edu}{\underline{jake@su.edu}} $|$ Georgetown, TX $|$ 
+    \href{https://linkedin.com/in/jake}{\underline{linkedin.com/in/jake}} $|$
+    \href{https://github.com/jake}{\underline{github.com/jake}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Southwestern University}{Georgetown, TX}
+      {Bachelor of Arts in Computer Science, Minor in Business}{Aug. 2018 -- May 2021}
+      \resumeItemListStart
+        \resumeItem{Relevant Coursework: Data Structures, Algorithms, Database Systems, Machine Learning, Software Engineering}
+        \resumeItem{GPA: 3.8/4.0 | Dean's List (6 semesters) | Computer Science Honor Society}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Blinn College}{Bryan, TX}
+      {Associate's in Liberal Arts}{Aug. 2014 -- May 2018}
+      \resumeItemListStart
+        \resumeItem{GPA: 3.9/4.0 | Phi Theta Kappa Honor Society | Academic Excellence Award}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+
+%-----------EXPERIENCE-----------
+\section{Work Experience}
+\resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Texas A\&M University}{College Station, TX}
+      {Undergraduate Research Assistant}{June 2020 -- Present}
+      \resumeItemListStart
+        \resumeItem{Developed a REST API using FastAPI and PostgreSQL to store data from learning management systems, improving data retrieval efficiency by 40\% and reducing server response time from 2s to 0.5s.}
+        \resumeItem{Built a full-stack web application using Flask, React, PostgreSQL and Docker to analyze GitHub data for 500+ repositories, processing 10M+ commits and generating actionable insights.}
+        \resumeItem{Implemented data visualization features using D3.js and Matplotlib to display GitHub collaboration patterns, enabling real-time insights for classroom settings with 200+ students.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Southwestern University}{Georgetown, TX}
+      {Information Technology Support Specialist}{Sep. 2018 -- Present}
+      \resumeItemListStart
+        \resumeItem{Coordinated with managers to configure and deploy 150+ campus computers, reducing setup time by 25\% through automated deployment scripts and standardized imaging processes.}
+        \resumeItem{Resolved 200+ technical issues monthly for students, faculty and staff, maintaining 95\% satisfaction rating and achieving first-call resolution rate of 85\%.}
+        \resumeItem{Managed maintenance of 200 printers and classroom equipment across campus, ensuring 99\% uptime and reducing equipment downtime by implementing preventive maintenance schedules.}
+    \resumeItemListEnd
+
+    \resumeSubheading
+      {Southwestern University}{Georgetown, TX}
+      {Artificial Intelligence Research Assistant}{May 2019 -- July 2019}
+      \resumeItemListStart
+        \resumeItem{Developed procedural dungeon generation methods inspired by \emph{The Legend of Zelda}, contributing 50K+ lines of Java code to open-source codebase with 100+ GitHub stars.}
+        \resumeItem{Built a Java-based game testing framework to evaluate generated dungeons and conducted human subject study with 30+ participants, achieving 90\% positive feedback on gameplay experience.}
+        \resumeItem{Authored 8-page research paper and delivered presentations at World Conference on Computational Intelligence, receiving Best Student Paper nomination.}
+      \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+    \resumeProjectHeading
+        {\textbf{Gitlytics} $|$ \emph{Python, Flask, React, PostgreSQL, Docker, Redis, Celery}}{June 2020 -- Present}
+        \resumeItemListStart
+          \resumeItem{Developed full-stack web application with Flask REST API backend and React frontend, serving 100+ daily active users with 99.5\% uptime and handling 10K+ API requests daily.}
+          \resumeItem{Implemented GitHub OAuth integration and interactive data visualizations using Chart.js to analyze repository collaboration patterns across 1000+ repositories.}
+          \resumeItem{Utilized Celery and Redis for asynchronous task processing, improving response times by 60\% and enabling background processing of large dataset imports.}
+        \resumeItemListEnd
+    \resumeProjectHeading
+        {\textbf{Simple Paintball} $|$ \emph{Spigot API, Java, Maven, TravisCI, Git}}{May 2018 -- May 2020}
+        \resumeItemListStart
+          \resumeItem{Developed Minecraft server plugin achieving 2K+ downloads and 4.5/5-star average review rating on SpigotMC marketplace, supporting 50+ concurrent players.}
+          \resumeItem{Implemented CI/CD pipeline using TravisCI for automated builds, testing, and deployments, reducing release cycle from days to hours.}
+          \resumeItem{Collaborated with 10+ Minecraft server administrators to gather feedback and implement 20+ feature requests, improving user retention by 35\%.}
+        \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+\begin{itemize}[leftmargin=0.1in, label={}, itemsep=-2pt]
+    \small{\item{
+     \textbf{Languages:} Java, Python, C/C++, SQL (Postgres, MySQL), JavaScript, TypeScript, HTML/CSS, R, Bash \\
+     \textbf{Frameworks:} React, Node.js, Flask, FastAPI, Django, Spring Boot, JUnit, Material-UI, Express.js \\
+     \textbf{Databases:} PostgreSQL, MySQL, MongoDB, Redis, SQLite, Elasticsearch \\
+     \textbf{Developer Tools:} Git, Docker, Kubernetes, AWS (EC2, S3, Lambda), GCP, CI/CD, Jenkins, TravisCI \\
+     \textbf{Libraries:} pandas, NumPy, Matplotlib, Scikit-learn, TensorFlow, PyTorch, D3.js, Chart.js
+    }}
+\end{itemize}
+
+%-------------------------------------------
+\end{document}

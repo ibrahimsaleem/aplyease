@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { NavigationHeader } from "@/components/navigation-header";
@@ -10,12 +10,13 @@ import { MobileSearch } from "@/components/mobile/mobile-search";
 import { MobileFilter } from "@/components/mobile/mobile-filter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
-import { DollarSign, Eye, EyeOff, Copy } from "lucide-react";
+import { DollarSign, Eye, EyeOff, Copy, Sparkles } from "lucide-react";
 import type { ClientStats, ApplicationFilters } from "@/types";
 
 // Helper function to format cents to dollars
@@ -36,6 +37,7 @@ export default function ClientDashboard() {
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [filters, setFilters] = useState<Partial<ApplicationFilters>>({
     clientId: user?.id,
   });
@@ -48,6 +50,27 @@ export default function ClientDashboard() {
     },
     enabled: !!user?.id,
   });
+
+  // Show welcome modal on first visit for clients only
+  useEffect(() => {
+    if (user && user.role === "CLIENT") {
+      const hasSeenWelcome = localStorage.getItem("hasSeenResumeToolWelcome");
+      if (!hasSeenWelcome) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, [user]);
+
+  const handleWelcomeModalClose = () => {
+    localStorage.setItem("hasSeenResumeToolWelcome", "true");
+    setShowWelcomeModal(false);
+  };
+
+  const handleTryResumeToolNow = () => {
+    localStorage.setItem("hasSeenResumeToolWelcome", "true");
+    setShowWelcomeModal(false);
+    setLocation("/profile");
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -256,6 +279,55 @@ export default function ClientDashboard() {
           />
         )}
       </div>
+
+      {/* Welcome Modal for Resume Tool */}
+      <Dialog open={showWelcomeModal} onOpenChange={handleWelcomeModalClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Sparkles className="w-6 h-6 text-purple-600" />
+              New: AI Resume Tailoring Tool
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Your base resume is already saved. Paste any job description and we'll generate a tailored resume you can use right away.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <ul className="space-y-2 text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold">✓</span>
+                  <span>Your base resume is ready</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold">✓</span>
+                  <span>Paste any job description</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold">✓</span>
+                  <span>Get a tailored resume instantly</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleWelcomeModalClose}
+              className="w-full sm:w-auto"
+            >
+              Maybe Later
+            </Button>
+            <Button
+              onClick={handleTryResumeToolNow}
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Try it Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2, Info, Zap, Target, TrendingUp, FileText, CheckCircle2 } from "lucide-react";
 import { ResumeGenerator } from "@/components/resume-generator";
+import { BaseLatexGenerator } from "@/components/base-latex-generator";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -65,6 +66,35 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
       description: `${label} copied to clipboard`,
     });
   };
+
+  // Mutation to save base LaTeX to profile (using dedicated endpoint)
+  const saveLatexMutation = useMutation({
+    mutationFn: async (latex: string) => {
+      console.log("[Save LaTeX] Saving to client:", profile.userId);
+      const res = await apiRequest("PUT", `/api/client-profiles/${profile.userId}/base-latex`, {
+        baseResumeLatex: latex,
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save LaTeX");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client-profiles", profile.userId] });
+      toast({
+        title: "Saved!",
+        description: "Base LaTeX resume saved to client profile",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save LaTeX to profile",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -610,6 +640,16 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
                 </div>
               </CardContent>
             </Card>
+
+            {/* Base LaTeX Generator - For EMPLOYEE/ADMIN to create or update base resume */}
+            {(user?.role === "EMPLOYEE" || user?.role === "ADMIN") && (
+              <BaseLatexGenerator
+                clientId={profile.userId}
+                userHasApiKey={!!user?.geminiApiKey}
+                existingLatex={profile.baseResumeLatex || undefined}
+                onSaveToProfile={(latex) => saveLatexMutation.mutate(latex)}
+              />
+            )}
 
             {/* AI Resume Generator */}
             <ResumeGenerator

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NavigationHeader } from "@/components/navigation-header";
 import { ResumeGenerator } from "@/components/resume-generator";
+import { BaseLatexGenerator } from "@/components/base-latex-generator";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +16,40 @@ import type { ClientProfile, ClientStats } from "@/types";
 export default function ClientDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, params] = useRoute("/clients/:clientId");
   const [, setLocation] = useLocation();
   const clientId = params?.clientId;
   const [showFullLatex, setShowFullLatex] = useState(false);
+
+  // Mutation to save base LaTeX to profile (using dedicated endpoint)
+  const saveLatexMutation = useMutation({
+    mutationFn: async (latex: string) => {
+      console.log("[Save LaTeX] Saving to client:", clientId);
+      const res = await apiRequest("PUT", `/api/client-profiles/${clientId}/base-latex`, {
+        baseResumeLatex: latex,
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save LaTeX");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client-profiles", clientId] });
+      toast({
+        title: "Saved!",
+        description: "Base LaTeX resume saved to client profile",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save LaTeX to profile",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: profile, isLoading: profileLoading } = useQuery<ClientProfile>({
     queryKey: ["/api/client-profiles", clientId],
@@ -432,6 +463,16 @@ export default function ClientDetail() {
                 </pre>
               </CardContent>
             </Card>
+          )}
+
+          {/* Base LaTeX Generator - For EMPLOYEE/ADMIN to create or update base resume */}
+          {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+            <BaseLatexGenerator
+              clientId={clientId!}
+              userHasApiKey={!!user.geminiApiKey}
+              existingLatex={profile.baseResumeLatex || undefined}
+              onSaveToProfile={(latex) => saveLatexMutation.mutate(latex)}
+            />
           )}
 
           {/* AI Resume Generator */}
