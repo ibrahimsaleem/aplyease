@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
-import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema, clientProfiles } from "../shared/schema";
+import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema, clientProfiles, type UpdateClientProfile } from "../shared/schema";
 import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
