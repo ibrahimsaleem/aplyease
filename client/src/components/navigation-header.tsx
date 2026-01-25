@@ -81,7 +81,7 @@ export function NavigationHeader({ user }: NavigationHeaderProps) {
               <div className="bg-primary text-white p-1.5 sm:p-2 rounded-lg mr-2 sm:mr-3">
                 <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h1 className="text-base sm:text-xl font-bold text-slate-900">AplyEase Portal</h1>
+              <h1 className="text-base sm:text-xl font-bold text-slate-900">HireEase</h1>
               <span className={`ml-2 sm:ml-3 text-xs font-medium px-2 sm:px-2.5 py-0.5 rounded-full ${getRoleColor(user.role)}`}>
                 {user.role}
               </span>

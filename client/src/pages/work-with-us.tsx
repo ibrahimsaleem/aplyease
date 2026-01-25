@@ -15,7 +15,7 @@ export default function WorkWithUsPage() {
                                 <div className="bg-primary text-white p-2 rounded-lg">
                                     <Briefcase className="h-5 w-5" />
                                 </div>
-                                <span className="text-xl font-bold text-slate-900">AplyEase</span>
+                                <span className="text-xl font-bold text-slate-900">HireEase</span>
                             </div>
                         </Link>
                         <div className="flex items-center gap-4">
@@ -38,7 +38,7 @@ export default function WorkWithUsPage() {
                             Work With Us
                         </h1>
                         <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-                            Earn by helping clients land their dream jobs. Join our team of dedicated application specialists.
+                            Join HireEase as an Application Specialist and help clients land jobs using our AI-powered workflows.
                         </p>
                         <Link href="/signup?role=employee">
                             <Button size="lg" className="text-lg px-8 h-14">
@@ -153,9 +153,9 @@ export default function WorkWithUsPage() {
                 <div className="container mx-auto px-4 md:px-6 text-center">
                     <div className="flex items-center justify-center gap-2 text-white mb-4">
                         <Briefcase className="h-5 w-5" />
-                        <span className="font-bold">AplyEase</span>
+                        <span className="font-bold">HireEase</span>
                     </div>
-                    <p className="text-sm">&copy; 2024 AplyEase. All rights reserved.</p>
+                    <p className="text-sm">&copy; 2026 HireEase. All rights reserved.</p>
                 </div>
             </footer>
         </div>

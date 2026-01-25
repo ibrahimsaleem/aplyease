@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { FuturisticBackground } from "@/components/ui/futuristic-background";
+import { motion } from "framer-motion";
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,7 +54,7 @@ export default function LandingPage() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Limited Time Offer! 🎉</DialogTitle>
             <DialogDescription className="text-base pt-4">
-              Get started with AplyEase today and receive exclusive benefits for early adopters.
+              Get started with HireEase today and receive exclusive benefits for early adopters.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -75,7 +77,7 @@ export default function LandingPage() {
                 <div className="bg-primary text-white p-2 rounded-lg">
                   <Briefcase className="h-5 w-5" />
                 </div>
-                <span className="text-xl font-bold text-slate-900">AplyEase</span>
+                <span className="text-xl font-bold text-slate-900">HireEase</span>
               </div>
             </Link>
 
@@ -153,15 +155,22 @@ export default function LandingPage() {
 
       <main>
         {/* Hero Section */}
-        <section className="pt-12 pb-16 md:pt-20 md:pb-24 bg-gradient-to-b from-slate-50 to-white">
+        {/* Hero Section */}
+        <FuturisticBackground className="pt-12 pb-16 md:pt-20 md:pb-24">
           <div className="container mx-auto px-4 md:px-6">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 mb-6">
-                Land Your Dream Job <span className="text-primary">Faster</span>
-              </h1>
-              <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-                AI-powered job applications with human expertise. We apply to jobs for you.
-              </p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 mb-6">
+                  HireEase helps you land the right job — <span className="text-primary">faster</span>.
+                </h1>
+                <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+                  An AI-powered job application platform backed by trained human specialists. We find roles, tailor resumes, and apply on your behalf.
+                </p>
+              </motion.div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
                 <Link href="/signup?role=client">
                   <Button size="lg" className="w-full sm:w-auto text-lg px-8 h-14">
@@ -182,64 +191,69 @@ export default function LandingPage() {
               <div className="grid grid-cols-3 gap-4 md:gap-8 max-w-3xl mx-auto">
                 <div className="text-center">
                   <div className="text-3xl md:text-4xl font-bold text-primary mb-1">22K+</div>
-                  <div className="text-sm md:text-base text-slate-600">Applications</div>
+                  <div className="text-sm md:text-base text-slate-600">Applications Submitted</div>
                 </div>
                 <div className="text-center border-x border-slate-200">
                   <div className="text-3xl md:text-4xl font-bold text-primary mb-1">100+</div>
-                  <div className="text-sm md:text-base text-slate-600">Clients</div>
+                  <div className="text-sm md:text-base text-slate-600">Clients Supported</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl md:text-4xl font-bold text-primary mb-1">16</div>
-                  <div className="text-sm md:text-base text-slate-600">Team Members</div>
+                  <div className="text-sm md:text-base text-slate-600">Application Specialists</div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+        </FuturisticBackground>
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-24 bg-white">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">How It Works</h2>
-              <p className="text-lg text-slate-600">Simple, fast, effective</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">How HireEase Works</h2>
+              <p className="text-lg text-slate-600">AI + Human Intelligence for better results</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8 text-center">
-                  <div className="mb-6 inline-block">
-                    <div className="p-4 bg-blue-50 rounded-2xl">
-                      <Cpu className="h-10 w-10 text-primary" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-slate-900">AI + Human Power</h3>
-                  <p className="text-slate-600">AI creates custom resumes, humans refine and submit</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8 text-center">
-                  <div className="mb-6 inline-block">
-                    <div className="p-4 bg-blue-50 rounded-2xl">
-                      <Target className="h-10 w-10 text-primary" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-slate-900">Perfect Matches</h3>
-                  <p className="text-slate-600">We find roles that fit your skills and career goals</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8 text-center">
-                  <div className="mb-6 inline-block">
-                    <div className="p-4 bg-blue-50 rounded-2xl">
-                      <Zap className="h-10 w-10 text-primary" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-slate-900">Fast Results</h3>
-                  <p className="text-slate-600">Get more interviews in less time with our automation</p>
-                </CardContent>
-              </Card>
+              {[
+                {
+                  icon: <Cpu className="h-10 w-10 text-primary" />,
+                  title: "AI + Human Intelligence",
+                  desc: "AI generates job-specific resumes. Human experts review, refine, and submit.",
+                  color: "bg-blue-50"
+                },
+                {
+                  icon: <Target className="h-10 w-10 text-primary" />,
+                  title: "Smart Job Matching",
+                  desc: "We identify roles aligned with your skills, experience, and career goals.",
+                  color: "bg-purple-50"
+                },
+                {
+                  icon: <Zap className="h-10 w-10 text-primary" />,
+                  title: "Faster Interviews",
+                  desc: "More relevant applications → higher response rates → better interviews.",
+                  color: "bg-amber-50"
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.2, duration: 0.5 }}
+                  viewport={{ once: true }}
+                >
+                  <Card className="border-none shadow-lg hover:shadow-2xl transition-all duration-300 bg-white/80 backdrop-blur-md h-full hover:-translate-y-1">
+                    <CardContent className="p-8 text-center h-full flex flex-col items-center">
+                      <div className="mb-6 inline-block">
+                        <div className={`p-4 ${feature.color} rounded-2xl group-hover:scale-110 transition-transform`}>
+                          {feature.icon}
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3 text-slate-900">{feature.title}</h3>
+                      <p className="text-slate-600">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
@@ -350,7 +364,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-slate-700 text-sm">1 Dedicated Human Assistant</span>
+                      <span className="text-slate-700 text-sm">1 Application Specialist</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -386,7 +400,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-slate-700 text-sm">2 Dedicated Human Assistants</span>
+                      <span className="text-slate-700 text-sm">2 Application Specialists</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -420,7 +434,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-slate-700 text-sm">2 Dedicated Human Assistants</span>
+                      <span className="text-slate-700 text-sm">2 Application Specialists</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -464,7 +478,7 @@ export default function LandingPage() {
                       <h3 className="text-2xl font-bold text-slate-900 mb-1">Mohammad Ibrahim Saleem</h3>
                       <p className="text-lg text-primary font-semibold mb-4">Founder & CEO</p>
                       <p className="text-slate-700 mb-4 leading-relaxed">
-                        AI engineer at NOV and researcher at University of Houston. Building intelligent automation systems to help people land their dream jobs.
+                        AI engineer at NOV and researcher at the University of Houston. Focused on building intelligent automation systems that help people win in competitive job markets.
                       </p>
                       <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
                         <Badge className="bg-blue-100 text-blue-800">AI & GenAI</Badge>
@@ -523,10 +537,10 @@ export default function LandingPage() {
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 text-white mb-4">
               <Briefcase className="h-6 w-6" />
-              <span className="text-xl font-bold">AplyEase</span>
+              <span className="text-xl font-bold">HireEase</span>
             </div>
             <p className="text-sm max-w-md mx-auto mb-6">
-              Transforming job search through intelligent automation
+              Transforming job search with AI + human expertise
             </p>
             <div className="flex justify-center gap-6 text-sm">
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
@@ -535,7 +549,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-sm">
-            <p>&copy; 2024 AplyEase. All rights reserved.</p>
+            <p>&copy; 2026 HireEase. All rights reserved.</p>
           </div>
         </div>
       </footer>

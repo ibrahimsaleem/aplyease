@@ -251,7 +251,7 @@ export function EmployeeTraining() {
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium text-slate-900">Step B: Configure Settings in AplyEase</h4>
+                <h4 className="font-medium text-slate-900">Step B: Configure Settings in HireEase</h4>
                 <ol className="list-decimal pl-5 space-y-2">
                   <li>Click the <strong>Settings icon</strong> (⚙️) in the top navigation bar</li>
                   <li>The Settings dialog will open with AI configuration options</li>

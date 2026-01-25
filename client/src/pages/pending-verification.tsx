@@ -47,8 +47,8 @@ export default function PendingVerificationPage() {
                             <Mail className="w-5 h-5 text-slate-500" />
                             <div className="text-sm">
                                 <p>Questions? Contact us at:</p>
-                                <a href="mailto:support@aplyease.com" className="text-primary hover:underline font-medium">
-                                    support@aplyease.com
+                                <a href="mailto:support@hireease.me" className="text-primary hover:underline font-medium">
+                                    support@hireease.me
                                 </a>
                             </div>
                         </div>

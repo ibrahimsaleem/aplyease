@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FuturisticBackground } from "@/components/ui/futuristic-background";
+import { motion } from "framer-motion";
 
 const PACKAGE_OPTIONS: Array<{
     value: string;
@@ -186,7 +188,7 @@ export default function RegisterPage() {
     if (registeredUserId) {
         const isEmployee = selectedRole === "EMPLOYEE";
         return (
-            <div className={`min-h-screen flex items-center justify-center ${isEmployee ? 'bg-gradient-to-br from-amber-50 to-orange-100' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
+            <FuturisticBackground className="min-h-screen flex items-center justify-center">
                 <Card className="max-w-md w-full mx-4 shadow-xl">
                     <CardHeader className="text-center">
                         <div className={`mx-auto p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 ${isEmployee ? 'bg-amber-100' : 'bg-green-100'}`}>
@@ -225,32 +227,37 @@ export default function RegisterPage() {
                         </Button>
                     </CardContent>
                 </Card>
-            </div>
+            </FuturisticBackground>
         );
     }
 
     // Role selection screen
     if (!selectedRole) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-                <div className="max-w-lg w-full mx-4">
+            <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="max-w-lg w-full mx-4"
+                >
                     <div className="text-center mb-8">
                         <Link href="/">
-                            <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+                            <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20">
                                 <Briefcase className="w-8 h-8" />
                             </div>
                         </Link>
-                        <h1 className="text-3xl font-bold text-slate-900 mb-2">Join AplyEase</h1>
-                        <p className="text-slate-600">Choose how you'd like to use AplyEase</p>
+                        <h1 className="text-3xl font-bold text-slate-900 mb-2">Join HireEase</h1>
+                        <p className="text-slate-600">Choose how you'd like to use HireEase</p>
                     </div>
 
                     <div className="space-y-4">
                         <Card
-                            className="cursor-pointer border-2 hover:border-primary transition-colors"
+                            className="cursor-pointer border-2 hover:border-primary transition-all duration-300 bg-white/80 backdrop-blur-md shadow-xl hover:shadow-2xl group"
                             onClick={() => setSelectedRole("CLIENT")}
                         >
                             <CardContent className="p-6 flex items-center gap-4">
-                                <div className="bg-green-100 p-3 rounded-xl">
+                                <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-200 transition-colors">
                                     <User className="w-8 h-8 text-green-600" />
                                 </div>
                                 <div className="flex-1">
@@ -261,11 +268,11 @@ export default function RegisterPage() {
                         </Card>
 
                         <Card
-                            className="cursor-pointer border-2 hover:border-primary transition-colors"
+                            className="cursor-pointer border-2 hover:border-primary transition-all duration-300 bg-white/80 backdrop-blur-md shadow-xl hover:shadow-2xl group"
                             onClick={() => setSelectedRole("EMPLOYEE")}
                         >
                             <CardContent className="p-6 flex items-center gap-4">
-                                <div className="bg-blue-100 p-3 rounded-xl">
+                                <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-200 transition-colors">
                                     <Users className="w-8 h-8 text-blue-600" />
                                 </div>
                                 <div className="flex-1">
@@ -282,15 +289,15 @@ export default function RegisterPage() {
                             Sign in
                         </Link>
                     </div>
-                </div>
-            </div>
+                </motion.div>
+            </FuturisticBackground>
         );
     }
 
     // Client registration form
     if (selectedRole === "CLIENT") {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+            <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
                 <div className="max-w-md w-full mx-4">
                     <div className="text-center mb-8">
                         <Link href="/">
@@ -452,13 +459,13 @@ export default function RegisterPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </FuturisticBackground>
         );
     }
 
     // Employee registration form
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+        <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
             <div className="max-w-md w-full mx-4">
                 <div className="text-center mb-8">
                     <Link href="/">
@@ -612,6 +619,6 @@ export default function RegisterPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </FuturisticBackground>
     );
 }
