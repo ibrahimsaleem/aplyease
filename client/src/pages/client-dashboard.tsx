@@ -16,7 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
-import { DollarSign, Eye, EyeOff, Copy, Sparkles } from "lucide-react";
+import { DollarSign, Eye, EyeOff, Copy, Sparkles, Phone } from "lucide-react";
 import type { ClientStats, ApplicationFilters } from "@/types";
 
 // Helper function to format cents to dollars
@@ -142,7 +142,7 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 {(stats.amountDue || 0) > 0 && (
                   <div className="flex flex-col gap-2">
                     <Button
@@ -206,21 +206,34 @@ export default function ClientDashboard() {
             <h2 className="text-lg font-semibold text-slate-900 mb-4">My Dedicated Team</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {stats.assignedEmployees.map((employee, i) => (
-                <div key={i} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-slate-900">{employee.name}</p>
-                    <a
-                      href={`mailto:${employee.email}`}
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                    >
-                      {employee.email}
-                    </a>
-                  </div>
-                  <div className="bg-blue-50 p-2 rounded-full">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold">
-                      {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                <div key={i} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-medium text-slate-900">{employee.name}</p>
+                      <a
+                        href={`mailto:${employee.email}`}
+                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {employee.email}
+                      </a>
+                    </div>
+                    <div className="bg-blue-50 p-2 rounded-full">
+                      <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold">
+                        {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
                     </div>
                   </div>
+                  {employee.whatsappNumber && (
+                    <a
+                      href={`https://wa.me/${employee.whatsappNumber.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(employee.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Chat on WhatsApp
+                    </a>
+                  )}
                 </div>
               ))}
             </div>

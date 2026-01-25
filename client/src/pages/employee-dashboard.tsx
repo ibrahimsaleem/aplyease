@@ -8,12 +8,13 @@ import { ApplicationTable } from "@/components/application-table";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
 import { MyMonthlyPayout } from "@/components/my-monthly-payout";
 import { useAuth } from "@/hooks/use-auth";
+import { EmployeeTraining } from "@/components/employee-training";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeeStats } from "@/types";
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("applications");
+  const [activeTab, setActiveTab] = useState("training");
 
   const { data: stats } = useQuery<EmployeeStats>({
     queryKey: ["/api/stats/employee", user?.id],
@@ -60,6 +61,9 @@ export default function EmployeeDashboard() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="w-full overflow-x-auto">
+            <TabsTrigger value="training" data-testid="tab-training">
+              Training & Guide
+            </TabsTrigger>
             <TabsTrigger value="applications" data-testid="tab-applications">
               All Applications
             </TabsTrigger>
@@ -88,6 +92,10 @@ export default function EmployeeDashboard() {
 
           <TabsContent value="client-analytics" className="space-y-6">
             <ClientPerformanceAnalytics />
+          </TabsContent>
+
+          <TabsContent value="training" className="space-y-6">
+            <EmployeeTraining />
           </TabsContent>
 
           <TabsContent value="my-payout" className="space-y-6">

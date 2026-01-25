@@ -87,13 +87,16 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Pricing
               </button>
+              <Link href="/work-with-us" className="text-slate-600 hover:text-primary transition-colors font-medium">
+                Work With Us
+              </Link>
               <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service" className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Contact
               </a>
               <Link href="/login">
                 <Button>Login</Button>
               </Link>
-              <Link href="/signup">
+              <Link href="/signup?role=client">
                 <Button variant="outline">Get Started</Button>
               </Link>
             </nav>
@@ -129,6 +132,9 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Pricing
               </button>
+              <Link href="/work-with-us" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
+                Work With Us
+              </Link>
               <a href="https://wa.me/+17138537974?text=I%20want%20to%20know%20about%20the%20service" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Contact
               </a>
@@ -136,7 +142,7 @@ export default function LandingPage() {
                 <Link href="/login">
                   <Button className="w-full">Login</Button>
                 </Link>
-                <Link href="/signup">
+                <Link href="/signup?role=client">
                   <Button variant="outline" className="w-full">Get Started</Button>
                 </Link>
               </div>
@@ -157,9 +163,14 @@ export default function LandingPage() {
                 AI-powered job applications with human expertise. We apply to jobs for you.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                <Link href="/signup">
+                <Link href="/signup?role=client">
                   <Button size="lg" className="w-full sm:w-auto text-lg px-8 h-14">
-                    Start Free <ArrowRight className="ml-2 h-5 w-5" />
+                    Get Started as Client <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/signup?role=employee">
+                  <Button size="lg" variant="secondary" className="w-full sm:w-auto text-lg px-8 h-14">
+                    Work With Us
                   </Button>
                 </Link>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 h-14" asChild>

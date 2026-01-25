@@ -161,6 +161,104 @@ A comprehensive web application for managing job applications with role-based ac
 - Real-time updates
 - Professional dashboard layouts
 
+## 🤖 AI Features Setup Guide
+
+AplyEase includes powerful AI features powered by Google's Gemini AI, including:
+- **AI Resume Generation**: Automatically generate tailored LaTeX resumes
+- **Resume Evaluation**: Get AI-powered feedback on resume quality
+- **Resume Optimization**: AI suggestions to improve resume sections
+
+### **Step 1: Getting Your Gemini API Key**
+
+To use the AI features, you need a Gemini API key from Google AI Studio:
+
+1. **Visit Google AI Studio**: Go to [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+
+2. **Sign In**: Log in with your Google account (create one if needed)
+
+3. **Create API Key**:
+   - Click the **"Create API Key"** button
+   - Select a Google Cloud project or create a new one
+   - Your API key will be generated and displayed
+
+4. **Copy Your Key**: 
+   - Click the copy icon next to your API key
+   - Store it securely - you'll need it for the next step
+
+> ⚠️ **Important**: Keep your API key private and never share it publicly. Each user should use their own API key.
+
+### **Step 2: Configuring Settings in AplyEase**
+
+Once you have your API key, configure it in the app:
+
+1. **Log In**: Sign into AplyEase as an **Employee** or **Admin**
+
+2. **Open Settings**: 
+   - Click the **Settings icon** (⚙️) in the top navigation bar
+   - The Settings dialog will open
+
+3. **Configure Your AI Settings**:
+
+   #### **Preferred AI Model**
+   Choose from available Gemini models:
+   | Model | Best For |
+   |-------|----------|
+   | Gemini 3 Pro Preview | Most powerful, complex tasks |
+   | Gemini 3 Flash Preview | Fastest intelligent responses |
+   | Gemini 2.5 Pro | Advanced thinking and reasoning |
+   | **Gemini 2.5 Flash** ⭐ | Best price-performance (Recommended) |
+   | Gemini 2.5 Flash-Lite | Most cost-efficient |
+   | Gemini 2.0 Flash | Next-gen workhorse |
+   | Gemini 1.5 Pro | High intelligence |
+   | Gemini 1.5 Flash | Balanced performance |
+   | Gemini 1.0 Pro | Legacy stable version |
+
+   #### **Primary Gemini API Key**
+   - Paste your API key in the "Primary Gemini API Key" field
+   - Click the eye icon (👁️) to toggle visibility
+
+   #### **Fallback API Key (Optional)**
+   - Add a secondary API key as a backup
+   - Used automatically if your primary key hits rate limits or quotas
+   - Recommended for heavy usage
+
+4. **Save Settings**: Click **"Save Settings"** to apply your configuration
+
+### **Step 3: Using AI Features**
+
+After configuration, you can:
+
+1. **Generate AI Resumes**:
+   - Go to a client's detail page
+   - Click "Generate Resume" to create AI-tailored resumes
+   - The AI will analyze job descriptions and customize content
+
+2. **Evaluate Resumes**:
+   - Upload or view an existing resume
+   - Get AI feedback on strengths and improvements
+
+3. **Optimize Content**:
+   - Let AI suggest improvements for resume sections
+   - Enhance bullet points and descriptions
+
+### **Troubleshooting AI Features**
+
+| Issue | Solution |
+|-------|----------|
+| "Please configure your Gemini API key" | Add your API key in Settings |
+| "Invalid API key" | Verify your key is correct at [AI Studio](https://aistudio.google.com/app/apikey) |
+| "Quota exceeded" | Wait for quota reset, or add a fallback API key |
+| "Model not found" | Select a different model in Settings |
+| Slow responses | Try a faster model like Gemini 2.5 Flash |
+
+### **API Key Best Practices**
+
+- ✅ Use your own personal API key
+- ✅ Set up a fallback key for high availability
+- ✅ Monitor your usage at [AI Studio](https://aistudio.google.com/app/apikey)
+- ❌ Never share your API key with others
+- ❌ Don't commit API keys to version control
+
 ## 📊 Application Status Workflow
 
 1. **Applied** → Employee submits application

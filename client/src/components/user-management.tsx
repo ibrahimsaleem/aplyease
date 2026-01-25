@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search, Trash2, Users, Sparkles } from "lucide-react";
+import { Plus, Edit, Search, Trash2, Users, Sparkles, UserCheck, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,19 +31,19 @@ import { getInitials, getRoleColor } from "@/lib/auth-utils";
 import type { User } from "@/types";
 
 // Currency input component that allows free typing
-function CurrencyInput({ 
-  value, 
-  onChange, 
-  ...props 
-}: { 
-  value: number | undefined; 
+function CurrencyInput({
+  value,
+  onChange,
+  ...props
+}: {
+  value: number | undefined;
   onChange: (cents: number) => void;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
   // Keep local text state for free typing
   const [localValue, setLocalValue] = useState(() => {
     return value !== undefined && value > 0 ? (value / 100).toString() : "";
   });
-  
+
   // Sync local value when form value changes externally (e.g., form reset)
   useEffect(() => {
     const formattedValue = value !== undefined && value > 0 ? (value / 100).toString() : "";
@@ -95,6 +96,7 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
+  whatsappNumber: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
@@ -107,6 +109,7 @@ const editUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
+  whatsappNumber: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
@@ -136,6 +139,7 @@ export function UserManagement() {
   const [customCredits, setCustomCredits] = useState<string>("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [userTab, setUserTab] = useState<"employees" | "clients">("employees");
 
   const form = useForm<UserFormData>({
     // Don't use resolver here - we'll validate manually in onSubmit
@@ -144,6 +148,7 @@ export function UserManagement() {
       email: "",
       role: "EMPLOYEE",
       company: "",
+      whatsappNumber: "",
       password: "",
       applicationsRemaining: 0,
       amountPaid: 0,
@@ -348,6 +353,7 @@ export function UserManagement() {
       email: user.email,
       role: user.role,
       company: user.company || "",
+      whatsappNumber: (user as any).whatsappNumber || "",
       password: "", // Don't populate password for editing
       applicationsRemaining: (user as any).applicationsRemaining ?? 0,
       amountPaid: (user as any).amountPaid ?? 0,
@@ -518,6 +524,29 @@ export function UserManagement() {
                       )}
                     />
 
+                    {/* WhatsApp Number (for EMPLOYEE only) */}
+                    {form.watch("role") === "EMPLOYEE" && (
+                      <FormField
+                        control={form.control}
+                        name="whatsappNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>WhatsApp Number</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="tel"
+                                placeholder="+1 234 567 8900"
+                                {...field}
+                                data-testid="input-user-whatsapp"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-slate-500">Include country code for client contact</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
                     {/* Applications Left (for CLIENT only) */}
                     {form.watch("role") === "CLIENT" && (
                       <FormField
@@ -545,10 +574,10 @@ export function UserManagement() {
                             <FormItem>
                               <FormLabel>Amount Paid ($)</FormLabel>
                               <FormControl>
-                                <CurrencyInput 
+                                <CurrencyInput
                                   value={field.value}
                                   onChange={field.onChange}
-                                  data-testid="input-user-amount-paid" 
+                                  data-testid="input-user-amount-paid"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -562,10 +591,10 @@ export function UserManagement() {
                             <FormItem>
                               <FormLabel>Amount Due ($)</FormLabel>
                               <FormControl>
-                                <CurrencyInput 
+                                <CurrencyInput
                                   value={field.value}
                                   onChange={field.onChange}
-                                  data-testid="input-user-amount-due" 
+                                  data-testid="input-user-amount-due"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -616,123 +645,225 @@ export function UserManagement() {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Applications Left</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${user.role === "ADMIN" ? "bg-red-100" :
-                        user.role === "CLIENT" ? "bg-green-100" : "bg-blue-100"
-                        }`}>
-                        <span className={`font-medium ${user.role === "ADMIN" ? "text-red-600" :
-                          user.role === "CLIENT" ? "text-green-600" : "text-blue-600"
-                          }`} data-testid="text-user-initials">
-                          {getInitials(user.name)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900" data-testid="text-user-name">
-                          {user.name}
-                        </div>
-                      </div>
+      {/* Pending Employee Approvals Alert - Last 7 days only */}
+      {(() => {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const pendingEmployees = users.filter(u =>
+          u.role === "EMPLOYEE" &&
+          !u.isActive &&
+          new Date(u.createdAt) >= sevenDaysAgo
+        );
+        if (pendingEmployees.length === 0) return null;
+        return (
+          <div className="mx-6 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <h3 className="font-semibold text-amber-800">
+                Pending Employee Approvals ({pendingEmployees.length})
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {pendingEmployees.map((emp) => (
+                <div key={emp.id} className="flex items-center justify-between bg-white p-3 rounded-md border border-amber-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-medium">{getInitials(emp.name)}</span>
                     </div>
-                  </TableCell>
-                  <TableCell data-testid="text-user-email">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge className={getRoleColor(user.role)} data-testid="badge-user-role">
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell data-testid="text-user-company">{user.company || "-"}</TableCell>
-                  <TableCell data-testid="text-user-apps-left">
-                    {user.role === "CLIENT" ? ((user as any).applicationsRemaining ?? "-") : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={user.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"} data-testid="badge-user-status">
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell data-testid="text-user-created">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      {user.role === "CLIENT" && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setManagingEmployeesClient(user)}
-                            title="Manage Employees"
-                            data-testid="button-manage-employees"
-                          >
+                    <div>
+                      <p className="font-medium text-slate-900">{emp.name}</p>
+                      <p className="text-sm text-slate-500">{emp.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-slate-400 ml-2">
+                      <Clock className="w-3 h-3" />
+                      <span>Joined {new Date(emp.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(emp)}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => enableUser.mutate(emp.id)}
+                      disabled={enableUser.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <UserCheck className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      <CardContent className="p-0">
+        <Tabs value={userTab} onValueChange={(v) => setUserTab(v as "employees" | "clients")} className="w-full">
+          <div className="px-6 pt-4">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="employees">
+                Employees ({users.filter(u => u.role === "EMPLOYEE").length})
+              </TabsTrigger>
+              <TabsTrigger value="clients">
+                Clients ({users.filter(u => u.role === "CLIENT").length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="employees" className="mt-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.filter(u => u.role === "EMPLOYEE").map((user) => (
+                    <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center mr-4 bg-blue-100">
+                            <span className="font-medium text-blue-600" data-testid="text-user-initials">
+                              {getInitials(user.name)}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-slate-900" data-testid="text-user-name">
+                              {user.name}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell data-testid="text-user-email">{user.email}</TableCell>
+                      <TableCell>
+                        {(user as any).whatsappNumber ? (
+                          <span className="text-sm text-slate-600">{(user as any).whatsappNumber}</span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Not set</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"} data-testid="badge-user-status">
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell data-testid="text-user-created">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(user)} data-testid="button-edit-user">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Switch checked={user.isActive} onCheckedChange={() => handleToggleStatus(user)} data-testid="switch-user-status" />
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 hover:text-red-700 hover:bg-red-50" data-testid="button-delete-user">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!users.filter(u => u.role === "EMPLOYEE").length && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="text-slate-500">No employees found.</div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="clients" className="mt-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Apps Left</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.filter(u => u.role === "CLIENT").map((user) => (
+                    <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center mr-4 bg-green-100">
+                            <span className="font-medium text-green-600" data-testid="text-user-initials">
+                              {getInitials(user.name)}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-slate-900" data-testid="text-user-name">
+                              {user.name}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell data-testid="text-user-email">{user.email}</TableCell>
+                      <TableCell data-testid="text-user-company">{user.company || "-"}</TableCell>
+                      <TableCell data-testid="text-user-apps-left">
+                        {(user as any).applicationsRemaining ?? "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"} data-testid="badge-user-status">
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell data-testid="text-user-created">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => setManagingEmployeesClient(user)} title="Manage Employees" data-testid="button-manage-employees">
                             <Users className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCreditsDialogUser(user)}
-                            title="Add Resume Credits"
-                            data-testid="button-resume-credits"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => setCreditsDialogUser(user)} title="Add Resume Credits" data-testid="button-resume-credits">
                             <Sparkles className="w-4 h-4 text-purple-600" />
                           </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(user)}
-                        data-testid="button-edit-user"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Switch
-                        checked={user.isActive}
-                        onCheckedChange={() => handleToggleStatus(user)}
-                        data-testid="switch-user-status"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        data-testid="button-delete-user"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {!users.length && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="text-slate-500" data-testid="text-no-users">
-                      No users found. Try adjusting your search.
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(user)} data-testid="button-edit-user">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Switch checked={user.isActive} onCheckedChange={() => handleToggleStatus(user)} data-testid="switch-user-status" />
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-500 hover:text-red-700 hover:bg-red-50" data-testid="button-delete-user">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!users.filter(u => u.role === "CLIENT").length && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="text-slate-500">No clients found.</div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
 
       <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
@@ -776,7 +907,7 @@ export function UserManagement() {
           <DialogHeader>
             <DialogTitle>Add Resume Credits - {creditsDialogUser?.name}</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-sm text-slate-600 mb-1">Current Resume Credits</p>
@@ -789,9 +920,8 @@ export function UserManagement() {
                 {CREDIT_PLANS.map((plan) => (
                   <Card
                     key={plan.name}
-                    className={`cursor-pointer transition-all ${
-                      selectedPlan === plan.name ? 'ring-2 ring-purple-600 bg-purple-50' : 'hover:shadow-md'
-                    }`}
+                    className={`cursor-pointer transition-all ${selectedPlan === plan.name ? 'ring-2 ring-purple-600 bg-purple-50' : 'hover:shadow-md'
+                      }`}
                     onClick={() => {
                       setSelectedPlan(plan.name);
                       setCustomCredits("");

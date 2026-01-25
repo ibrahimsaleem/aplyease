@@ -42,6 +42,7 @@ export const users = pgTable(
     amountDue: integer("amount_due").notNull().default(sql`0`), // Remaining payment due (in cents)
     isActive: boolean("is_active").default(sql`true`).notNull(),
     passwordHash: text("password_hash").notNull(),
+    whatsappNumber: text("whatsapp_number"), // Employee WhatsApp contact
     geminiApiKey: text("gemini_api_key"),
     preferredGeminiModel: text("preferred_gemini_model").default(sql`'gemini-1.5-flash'`).notNull(),
     fallbackGeminiApiKey: text("fallback_gemini_api_key"),
@@ -230,6 +231,8 @@ export const registerUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters").regex(/^(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter and one number"),
   packageTier: z.string().optional(),
+  whatsappNumber: z.string().optional(),
+  role: z.enum(["CLIENT", "EMPLOYEE"]).optional().default("CLIENT"),
 });
 
 export const updateUserSchema = createInsertSchema(users)

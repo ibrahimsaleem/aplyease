@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/use-auth";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import LandingPage from "@/pages/landing-page";
+import WorkWithUsPage from "@/pages/work-with-us";
+import PendingVerificationPage from "@/pages/pending-verification";
 import AdminDashboard from "@/pages/admin-dashboard";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
@@ -47,6 +49,11 @@ function Dashboard() {
 
   if (!user) return null;
 
+  // Employees must be verified (isActive) before accessing dashboard
+  if (user.role === "EMPLOYEE" && !user.isActive) {
+    return <PendingVerificationPage />;
+  }
+
   return (
     <>
       {user.role === "ADMIN" && <AdminDashboard />}
@@ -81,6 +88,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/work-with-us" component={WorkWithUsPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={RegisterPage} />
 
@@ -92,10 +100,10 @@ function Router() {
         <ProtectedRoute component={ClientProfile} />
       </Route>
       <Route path="/clients">
-        {user?.role === "EMPLOYEE" || user?.role === "ADMIN" ? <Clients /> : <NotFound />}
+        {(user?.role === "EMPLOYEE" || user?.role === "ADMIN") && user?.isActive ? <Clients /> : <NotFound />}
       </Route>
       <Route path="/clients/:clientId">
-        {user?.role === "EMPLOYEE" || user?.role === "ADMIN" ? <ClientDetail /> : <NotFound />}
+        {(user?.role === "EMPLOYEE" || user?.role === "ADMIN") && user?.isActive ? <ClientDetail /> : <NotFound />}
       </Route>
       <Route component={NotFound} />
     </Switch>

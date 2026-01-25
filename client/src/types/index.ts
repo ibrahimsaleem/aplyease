@@ -60,7 +60,7 @@ export type ClientStats = {
   applicationsRemaining?: number;
   amountPaid?: number; // Payment made by client (in cents)
   amountDue?: number; // Remaining payment due (in cents)
-  assignedEmployees?: { name: string; email: string }[];
+  assignedEmployees?: { name: string; email: string; whatsappNumber?: string }[];
 };
 
 export type ApplicationFilters = {

@@ -590,7 +590,7 @@ export class DatabaseStorage implements IStorage {
     hired: number;
     amountPaid?: number;
     amountDue?: number;
-    assignedEmployees?: { name: string; email: string }[];
+    assignedEmployees?: { name: string; email: string; whatsappNumber?: string }[];
   }> {
     return retryOperation(async () => {
       const [totalApps] = await db
@@ -642,7 +642,8 @@ export class DatabaseStorage implements IStorage {
         amountDue: (client as any)?.amountDue ?? 0,
         assignedEmployees: assignedEmployees.map(emp => ({
           name: emp.name,
-          email: emp.email
+          email: emp.email,
+          whatsappNumber: (emp as any).whatsappNumber || undefined
         })),
       };
     });
@@ -1575,7 +1576,7 @@ export class DatabaseStorage implements IStorage {
         amount,
         paymentDate: new Date(),
       };
-      
+
       if (recordedBy) values.recordedBy = recordedBy;
       if (notes) values.notes = notes;
 

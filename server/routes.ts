@@ -124,6 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/register", registerLimiter, async (req, res) => {
     try {
       const userData = registerUserSchema.parse(req.body);
+      const userRole = userData.role || "CLIENT";
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
@@ -131,45 +132,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Determine applications quota based on package
+      // Determine applications quota based on package (only for clients)
       let applicationsRemaining = 0;
-      switch (userData.packageTier) {
-        case "basic":
-          applicationsRemaining = 250;
-          break;
-        case "standard":
-          applicationsRemaining = 500;
-          break;
-        case "premium":
-          applicationsRemaining = 1000;
-          break;
-        case "ultimate":
-          applicationsRemaining = 1000;
-          break;
-        default:
-          applicationsRemaining = 0;
+      if (userRole === "CLIENT") {
+        switch (userData.packageTier) {
+          case "basic":
+            applicationsRemaining = 250;
+            break;
+          case "standard":
+            applicationsRemaining = 500;
+            break;
+          case "premium":
+            applicationsRemaining = 1000;
+            break;
+          case "ultimate":
+            applicationsRemaining = 1000;
+            break;
+          default:
+            applicationsRemaining = 0;
+        }
       }
 
       const hashedPassword = await hashPassword(userData.password);
+
+      // Employees start as inactive (pending verification), clients are active
+      const isActiveByDefault = userRole === "CLIENT";
+
       // Cast to any to avoid strict type checking issues with inferred schema
       const user = await storage.createUser({
         ...userData,
-        role: "CLIENT",
+        role: userRole,
         passwordHash: hashedPassword,
         applicationsRemaining,
-        isActive: true
+        isActive: isActiveByDefault
       } as any);
 
-      // Create empty client profile
-      await storage.upsertClientProfile(user.id, {
-        fullName: user.name,
-        phoneNumber: "",
-        mailingAddress: "",
-        situation: "",
-        desiredTitles: "",
-        workAuthorization: "",
-        sponsorshipAnswer: "",
-      } as any);
+      // Create empty client profile only for clients
+      if (userRole === "CLIENT") {
+        await storage.upsertClientProfile(user.id, {
+          fullName: user.name,
+          phoneNumber: "",
+          mailingAddress: "",
+          situation: "",
+          desiredTitles: "",
+          workAuthorization: "",
+          sponsorshipAnswer: "",
+        } as any);
+      }
+
       res.status(201).json({
         userId: user.id,
         message: "Registration successful"
@@ -281,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const previousAmount = (existingUser as any).amountPaid || 0;
         const newAmount = updateData.amountPaid;
         const paymentDifference = newAmount - previousAmount;
-        
+
         if (paymentDifference > 0) {
           // Only record positive payments (increases)
           await storage.recordPayment(
@@ -424,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUser = (req.user ?? req.session.user)!;
       const user = await storage.getUser(currentUser.id);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -456,7 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateUser(id, { resumeCredits: newCredits } as any);
 
-      res.json({ 
+      res.json({
         message: `Added ${credits} resume credits`,
         resumeCredits: newCredits,
         plan: plan || 'Custom'
@@ -542,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Credit Check] User ${user.id} (${user.email}) has ${resumeCredits} credits`);
         if (resumeCredits <= 0) {
           console.log(`[Credit Check] Insufficient credits for user ${user.id}`);
-          return res.status(402).json({ 
+          return res.status(402).json({
             message: "Insufficient resume credits",
             resumeCredits: 0,
             plans: [
@@ -1587,13 +1597,13 @@ OUTPUT:
   app.get("/api/clients", requireAuth, requireRole(["ADMIN", "EMPLOYEE"]), async (req, res) => {
     try {
       const user = (req.user ?? req.session.user)!;
-      
+
       if (user.role === "EMPLOYEE") {
         // Return only assigned clients for employees
         const assignedClients = await storage.getEmployeeAssignments(user.id);
         return res.json(assignedClients.filter(u => u.isActive));
       }
-      
+
       // Admin sees all clients
       const clients = await storage.listUsers({ role: "CLIENT" });
       res.json(clients.filter(user => user.isActive));
@@ -1630,13 +1640,13 @@ OUTPUT:
     try {
       const user = (req.user ?? req.session.user)!;
       const analytics = await storage.getClientPerformanceAnalytics();
-      
+
       // Filter and modify data for employees
       if (user.role === "EMPLOYEE") {
         // Get assigned clients
         const assignedClients = await storage.getEmployeeAssignments(user.id);
         const assignedClientIds = new Set(assignedClients.map(c => c.id));
-        
+
         // Filter to only show assigned clients and strip payment data
         analytics.clients = analytics.clients
           .filter(client => assignedClientIds.has(client.id))
@@ -1645,11 +1655,11 @@ OUTPUT:
             amountPaid: undefined,
             amountDue: undefined,
           }));
-        
+
         // Update total count to reflect filtered results
         analytics.totalClients = analytics.clients.length;
       }
-      
+
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching client performance analytics:", error);
@@ -1695,14 +1705,14 @@ OUTPUT:
     try {
       const user = (req.user ?? req.session.user)!;
       let profiles = await storage.listClientProfiles();
-      
+
       // Filter profiles for employees to only show assigned clients
       if (user.role === "EMPLOYEE") {
         const assignedClients = await storage.getEmployeeAssignments(user.id);
         const assignedClientIds = new Set(assignedClients.map(c => c.id));
         profiles = profiles.filter(p => assignedClientIds.has(p.userId));
       }
-      
+
       // Parse JSON strings back to arrays for frontend
       const parsedProfiles = profiles.map(p => ({
         ...p,
