@@ -96,11 +96,20 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
-  whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code)"),
+  whatsappNumber: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
   amountDue: z.coerce.number().int().min(0).optional(),
+}).refine((data) => {
+  if (data.role === "EMPLOYEE") {
+    // Check if whatsappNumber exists and has minimum length
+    return !!data.whatsappNumber && data.whatsappNumber.length >= 10;
+  }
+  return true;
+}, {
+  message: "WhatsApp number is required (include country code)",
+  path: ["whatsappNumber"],
 });
 
 // Schema for editing existing users - password is optional
@@ -109,11 +118,20 @@ const editUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.enum(["ADMIN", "CLIENT", "EMPLOYEE"], { required_error: "Role is required" }),
   company: z.string().optional(),
-  whatsappNumber: z.string().min(10, "WhatsApp number is required (include country code)"),
+  whatsappNumber: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   applicationsRemaining: z.coerce.number().int().min(0).optional(),
   amountPaid: z.coerce.number().int().min(0).optional(),
   amountDue: z.coerce.number().int().min(0).optional(),
+}).refine((data) => {
+  if (data.role === "EMPLOYEE") {
+    // Check if whatsappNumber exists and has minimum length
+    return !!data.whatsappNumber && data.whatsappNumber.length >= 10;
+  }
+  return true;
+}, {
+  message: "WhatsApp number is required (include country code)",
+  path: ["whatsappNumber"],
 });
 
 type UserFormData = z.infer<typeof createUserSchema>;
