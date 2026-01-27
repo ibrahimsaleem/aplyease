@@ -5,6 +5,7 @@ export type User = {
   role: "ADMIN" | "CLIENT" | "EMPLOYEE";
   company?: string;
   isActive: boolean;
+  whatsappNumber?: string;
   geminiApiKey?: string;
   applicationsRemaining?: number;
   amountPaid?: number; // Payment made by client (in cents)

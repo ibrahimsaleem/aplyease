@@ -371,7 +371,7 @@ export function UserManagement() {
       email: user.email,
       role: user.role,
       company: user.company || "",
-      whatsappNumber: (user as any).whatsappNumber || "",
+      whatsappNumber: user.whatsappNumber || "",
       password: "", // Don't populate password for editing
       applicationsRemaining: (user as any).applicationsRemaining ?? 0,
       amountPaid: (user as any).amountPaid ?? 0,
@@ -698,12 +698,12 @@ export function UserManagement() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {(emp as any).whatsappNumber && (
+                    {emp.whatsappNumber && (
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 text-white border-none"
                         title="Contact on WhatsApp"
-                        onClick={() => window.open(`https://wa.me/${(emp as any).whatsappNumber.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(emp.name)},%20regarding%20your%20application%20to%20HireEase...`, '_blank')}
+                        onClick={() => window.open(`https://wa.me/${emp.whatsappNumber!.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(emp.name)},%20regarding%20your%20application%20to%20HireEase...`, '_blank')}
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Button>
@@ -778,8 +778,8 @@ export function UserManagement() {
                       </TableCell>
                       <TableCell data-testid="text-user-email">{user.email}</TableCell>
                       <TableCell>
-                        {(user as any).whatsappNumber ? (
-                          <span className="text-sm text-slate-600">{(user as any).whatsappNumber}</span>
+                        {user.whatsappNumber ? (
+                          <span className="text-sm text-slate-600">{user.whatsappNumber}</span>
                         ) : (
                           <span className="text-xs text-slate-400">Not set</span>
                         )}

@@ -188,6 +188,7 @@ export class DatabaseStorage implements IStorage {
           applicationsRemaining: (userData as any).applicationsRemaining ?? 0,
           passwordHash,
           isActive: (userData as any).isActive ?? true,
+          whatsappNumber: (userData as any).whatsappNumber,
         } as any)
         .returning();
       return user;
