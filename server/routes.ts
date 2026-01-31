@@ -939,6 +939,9 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       const { GoogleGenAI } = await import("@google/genai");
 
       // LaTeX template structure - OPTIMIZED VERSION with balanced spacing (no overlaps)
+      // Key improvements:
+      // - Use tabularx (X column) so long left-side headings wrap instead of colliding with right-side dates/locations
+      // - Use \\flushbottom to reduce large unused bottom space on a one-page resume
       const latexTemplate = `\\documentclass[letterpaper,10pt]{article}
 
 \\usepackage{latexsym}
@@ -949,6 +952,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
 \\usepackage[hidelinks]{hyperref}
 \\usepackage{fancyhdr}
 \\usepackage{tabularx, multicol}
+\\usepackage{array}
 
 \\pagestyle{fancy}
 \\fancyhf{}
@@ -963,9 +967,13 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
 \\addtolength{\\textheight}{1.2in}
 
 \\urlstyle{same}
-\\raggedbottom
 \\raggedright
+\\flushbottom
 \\setlength{\\tabcolsep}{0in}
+\\setlength{\\emergencystretch}{2em}
+
+% Tabularx helper column for wrapping long headings
+\\newcolumntype{L}{>{\\raggedright\\arraybackslash}X}
 
 % Section formatting - balanced spacing
 \\titleformat{\\section}{
@@ -981,17 +989,17 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
 
 \\newcommand{\\resumeSubheading}[4]{
   \\vspace{-2pt}\\item
-    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+    \\begin{tabularx}{0.97\\textwidth}[t]{@{}Lr@{}}
       \\textbf{#1} & #2 \\\\
       \\textit{\\small#3} & \\textit{\\small #4} \\\\
-    \\end{tabular*}\\vspace{-5pt}
+    \\end{tabularx}\\vspace{-5pt}
 }
 
 \\newcommand{\\resumeProjectHeading}[2]{
     \\item
-    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}
+    \\begin{tabularx}{0.97\\textwidth}{@{}Lr@{}}
       \\small#1 & #2 \\\\
-    \\end{tabular*}\\vspace{-5pt}
+    \\end{tabularx}\\vspace{-5pt}
 }
 
 \\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.1in, label={}]}
