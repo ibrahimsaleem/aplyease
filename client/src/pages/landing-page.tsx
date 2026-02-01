@@ -61,10 +61,10 @@ export default function LandingPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-slate-700 mb-4">Special launch pricing - Save up to 30% on all packages!</p>
+            <p className="text-slate-700 mb-4">Special launch pricing - Save up to 20% on selected packages!</p>
           </div>
           <DialogFooter className="sm:justify-center">
-            <a href="https://wa.me/+17138537974?text=I%20want%20to%20get%20the%20deal%2030%25%20off" className="w-full">
+            <a href="https://wa.me/+17138537974?text=I%20want%20to%20get%20the%20deal%2020%25%20off%20on%20selected%20packages" className="w-full">
               <Button className="w-full" size="lg">Get the Deal</Button>
             </a>
           </DialogFooter>

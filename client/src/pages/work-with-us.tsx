@@ -34,17 +34,52 @@ export default function WorkWithUsPage() {
                 {/* Hero Section */}
                 <section className="pt-16 pb-20 bg-gradient-to-b from-blue-50 to-white">
                     <div className="container mx-auto px-4 md:px-6 text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-800 font-semibold text-sm mb-6">
+                            <span>Hiring Now</span>
+                        </div>
                         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-                            Work With Us
+                            Turn Your Free Time Into Real Income
                         </h1>
                         <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-                            Join HireEase as an Application Specialist and help clients land jobs using our AI-powered workflows.
+                            Join our global team of Application Specialists. Earn competitive pay in USD, work from anywhere, on your own schedule.
                         </p>
                         <Link href="/signup?role=employee">
                             <Button size="lg" className="text-lg px-8 h-14">
                                 Apply as Employee <ArrowRight className="ml-2 h-5 w-5" />
                             </Button>
                         </Link>
+                    </div>
+                </section>
+
+                {/* Benefits */}
+                <section className="py-16 bg-white">
+                    <div className="container mx-auto px-4 md:px-6">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+                            <Card className="border-none shadow-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold text-slate-900 mb-2">Earn in USD</h3>
+                                    <p className="text-sm text-slate-600">Get paid in stable currency for every application you process.</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold text-slate-900 mb-2">Flexible Hours</h3>
+                                    <p className="text-sm text-slate-600">Work whenever you want. Convert your free time into earnings.</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold text-slate-900 mb-2">Remote First</h3>
+                                    <p className="text-sm text-slate-600">Work from home or anywhere in the world. All you need is internet.</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold text-slate-900 mb-2">Easy to Start</h3>
+                                    <p className="text-sm text-slate-600">We provide all tools and training. No prior experience needed.</p>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 </section>
 
@@ -135,9 +170,12 @@ export default function WorkWithUsPage() {
                 {/* CTA Section */}
                 <section className="py-20 bg-primary text-white">
                     <div className="container mx-auto px-4 md:px-6 text-center">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Join?</h2>
-                        <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
-                            Start earning by helping job seekers land their dream positions.
+                        <h2 className="text-3xl md:text-4xl font-bold mb-4">Start Earning Today</h2>
+                        <p className="text-lg opacity-90 mb-2 max-w-xl mx-auto">
+                            Limited spots available. Join 200+ specialists worldwide.
+                        </p>
+                        <p className="text-base opacity-90 mb-8 max-w-xl mx-auto">
+                            Join our global team of Application Specialists. Earn competitive pay in USD, work from anywhere, on your own schedule.
                         </p>
                         <Link href="/signup?role=employee">
                             <Button size="lg" variant="secondary" className="text-lg px-8 h-14">

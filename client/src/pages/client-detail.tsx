@@ -4,9 +4,11 @@ import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { NavigationHeader } from "@/components/navigation-header";
 import { ResumeGenerator } from "@/components/resume-generator";
 import { BaseLatexGenerator } from "@/components/base-latex-generator";
+import { ResumeProfilesManager } from "@/components/resume-profiles-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -178,7 +180,12 @@ export default function ClientDetail() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Client Details */}
+        <Accordion type="multiple" defaultValue={["basic", "job", "location"]} className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <AccordionItem value="basic">
+            <AccordionTrigger className="text-base sm:text-lg">Basic Information</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Contact Information */}
           <Card>
             <CardHeader>
@@ -262,6 +269,13 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </Card>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="job">
+            <AccordionTrigger className="text-base sm:text-lg">Job Preferences</AccordionTrigger>
+            <AccordionContent>
 
           {/* Job Preferences */}
           <Card>
@@ -294,6 +308,12 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="location">
+            <AccordionTrigger className="text-base sm:text-lg">Location Preferences</AccordionTrigger>
+            <AccordionContent>
 
           {/* Location Preferences */}
           <Card>
@@ -333,6 +353,12 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="services">
+            <AccordionTrigger className="text-base sm:text-lg">Requested Services</AccordionTrigger>
+            <AccordionContent>
 
           {/* Services */}
           <Card className="lg:col-span-2">
@@ -347,6 +373,12 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="documents">
+            <AccordionTrigger className="text-base sm:text-lg">Documents & Links</AccordionTrigger>
+            <AccordionContent>
 
           {/* Documents */}
           <Card className="lg:col-span-2">
@@ -415,88 +447,110 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
-
-          {/* Base Resume LaTeX */}
-          {profile.baseResumeLatex && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Base Resume LaTeX Code</CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowFullLatex(!showFullLatex)}
-                    >
-                      {showFullLatex ? (
-                        <>
-                          <EyeOff className="w-4 h-4 mr-2" />
-                          Show Less
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Show Full Code
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => copyToClipboard(profile.baseResumeLatex!, "LaTeX code")}
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Code
-                    </Button>
-                  </div>
-                </div>
-                <CardDescription>
-                  This is the client's LaTeX resume template
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
-                  <code className="text-sm font-mono">
-                    {showFullLatex 
-                      ? profile.baseResumeLatex 
-                      : profile.baseResumeLatex.split('\n').slice(0, 20).join('\n') + '\n\n... (click "Show Full Code" to see more)'}
-                  </code>
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Base LaTeX Generator - For EMPLOYEE/ADMIN to create or update base resume */}
-          {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
-            <BaseLatexGenerator
-              clientId={clientId!}
-              userHasApiKey={!!user.geminiApiKey}
-              existingLatex={profile.baseResumeLatex || undefined}
-              onSaveToProfile={(latex) => saveLatexMutation.mutate(latex)}
-            />
-          )}
-
-          {/* AI Resume Generator */}
-          {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
-            <ResumeGenerator
-              clientId={clientId!}
-              hasBaseResume={!!profile.baseResumeLatex}
-              userHasApiKey={!!user.geminiApiKey}
-              resumeCredits={undefined}
-              userRole={user.role}
-            />
-          )}
+            </AccordionContent>
+          </AccordionItem>
 
           {/* Additional Notes */}
           {profile.additionalNotes && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Additional Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <AccordionItem value="additionalNotes">
+              <AccordionTrigger className="text-base sm:text-lg">Additional Notes</AccordionTrigger>
+              <AccordionContent>
                 <p className="text-slate-700 whitespace-pre-wrap">{profile.additionalNotes}</p>
-              </CardContent>
-            </Card>
+              </AccordionContent>
+            </AccordionItem>
           )}
+        </Accordion>
+
+        {/* Resume + AI Tools (separate from client details) */}
+        <div className="mt-6">
+          <div className="text-sm font-semibold text-slate-700 mb-2">Resume & AI Tools</div>
+          <Accordion type="multiple" defaultValue={[]} className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <AccordionItem value="resumeTemplates">
+              <AccordionTrigger className="text-base sm:text-lg">Resume Templates</AccordionTrigger>
+              <AccordionContent>
+                {/* Base Resume LaTeX */}
+                {profile.baseResumeLatex && (
+                  <Card className="lg:col-span-2">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Base Resume LaTeX Code</CardTitle>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowFullLatex(!showFullLatex)}
+                          >
+                            {showFullLatex ? (
+                              <>
+                                <EyeOff className="w-4 h-4 mr-2" />
+                                Show Less
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Show Full Code
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => copyToClipboard(profile.baseResumeLatex!, "LaTeX code")}
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy Code
+                          </Button>
+                        </div>
+                      </div>
+                      <CardDescription>
+                        This is the client's LaTeX resume template
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
+                        <code className="text-sm font-mono">
+                          {showFullLatex
+                            ? profile.baseResumeLatex
+                            : profile.baseResumeLatex.split('\n').slice(0, 20).join('\n') + '\n\n... (click \"Show Full Code\" to see more)'}
+                        </code>
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Resume Profiles (multiple base resumes) */}
+                <ResumeProfilesManager
+                  clientId={clientId!}
+                  legacyBaseResumeLatex={profile.baseResumeLatex ?? null}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="aiTools">
+              <AccordionTrigger className="text-base sm:text-lg">AI Tools</AccordionTrigger>
+              <AccordionContent>
+                {/* Base LaTeX Generator - For EMPLOYEE/ADMIN to create or update base resume */}
+                {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+                  <BaseLatexGenerator
+                    clientId={clientId!}
+                    userHasApiKey={!!user.geminiApiKey}
+                    existingLatex={profile.baseResumeLatex || undefined}
+                    onSaveToProfile={(latex) => saveLatexMutation.mutate(latex)}
+                  />
+                )}
+
+                {/* AI Resume Generator */}
+                {(user.role === "EMPLOYEE" || user.role === "ADMIN") && (
+                  <ResumeGenerator
+                    clientId={clientId!}
+                    hasBaseResume={!!profile.baseResumeLatex}
+                    userHasApiKey={!!user.geminiApiKey}
+                    resumeCredits={undefined}
+                    userRole={user.role}
+                  />
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
     </div>

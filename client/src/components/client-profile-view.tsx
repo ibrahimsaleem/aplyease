@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Pencil, Eye, EyeOff, DollarSign, Sparkles, Key, Loader2, Info, Zap, Target, TrendingUp, FileText, CheckCircle2 } from "lucide-react";
 import { ResumeGenerator } from "@/components/resume-generator";
 import { BaseLatexGenerator } from "@/components/base-latex-generator";
+import { ResumeProfilesManager } from "@/components/resume-profiles-manager";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -158,8 +160,11 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </div>
         )}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <Accordion type="multiple" defaultValue={["basic", "job", "location"]} className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <AccordionItem value="basic">
+          <AccordionTrigger className="text-base sm:text-lg">Basic Information</AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Contact Information */}
         <Card>
           <CardHeader>
@@ -244,6 +249,13 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="job">
+          <AccordionTrigger className="text-base sm:text-lg">Job Preferences</AccordionTrigger>
+          <AccordionContent>
         {/* Job Preferences */}
         <Card>
           <CardHeader>
@@ -276,6 +288,12 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="location">
+          <AccordionTrigger className="text-base sm:text-lg">Location Preferences</AccordionTrigger>
+          <AccordionContent>
         {/* Location Preferences */}
         <Card>
           <CardHeader>
@@ -315,6 +333,12 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="services">
+          <AccordionTrigger className="text-base sm:text-lg">Requested Services</AccordionTrigger>
+          <AccordionContent>
         {/* Services */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -329,6 +353,12 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="documents">
+          <AccordionTrigger className="text-base sm:text-lg">Documents & Links</AccordionTrigger>
+          <AccordionContent>
         {/* Documents */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -397,6 +427,18 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="resumeTemplates">
+          <AccordionTrigger className="text-base sm:text-lg">Resume Templates</AccordionTrigger>
+          <AccordionContent>
+        {/* Resume Profiles (multiple base resumes) */}
+        <ResumeProfilesManager
+          clientId={profile.userId}
+          legacyBaseResumeLatex={profile.baseResumeLatex ?? null}
+        />
+
         {/* Base Resume LaTeX */}
         {profile.baseResumeLatex && (
           <Card className="lg:col-span-2">
@@ -446,8 +488,13 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </Card>
         )}
 
-        {/* Gemini API Key Configuration */}
+          </AccordionContent>
+        </AccordionItem>
+
         {isOwnProfile && (
+          <AccordionItem value="aiSettings">
+            <AccordionTrigger className="text-base sm:text-lg">AI Settings</AccordionTrigger>
+            <AccordionContent>
           <Card className="lg:col-span-2">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -532,28 +579,14 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
               </p>
             </CardContent>
           </Card>
+            </AccordionContent>
+          </AccordionItem>
         )}
 
-        {/* AI Resume Tailoring Tool Section */}
         {isOwnProfile && (
-          <>
-            {/* Section Divider */}
-            <div className="lg:col-span-2 my-8">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t-2 border-purple-200"></div>
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-slate-50 px-6 py-2 rounded-full border-2 border-purple-200">
-                    <div className="flex items-center gap-2 text-purple-700 font-semibold">
-                      <Sparkles className="w-5 h-5" />
-                      <span>AI Resume Tailoring Tool</span>
-                    </div>
-                  </span>
-                </div>
-              </div>
-            </div>
-
+          <AccordionItem value="aiTailoring">
+            <AccordionTrigger className="text-base sm:text-lg">AI Resume Tailoring</AccordionTrigger>
+            <AccordionContent>
             {/* Tool Description Card */}
             <Card className="lg:col-span-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white">
               <CardHeader>
@@ -659,21 +692,19 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
               resumeCredits={user?.resumeCredits}
               userRole={user?.role}
             />
-          </>
+            </AccordionContent>
+          </AccordionItem>
         )}
 
-        {/* Additional Notes */}
         {profile.additionalNotes && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Additional Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <AccordionItem value="additionalNotes">
+            <AccordionTrigger className="text-base sm:text-lg">Additional Notes</AccordionTrigger>
+            <AccordionContent>
               <p className="text-slate-700 whitespace-pre-wrap">{profile.additionalNotes}</p>
-            </CardContent>
-          </Card>
+            </AccordionContent>
+          </AccordionItem>
         )}
-      </div>
+      </Accordion>
     </div>
   );
 }

@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Sparkles, Copy, AlertCircle, History, RefreshCw, Eye, ExternalLink, FileText, Play, Lock, Mail, MessageCircle } from "lucide-react";
 import { ResumeEvaluationDisplay } from "./resume-evaluation-display";
-import type { ResumeEvaluation, OptimizationIteration } from "@/types";
+import type { ResumeEvaluation, OptimizationIteration, ResumeProfile } from "@/types";
 
 interface ResumeGeneratorProps {
   clientId: string;
@@ -42,11 +43,32 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
   const [isProcessing, setIsProcessing] = useState(false);
   const maxIterations = 10;
 
+  const { data: resumeProfiles = [] } = useQuery<ResumeProfile[]>({
+    queryKey: ["/api/resume-profiles", clientId],
+    enabled: !!clientId,
+  });
+
+  const defaultProfile = useMemo(
+    () => resumeProfiles.find((p) => p.isDefault) ?? resumeProfiles[0] ?? null,
+    [resumeProfiles]
+  );
+
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedProfileId && defaultProfile?.id) {
+      setSelectedProfileId(defaultProfile.id);
+    }
+  }, [defaultProfile?.id, selectedProfileId]);
+
+  const effectiveHasBaseResume = hasBaseResume || resumeProfiles.length > 0;
+
   // Generate initial resume (Agent 1: Tailor)
   const generateResume = useMutation({
     mutationFn: async (jobDesc: string) => {
       const response = await apiRequest("POST", `/api/generate-resume/${clientId}`, {
         jobDescription: jobDesc,
+        ...(selectedProfileId ? { resumeProfileId: selectedProfileId } : {}),
       });
       if (response.status === 402) {
         const errorData = await response.json();
@@ -284,13 +306,37 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
             </Alert>
           )}
 
-          {!hasBaseResume && (
+          {!effectiveHasBaseResume && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Client hasn't uploaded a LaTeX resume template yet
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Base Resume Profile Selector */}
+          {resumeProfiles.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">
+                Base Resume Profile
+              </label>
+              <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
+                <SelectTrigger disabled={!userHasApiKey || isProcessing || isLocked}>
+                  <SelectValue placeholder="Select a base resume profile" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resumeProfiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}{p.isDefault ? " (Default)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">
+                The selected profile’s base LaTeX will be used for tailoring.
+              </p>
+            </div>
           )}
 
           {/* Job Description Input */}
@@ -303,7 +349,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste the full job description here..."
               className="min-h-[200px] font-mono text-sm"
-              disabled={!userHasApiKey || !hasBaseResume || isProcessing || isLocked}
+              disabled={!userHasApiKey || !effectiveHasBaseResume || isProcessing || isLocked}
             />
           </div>
 
@@ -311,7 +357,7 @@ export function ResumeGenerator({ clientId, hasBaseResume, userHasApiKey, resume
           <div className="flex gap-2">
             <Button
               onClick={handleGenerate}
-              disabled={isProcessing || !userHasApiKey || !hasBaseResume || isLocked}
+              disabled={isProcessing || !userHasApiKey || !effectiveHasBaseResume || isLocked}
               className="flex-1"
               size="lg"
             >

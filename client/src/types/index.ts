@@ -179,6 +179,16 @@ export type ClientProfile = {
   user?: User;
 };
 
+export type ResumeProfile = {
+  id: string;
+  clientId: string;
+  name: string;
+  baseResumeLatex: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ResumeEvaluation = {
   score: number;
   overallAssessment: string;

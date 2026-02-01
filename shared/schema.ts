@@ -120,6 +120,24 @@ export const clientProfiles = pgTable(
   ]
 );
 
+// Resume profiles table (multiple base resumes per client)
+// NOTE: This table already exists in the live database as `resume_profiles`
+export const resumeProfiles = pgTable(
+  "resume_profiles",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    clientId: uuid("client_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    baseResumeLatex: text("base_resume_latex").notNull(),
+    isDefault: boolean("is_default").default(sql`false`).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_resume_profiles_client").on(table.clientId),
+  ]
+);
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   clientApplications: many(jobApplications, { relationName: "client" }),
@@ -148,6 +166,14 @@ export const clientProfilesRelations = relations(clientProfiles, ({ one }) => ({
     fields: [clientProfiles.userId],
     references: [users.id],
     relationName: "client",
+  }),
+}));
+
+export const resumeProfilesRelations = relations(resumeProfiles, ({ one }) => ({
+  client: one(users, {
+    fields: [resumeProfiles.clientId],
+    references: [users.id],
+    relationName: "resumeProfileClient",
   }),
 }));
 
@@ -281,6 +307,14 @@ export const insertClientProfileSchema = createInsertSchema(clientProfiles)
 
 export const updateClientProfileSchema = insertClientProfileSchema.partial();
 
+export const insertResumeProfileSchema = createInsertSchema(resumeProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+} as any);
+
+export const updateResumeProfileSchema = insertResumeProfileSchema.partial();
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -291,6 +325,9 @@ export type UpdateJobApplication = z.infer<typeof updateJobApplicationSchema>;
 export type ClientProfile = typeof clientProfiles.$inferSelect;
 export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
 export type UpdateClientProfile = z.infer<typeof updateClientProfileSchema>;
+export type ResumeProfile = typeof resumeProfiles.$inferSelect;
+export type InsertResumeProfile = z.infer<typeof insertResumeProfileSchema>;
+export type UpdateResumeProfile = z.infer<typeof updateResumeProfileSchema>;
 
 // Types with relations
 export type UserWithApplications = User & {

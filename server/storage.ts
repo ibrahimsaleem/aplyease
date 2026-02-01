@@ -1,4 +1,4 @@
-import { users, jobApplications, clientProfiles, employeeAssignments, paymentTransactions, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type EmployeeAssignment, type InsertEmployeeAssignment, type PaymentTransaction, type InsertPaymentTransaction } from "../shared/schema";
+import { users, jobApplications, clientProfiles, resumeProfiles, employeeAssignments, paymentTransactions, type User, type InsertUser, type UpdateUser, type JobApplication, type InsertJobApplication, type UpdateJobApplication, type JobApplicationWithUsers, type ClientProfile, type InsertClientProfile, type UpdateClientProfile, type ClientProfileWithUser, type ResumeProfile, type InsertResumeProfile, type UpdateResumeProfile, type EmployeeAssignment, type InsertEmployeeAssignment, type PaymentTransaction, type InsertPaymentTransaction } from "../shared/schema";
 import { db } from "./db";
 import { eq, and, like, ilike, desc, asc, count, sql, gte, lt, lte, or, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -139,6 +139,15 @@ export interface IStorage {
   getClientProfile(userId: string): Promise<ClientProfileWithUser | undefined>;
   upsertClientProfile(userId: string, profile: InsertClientProfile | UpdateClientProfile): Promise<ClientProfile>;
   listClientProfiles(): Promise<ClientProfileWithUser[]>;
+
+  // Resume profile operations (multiple base resumes per client)
+  listResumeProfiles(clientId: string): Promise<ResumeProfile[]>;
+  getResumeProfile(clientId: string, profileId: string): Promise<ResumeProfile | undefined>;
+  getDefaultResumeProfile(clientId: string): Promise<ResumeProfile | undefined>;
+  createResumeProfile(clientId: string, profile: Omit<InsertResumeProfile, "clientId">): Promise<ResumeProfile>;
+  updateResumeProfile(clientId: string, profileId: string, profile: UpdateResumeProfile): Promise<ResumeProfile | undefined>;
+  deleteResumeProfile(clientId: string, profileId: string): Promise<boolean>;
+  setDefaultResumeProfile(clientId: string, profileId: string): Promise<ResumeProfile | undefined>;
 
   // Employee Assignment operations
   assignEmployee(clientId: string, employeeId: string): Promise<EmployeeAssignment>;
@@ -1480,6 +1489,117 @@ export class DatabaseStorage implements IStorage {
         ...p.client_profiles,
         user: p.users || undefined,
       }));
+    });
+  }
+
+  // Resume profile operations
+  async listResumeProfiles(clientId: string): Promise<ResumeProfile[]> {
+    return retryOperation(async () => {
+      return await db
+        .select()
+        .from(resumeProfiles)
+        .where(eq(resumeProfiles.clientId, clientId))
+        .orderBy(desc(resumeProfiles.isDefault), asc(resumeProfiles.name), desc(resumeProfiles.createdAt));
+    });
+  }
+
+  async getResumeProfile(clientId: string, profileId: string): Promise<ResumeProfile | undefined> {
+    return retryOperation(async () => {
+      const [profile] = await db
+        .select()
+        .from(resumeProfiles)
+        .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.id, profileId)));
+      return profile;
+    });
+  }
+
+  async getDefaultResumeProfile(clientId: string): Promise<ResumeProfile | undefined> {
+    return retryOperation(async () => {
+      const [profile] = await db
+        .select()
+        .from(resumeProfiles)
+        .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.isDefault, true)))
+        .orderBy(desc(resumeProfiles.updatedAt));
+      return profile;
+    });
+  }
+
+  async createResumeProfile(clientId: string, profile: Omit<InsertResumeProfile, "clientId">): Promise<ResumeProfile> {
+    return retryOperation(async () => {
+      return await db.transaction(async (tx) => {
+        const shouldBeDefault = !!(profile as any).isDefault;
+        if (shouldBeDefault) {
+          await tx
+            .update(resumeProfiles)
+            .set({ isDefault: false, updatedAt: sql`now()` } as any)
+            .where(eq(resumeProfiles.clientId, clientId));
+        }
+
+        const [created] = await tx
+          .insert(resumeProfiles)
+          .values({
+            clientId,
+            name: (profile as any).name,
+            baseResumeLatex: (profile as any).baseResumeLatex,
+            isDefault: shouldBeDefault,
+          } as any)
+          .returning();
+
+        return created;
+      });
+    });
+  }
+
+  async updateResumeProfile(clientId: string, profileId: string, profile: UpdateResumeProfile): Promise<ResumeProfile | undefined> {
+    return retryOperation(async () => {
+      const [updated] = await db
+        .update(resumeProfiles)
+        .set({
+          ...((profile as any).name !== undefined ? { name: (profile as any).name } : {}),
+          ...((profile as any).baseResumeLatex !== undefined ? { baseResumeLatex: (profile as any).baseResumeLatex } : {}),
+          updatedAt: sql`now()`,
+        } as any)
+        .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.id, profileId)))
+        .returning();
+
+      return updated;
+    });
+  }
+
+  async deleteResumeProfile(clientId: string, profileId: string): Promise<boolean> {
+    return retryOperation(async () => {
+      const deleted = await db
+        .delete(resumeProfiles)
+        .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.id, profileId)))
+        .returning({ id: resumeProfiles.id });
+      return deleted.length > 0;
+    });
+  }
+
+  async setDefaultResumeProfile(clientId: string, profileId: string): Promise<ResumeProfile | undefined> {
+    return retryOperation(async () => {
+      return await db.transaction(async (tx) => {
+        // Ensure the profile exists for this client
+        const [existing] = await tx
+          .select()
+          .from(resumeProfiles)
+          .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.id, profileId)));
+
+        if (!existing) return undefined;
+
+        await tx
+          .update(resumeProfiles)
+          .set({ isDefault: false, updatedAt: sql`now()` } as any)
+          .where(eq(resumeProfiles.clientId, clientId));
+
+        const [updated] = await tx
+          .update(resumeProfiles)
+          .set({ isDefault: true, updatedAt: sql`now()` } as any)
+          .where(and(eq(resumeProfiles.clientId, clientId), eq(resumeProfiles.id, profileId)))
+          .returning();
+
+        return updated;
+      });
     });
   }
 

@@ -524,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate-resume/:clientId", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.params;
-      const { jobDescription } = req.body;
+      const { jobDescription, resumeProfileId } = req.body;
       const currentUser = (req.user ?? req.session.user)!;
 
       if (!jobDescription || typeof jobDescription !== 'string') {
@@ -566,9 +566,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get client's base resume LaTeX
-      const clientProfile = await storage.getClientProfile(clientId);
-      if (!clientProfile || !clientProfile.baseResumeLatex) {
+      // Resolve base resume LaTeX from (1) selected resume profile, (2) default resume profile, (3) legacy client profile field
+      let baseResumeLatex: string | undefined;
+
+      if (resumeProfileId && typeof resumeProfileId === "string") {
+        const selected = await storage.getResumeProfile(clientId, resumeProfileId);
+        if (!selected) {
+          return res.status(400).json({ message: "Selected resume profile not found for this client" });
+        }
+        baseResumeLatex = selected.baseResumeLatex;
+      } else {
+        const defaultProfile = await storage.getDefaultResumeProfile(clientId);
+        if (defaultProfile?.baseResumeLatex) {
+          baseResumeLatex = defaultProfile.baseResumeLatex;
+        }
+      }
+
+      if (!baseResumeLatex) {
+        const clientProfile = await storage.getClientProfile(clientId);
+        if (clientProfile?.baseResumeLatex) {
+          baseResumeLatex = clientProfile.baseResumeLatex;
+        }
+      }
+
+      if (!baseResumeLatex) {
         return res.status(400).json({ message: "Client hasn't uploaded a LaTeX resume template" });
       }
 
@@ -622,7 +643,7 @@ Return only the complete, optimized LaTeX code.
 Do not include explanations, comments, markdown syntax, or code block markers.
 
 Base Resume:
-${clientProfile.baseResumeLatex}
+${baseResumeLatex}
 
 Job Description:
 ${jobDescription}
@@ -793,6 +814,137 @@ Provide your evaluation in valid JSON format only, no other text:`;
         message: "Failed to evaluate resume",
         details: error.message || "Unknown error"
       });
+    }
+  });
+
+  // Resume profile CRUD (multiple base resume templates per client)
+  app.get("/api/resume-profiles/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const profiles = await storage.listResumeProfiles(clientId);
+      res.json(profiles);
+    } catch (error: any) {
+      console.error("Error listing resume profiles:", error);
+      res.status(500).json({ message: "Failed to list resume profiles" });
+    }
+  });
+
+  app.post("/api/resume-profiles/:clientId", requireAuth, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { name, baseResumeLatex, isDefault } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!name || typeof name !== "string") {
+        return res.status(400).json({ message: "name is required" });
+      }
+      if (!baseResumeLatex || typeof baseResumeLatex !== "string") {
+        return res.status(400).json({ message: "baseResumeLatex is required" });
+      }
+
+      const created = await storage.createResumeProfile(clientId, {
+        name,
+        baseResumeLatex,
+        isDefault: !!isDefault,
+      } as any);
+
+      res.json(created);
+    } catch (error: any) {
+      console.error("Error creating resume profile:", error);
+      res.status(500).json({ message: "Failed to create resume profile" });
+    }
+  });
+
+  app.put("/api/resume-profiles/:clientId/:profileId", requireAuth, async (req, res) => {
+    try {
+      const { clientId, profileId } = req.params;
+      const { name, baseResumeLatex } = req.body;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateResumeProfile(clientId, profileId, {
+        ...(name !== undefined ? { name } : {}),
+        ...(baseResumeLatex !== undefined ? { baseResumeLatex } : {}),
+      } as any);
+
+      if (!updated) {
+        return res.status(404).json({ message: "Resume profile not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating resume profile:", error);
+      res.status(500).json({ message: "Failed to update resume profile" });
+    }
+  });
+
+  app.post("/api/resume-profiles/:clientId/:profileId/default", requireAuth, async (req, res) => {
+    try {
+      const { clientId, profileId } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.setDefaultResumeProfile(clientId, profileId);
+      if (!updated) {
+        return res.status(404).json({ message: "Resume profile not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error setting default resume profile:", error);
+      res.status(500).json({ message: "Failed to set default resume profile" });
+    }
+  });
+
+  app.delete("/api/resume-profiles/:clientId/:profileId", requireAuth, async (req, res) => {
+    try {
+      const { clientId, profileId } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (currentUser.role === "CLIENT" && currentUser.id !== clientId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (currentUser.role !== "ADMIN" && currentUser.role !== "EMPLOYEE" && currentUser.role !== "CLIENT") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const ok = await storage.deleteResumeProfile(clientId, profileId);
+      if (!ok) {
+        return res.status(404).json({ message: "Resume profile not found" });
+      }
+
+      res.json({ ok: true });
+    } catch (error: any) {
+      console.error("Error deleting resume profile:", error);
+      res.status(500).json({ message: "Failed to delete resume profile" });
     }
   });
 

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { NavigationHeader } from "@/components/navigation-header";
 import { ClientProfileView } from "@/components/client-profile-view";
 import { apiRequest } from "@/lib/queryClient";
@@ -252,420 +253,442 @@ export default function ClientProfile() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Basic Information</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter your first and last name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <Accordion
+                  type="multiple"
+                  defaultValue={["basic", "job", "location"]}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4"
+                >
+                  <AccordionItem value="basic">
+                    <AccordionTrigger className="text-base sm:text-lg">Basic Information</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="fullName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Enter your first and last name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="contactEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Email (Optional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="email" placeholder="Email for job applications" />
-                        </FormControl>
-                        <FormDescription>
-                          We'll use this in job applications. Leave blank to create a new one.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="contactEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Contact Email (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="email" placeholder="Email for job applications" />
+                              </FormControl>
+                              <FormDescription>
+                                We'll use this in job applications. Leave blank to create a new one.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="contactPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Password (Optional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="password" placeholder="Password for application portals" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="contactPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Contact Password (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="password" placeholder="Password for application portals" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number (WhatsApp) *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="For quick calls or SMS reminders" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="phoneNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number (WhatsApp) *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="For quick calls or SMS reminders" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="mailingAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mailing Address *</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Street, City, State, ZIP – needed for job applications" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="mailingAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mailing Address *</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Street, City, State, ZIP – needed for job applications" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Employment Situation */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Current Situation</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="situation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What best describes your situation? *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Student, Employed, Unemployed" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  <AccordionItem value="currentSituation">
+                    <AccordionTrigger className="text-base sm:text-lg">Current Situation</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="situation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What best describes your situation? *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., Student, Employed, Unemployed" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Services */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Services</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="servicesRequested"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Which services would you like?</FormLabel>
-                        {serviceOptions.map((service) => (
-                          <FormField
-                            key={service}
-                            control={form.control}
-                            name="servicesRequested"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
+                  <AccordionItem value="services">
+                    <AccordionTrigger className="text-base sm:text-lg">Services</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="servicesRequested"
+                          render={() => (
+                            <FormItem>
+                              <FormLabel>Which services would you like?</FormLabel>
+                              {serviceOptions.map((service) => (
+                                <FormField
                                   key={service}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(service)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, service])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== service
-                                              )
-                                            )
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {service}
-                                  </FormLabel>
-                                </FormItem>
-                              )
-                            }}
-                          />
-                        ))}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                                  control={form.control}
+                                  name="servicesRequested"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem
+                                        key={service}
+                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                      >
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(service)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...field.value, service])
+                                                : field.onChange(
+                                                    field.value?.filter(
+                                                      (value) => value !== service
+                                                    )
+                                                  )
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                          {service}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )
+                                  }}
+                                />
+                              ))}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="applicationQuota"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>How many applications? *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                            placeholder="500, 1000, etc." 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="applicationQuota"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>How many applications? *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number" 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  placeholder="500, 1000, etc." 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preferred Start Date</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" />
-                        </FormControl>
-                        <FormDescription>
-                          When should we begin submitting your applications?
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preferred Start Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="date" />
+                              </FormControl>
+                              <FormDescription>
+                                When should we begin submitting your applications?
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Location Preferences */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Location Preferences</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="searchScope"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Where should we search? *</FormLabel>
-                        {searchScopeOptions.map((option) => (
-                          <FormField
-                            key={option}
-                            control={form.control}
-                            name="searchScope"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
+                  <AccordionItem value="location">
+                    <AccordionTrigger className="text-base sm:text-lg">Location Preferences</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="searchScope"
+                          render={() => (
+                            <FormItem>
+                              <FormLabel>Where should we search? *</FormLabel>
+                              {searchScopeOptions.map((option) => (
+                                <FormField
                                   key={option}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(option)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, option])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== option
-                                              )
-                                            )
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {option}
-                                  </FormLabel>
-                                </FormItem>
-                              )
-                            }}
-                          />
-                        ))}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                                  control={form.control}
+                                  name="searchScope"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem
+                                        key={option}
+                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                      >
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(option)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...field.value, option])
+                                                : field.onChange(
+                                                    field.value?.filter(
+                                                      (value) => value !== option
+                                                    )
+                                                  )
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                          {option}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )
+                                  }}
+                                />
+                              ))}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="states"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specific States (if applicable)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            value={statesInput}
-                            onChange={(e) => {
-                              setStatesInput(e.target.value);
-                              field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean));
-                            }}
-                            placeholder="California, New York, Texas (comma-separated)" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="states"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Specific States (if applicable)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  value={statesInput}
+                                  onChange={(e) => {
+                                    setStatesInput(e.target.value);
+                                    field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean));
+                                  }}
+                                  placeholder="California, New York, Texas (comma-separated)" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="cities"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specific Cities (if applicable)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            value={citiesInput}
-                            onChange={(e) => {
-                              setCitiesInput(e.target.value);
-                              field.onChange(e.target.value.split(',').map(c => c.trim()).filter(Boolean));
-                            }}
-                            placeholder="San Francisco, Austin, Seattle (comma-separated)" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="cities"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Specific Cities (if applicable)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  value={citiesInput}
+                                  onChange={(e) => {
+                                    setCitiesInput(e.target.value);
+                                    field.onChange(e.target.value.split(',').map(c => c.trim()).filter(Boolean));
+                                  }}
+                                  placeholder="San Francisco, Austin, Seattle (comma-separated)" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Job Preferences */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Job Preferences</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="desiredTitles"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Desired Job Titles *</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder='e.g., "Data Analyst Summer Intern," "Senior Mechanical Engineer"' />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <AccordionItem value="job">
+                    <AccordionTrigger className="text-base sm:text-lg">Job Preferences</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="desiredTitles"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Desired Job Titles *</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder='e.g., "Data Analyst Summer Intern," "Senior Mechanical Engineer"' />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="targetCompanies"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Industries or Companies (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Helps us narrow your search" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="targetCompanies"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Target Industries or Companies (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Helps us narrow your search" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Documents & Links */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Documents & Links</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="resumeUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Resume/CV URL</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="url" placeholder="https://..." />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <AccordionItem value="documents">
+                    <AccordionTrigger className="text-base sm:text-lg">Documents & Links</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="resumeUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Resume/CV URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="url" placeholder="https://..." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="linkedinUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>LinkedIn Profile URL (Optional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="url" placeholder="https://linkedin.com/in/..." />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        <FormField
+                          control={form.control}
+                          name="linkedinUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>LinkedIn Profile URL (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="url" placeholder="https://linkedin.com/in/..." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="baseResumeLatex"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Base Resume LaTeX Code</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            className="font-mono min-h-[200px]" 
-                            placeholder="\documentclass{article}..." 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Paste your LaTeX resume template here
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="baseResumeLatex"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Legacy Base Resume LaTeX Code</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  {...field} 
+                                  className="font-mono min-h-[200px]" 
+                                  placeholder="\\documentclass{article}..." 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Optional legacy field. Prefer using Resume Profiles in the resume templates section.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Work Authorization */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Work Authorization</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="workAuthorization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Work Authorization / Visa Status *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder='e.g., "F-1 OPT until Dec 2027," "U.S. Citizen"' />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <AccordionItem value="workAuth">
+                    <AccordionTrigger className="text-base sm:text-lg">Work Authorization</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="workAuthorization"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Work Authorization / Visa Status *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder='e.g., "F-1 OPT until Dec 2027," "U.S. Citizen"' />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <FormField
-                    control={form.control}
-                    name="sponsorshipAnswer"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sponsorship Required? *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Yes / No" />
-                        </FormControl>
-                        <FormDescription>
-                          What to answer when asked if sponsorship is required in job applications
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <FormField
+                          control={form.control}
+                          name="sponsorshipAnswer"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sponsorship Required? *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Yes / No" />
+                              </FormControl>
+                              <FormDescription>
+                                What to answer when asked if sponsorship is required in job applications
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* Additional Notes */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Additional Information</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="additionalNotes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Notes or Special Requests</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Visa constraints, salary targets, or other preferences" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  <AccordionItem value="additional">
+                    <AccordionTrigger className="text-base sm:text-lg">Additional Information</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="additionalNotes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Additional Notes or Special Requests</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Visa constraints, salary targets, or other preferences" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
 
                 <div className="flex justify-end gap-4">
                   {isOwnProfile && editMode && (
