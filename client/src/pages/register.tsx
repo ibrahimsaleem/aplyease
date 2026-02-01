@@ -12,6 +12,7 @@ import { Link, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FuturisticBackground } from "@/components/ui/futuristic-background";
 import { motion } from "framer-motion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const PACKAGE_OPTIONS: Array<{
     value: string;
@@ -67,6 +68,8 @@ export default function RegisterPage() {
     const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedRole, setSelectedRole] = useState<"CLIENT" | "EMPLOYEE" | null>(null);
+    const [couponCode, setCouponCode] = useState("");
+    const [showCoupon, setShowCoupon] = useState(false);
 
     // Parse query params for role and package
     const getParamsFromUrl = () => {
@@ -120,6 +123,7 @@ export default function RegisterPage() {
                 body: JSON.stringify({
                     ...data,
                     role: "CLIENT",
+                    couponCode: couponCode.trim() ? couponCode.trim() : undefined,
                 }),
             });
 
@@ -188,7 +192,7 @@ export default function RegisterPage() {
     if (registeredUserId) {
         const isEmployee = selectedRole === "EMPLOYEE";
         return (
-            <FuturisticBackground className="min-h-screen flex items-center justify-center">
+            <FuturisticBackground className="min-h-screen flex items-start sm:items-center justify-center py-10">
                 <Card className="max-w-md w-full mx-4 shadow-xl">
                     <CardHeader className="text-center">
                         <div className={`mx-auto p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 ${isEmployee ? 'bg-amber-100' : 'bg-green-100'}`}>
@@ -234,18 +238,20 @@ export default function RegisterPage() {
     // Role selection screen
     if (!selectedRole) {
         return (
-            <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
+            <FuturisticBackground className="min-h-screen flex items-start sm:items-center justify-center py-10">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                     className="max-w-lg w-full mx-4 relative"
                 >
-                    <Link href="/">
-                        <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
-                            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
-                        </Button>
-                    </Link>
+                    <div className="mb-4 sm:mb-0 sm:absolute sm:-top-16 sm:left-0">
+                        <Link href="/">
+                            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
+                                <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                            </Button>
+                        </Link>
+                    </div>
                     <div className="text-center mb-8">
                         <Link href="/">
                             <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20">
@@ -302,13 +308,15 @@ export default function RegisterPage() {
     // Client registration form
     if (selectedRole === "CLIENT") {
         return (
-            <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
-                <div className="max-w-md w-full mx-4 relative">
-                    <Link href="/">
-                        <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
-                            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
-                        </Button>
-                    </Link>
+            <FuturisticBackground className="min-h-screen flex items-start sm:items-center justify-center py-10">
+                <div className="max-w-md w-full px-4 relative">
+                    <div className="mb-4 sm:mb-0 sm:absolute sm:-top-16 sm:left-0">
+                        <Link href="/">
+                            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
+                                <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                            </Button>
+                        </Link>
+                    </div>
                     <div className="text-center mb-8">
                         <Link href="/">
                             <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
@@ -323,7 +331,7 @@ export default function RegisterPage() {
                     </div>
 
                     <Card className="shadow-xl">
-                        <CardContent className="p-8">
+                        <CardContent className="p-6 sm:p-8">
                             <Form {...clientForm}>
                                 <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-6">
                                     <FormField
@@ -378,6 +386,37 @@ export default function RegisterPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Coupon code (optional) */}
+                                    <Collapsible open={showCoupon} onOpenChange={setShowCoupon}>
+                                        <CollapsibleTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full justify-between"
+                                            >
+                                                <span>Have a coupon?</span>
+                                                <span className="text-xs text-slate-500">
+                                                    {showCoupon ? "Hide" : "Enter code"}
+                                                </span>
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                            <div className="mt-3 space-y-2">
+                                                <FormItem>
+                                                    <FormLabel>Coupon Code</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            value={couponCode}
+                                                            onChange={(e) => setCouponCode(e.target.value)}
+                                                            placeholder="Enter coupon code"
+                                                            autoCapitalize="characters"
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            </div>
+                                        </CollapsibleContent>
+                                    </Collapsible>
 
                                     <FormField
                                         control={clientForm.control}
@@ -475,13 +514,15 @@ export default function RegisterPage() {
 
     // Employee registration form
     return (
-        <FuturisticBackground className="min-h-screen flex items-center justify-center py-12">
-            <div className="max-w-md w-full mx-4 relative">
-                <Link href="/">
-                    <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
-                        <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
-                    </Button>
-                </Link>
+        <FuturisticBackground className="min-h-screen flex items-start sm:items-center justify-center py-10">
+            <div className="max-w-md w-full px-4 relative">
+                <div className="mb-4 sm:mb-0 sm:absolute sm:-top-16 sm:left-0">
+                    <Link href="/">
+                        <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
+                            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+                        </Button>
+                    </Link>
+                </div>
                 <div className="text-center mb-8">
                     <Link href="/">
                         <div className="bg-primary text-white p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
@@ -496,7 +537,7 @@ export default function RegisterPage() {
                 </div>
 
                 <Card className="shadow-xl">
-                    <CardContent className="p-8">
+                    <CardContent className="p-6 sm:p-8">
                         <Form {...employeeForm}>
                             <form onSubmit={employeeForm.handleSubmit(onEmployeeSubmit)} className="space-y-6">
                                 <FormField

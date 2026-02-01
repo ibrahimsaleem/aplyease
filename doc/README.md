@@ -2,6 +2,19 @@
 
 A comprehensive web application for managing job applications with role-based access control for Administrators, Employees, and Clients.
 
+## Environment Variables
+
+### Signup coupon codes (optional)
+
+You can enable **client signup coupon codes** (percentage discounts) by setting:
+
+```env
+SIGNUP_COUPONS=<CODE>:<PERCENT>,<CODE2>:<PERCENT2>
+```
+
+- Coupon codes are **case-insensitive** (we normalize to uppercase).
+- The discount is applied to the selected package price and saved into the client’s **pending amount** (`amountDue`).
+
 ## 🚀 Features Overview
 
 ### **For Administrators**

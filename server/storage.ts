@@ -195,6 +195,8 @@ export class DatabaseStorage implements IStorage {
           company: (userData as any).company,
           packageTier: userData.packageTier,
           applicationsRemaining: (userData as any).applicationsRemaining ?? 0,
+          amountPaid: (userData as any).amountPaid ?? 0,
+          amountDue: (userData as any).amountDue ?? 0,
           passwordHash,
           isActive: (userData as any).isActive ?? true,
           whatsappNumber: (userData as any).whatsappNumber,

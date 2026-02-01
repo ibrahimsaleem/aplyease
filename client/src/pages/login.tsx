@@ -63,13 +63,15 @@ export default function LoginPage() {
   const glassCardClass = "bg-white/80 backdrop-blur-md border-white/40 shadow-xl";
 
   return (
-    <FuturisticBackground className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full mx-4 relative">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="absolute -top-16 left-0 text-slate-600 hover:text-slate-900">
-            <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
-          </Button>
-        </Link>
+    <FuturisticBackground className="min-h-screen flex items-start sm:items-center justify-center py-10">
+      <div className="max-w-md w-full px-4 relative">
+        <div className="mb-4 sm:mb-0 sm:absolute sm:-top-16 sm:left-0">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
+              <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
+            </Button>
+          </Link>
+        </div>
         {/* Logo and Branding */}
         <div className="text-center mb-8">
           <Link href="/">
@@ -88,7 +90,7 @@ export default function LoginPage() {
           transition={{ duration: 0.5 }}
         >
           <Card className={`shadow-xl ${glassCardClass}`}>
-            <CardContent className="p-8">
+            <CardContent className="p-6 sm:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField

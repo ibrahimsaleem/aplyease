@@ -11,6 +11,23 @@ import { eq } from "drizzle-orm";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  function parseSignupCouponsEnv(envValue: string | undefined): Record<string, number> {
+    const map: Record<string, number> = {};
+    if (!envValue) return map;
+    for (const rawEntry of envValue.split(",")) {
+      const entry = rawEntry.trim();
+      if (!entry) continue;
+      const [rawCode, rawPct] = entry.split(":");
+      const code = rawCode?.trim()?.toUpperCase();
+      const pct = rawPct !== undefined ? Number(String(rawPct).trim()) : NaN;
+      if (!code || !Number.isFinite(pct)) continue;
+      // Clamp to sane range; invalid ranges are treated as unusable.
+      if (pct <= 0 || pct >= 100) continue;
+      map[code] = pct;
+    }
+    return map;
+  }
+
   // Rate limiter for registration
   const registerLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -134,23 +151,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine applications quota based on package (only for clients)
       let applicationsRemaining = 0;
+      let amountDue = 0; // in cents (pending amount)
       if (userRole === "CLIENT") {
         switch (userData.packageTier) {
           case "basic":
             applicationsRemaining = 250;
+            amountDue = 12500;
             break;
           case "standard":
             applicationsRemaining = 500;
+            amountDue = 29900;
             break;
           case "premium":
             applicationsRemaining = 1000;
+            amountDue = 35000;
             break;
           case "ultimate":
             applicationsRemaining = 1000;
+            amountDue = 59900;
             break;
           default:
             applicationsRemaining = 0;
+            amountDue = 0;
         }
+      }
+
+      // Optional coupon discounts (CLIENT only)
+      const rawCouponCode = (req.body as any)?.couponCode;
+      const couponCode = typeof rawCouponCode === "string" ? rawCouponCode.trim().toUpperCase() : "";
+      if (userRole === "CLIENT" && couponCode) {
+        const coupons = parseSignupCouponsEnv(process.env.SIGNUP_COUPONS);
+        const discountPct = coupons[couponCode];
+        if (!discountPct) {
+          return res.status(400).json({ message: "Invalid coupon code" });
+        }
+        // discounted = round(baseCents * (1 - discountPct/100))
+        amountDue = Math.max(0, Math.round(amountDue * (1 - discountPct / 100)));
       }
 
       const hashedPassword = await hashPassword(userData.password);
@@ -164,8 +200,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: userRole,
         passwordHash: hashedPassword,
         applicationsRemaining,
+        // For CLIENT signups, set pending amount due based on selected package
+        ...(userRole === "CLIENT" ? { amountDue, amountPaid: 0 } : {}),
         isActive: isActiveByDefault
       } as any);
+
+      // Safety: ensure amountDue persisted for CLIENT signups (older create paths may omit these fields)
+      if (userRole === "CLIENT" && amountDue > 0) {
+        await storage.updateUser(user.id, { amountDue, amountPaid: 0 } as any);
+      }
 
       // Create empty client profile only for clients
       if (userRole === "CLIENT") {

@@ -8,15 +8,16 @@ export default function PendingVerificationPage() {
     const logout = useLogout();
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
-            <Card className="max-w-md w-full mx-4 shadow-xl relative">
-                <div className="absolute -top-16 left-0">
+        <div className="min-h-screen flex items-start sm:items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 py-10">
+            <div className="w-full max-w-md px-4">
+                <div className="mb-4 sm:mb-0 sm:-mt-16">
                     <Link href="/">
                         <Button variant="ghost" size="sm" className="text-amber-800 hover:text-amber-900">
                             <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Back to Home
                         </Button>
                     </Link>
                 </div>
+                <Card className="w-full shadow-xl">
                 <CardHeader className="text-center">
                     <div className="mx-auto bg-amber-100 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4">
                         <Clock className="w-10 h-10 text-amber-600" />
@@ -89,6 +90,7 @@ export default function PendingVerificationPage() {
                     </div>
                 </CardContent>
             </Card>
+            </div>
         </div>
     );
 }
