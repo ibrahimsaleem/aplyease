@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Briefcase, Eye, EyeOff, CheckCircle, Users, User, ArrowRight } from "lucide-react";
+import { Briefcase, Eye, EyeOff, CheckCircle, Users, User, ArrowRight, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -214,14 +214,23 @@ export default function RegisterPage() {
                             <p className="text-xl font-mono font-bold text-slate-900 select-all">{registeredUserId}</p>
                         </div>
                         {isEmployee && (
-                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                                <p className="text-sm text-amber-800 font-medium mb-2">What happens next?</p>
-                                <ul className="text-sm text-amber-700 space-y-1">
-                                    <li>• An admin will review and verify your account</li>
-                                    <li>• Once verified, clients will be assigned to you</li>
-                                    <li>• You can then start applying on behalf of clients</li>
-                                </ul>
-                            </div>
+                            <>
+                                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                                    <p className="text-sm text-amber-800 font-medium mb-2">What happens next?</p>
+                                    <ul className="text-sm text-amber-700 space-y-1">
+                                        <li>• An admin will review and verify your account</li>
+                                        <li>• Once verified, clients will be assigned to you</li>
+                                        <li>• You can then start applying on behalf of clients</li>
+                                    </ul>
+                                    <p className="text-sm text-amber-700 mt-2">Book a slot for your verification round.</p>
+                                </div>
+                                <Button className="w-full bg-[#039BE5] hover:bg-[#0288D1] text-white border-none" asChild>
+                                    <a href="https://calendar.app.google/sdYc2yQeTHJRpk4k8" target="_blank" rel="noopener noreferrer">
+                                        <Calendar className="mr-2 h-4 w-4" />
+                                        Schedule verification meeting
+                                    </a>
+                                </Button>
+                            </>
                         )}
                         <div className="text-center text-sm text-slate-600">
                             Please save this ID for your records.

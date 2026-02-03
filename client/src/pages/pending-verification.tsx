@@ -1,4 +1,4 @@
-import { Briefcase, Clock, Mail, ArrowRight, MessageSquare } from "lucide-react";
+import { Clock, Mail, ArrowRight, MessageSquare, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/hooks/use-auth";
@@ -48,6 +48,9 @@ export default function PendingVerificationPage() {
                                 <span>You can then start applying on behalf of clients</span>
                             </li>
                         </ul>
+                        <p className="text-sm text-amber-700 mt-3">
+                            Book a slot below for your verification round.
+                        </p>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -63,6 +66,15 @@ export default function PendingVerificationPage() {
                     </div>
 
                     <div className="flex flex-col gap-3">
+                        <Button
+                            className="w-full bg-[#039BE5] hover:bg-[#0288D1] text-white border-none"
+                            asChild
+                        >
+                            <a href="https://calendar.app.google/sdYc2yQeTHJRpk4k8" target="_blank" rel="noopener noreferrer">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                Schedule verification meeting
+                            </a>
+                        </Button>
                         <Button
                             className="w-full bg-green-600 hover:bg-green-700 text-white border-none"
                             asChild
