@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Search, Trash2, Users, Sparkles, UserCheck, Clock, AlertCircle, MessageSquare } from "lucide-react";
+import { Plus, Edit, Search, Trash2, Users, Sparkles, UserCheck, Clock, AlertCircle, MessageSquare, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -156,6 +156,7 @@ export function UserManagement() {
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [customCredits, setCustomCredits] = useState<string>("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [showPendingApprovals, setShowPendingApprovals] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [userTab, setUserTab] = useState<"employees" | "clients">("employees");
 
@@ -675,60 +676,80 @@ export function UserManagement() {
         if (pendingEmployees.length === 0) return null;
         return (
           <div className="mx-6 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertCircle className="w-5 h-5 text-amber-600" />
-              <h3 className="font-semibold text-amber-800">
-                Pending Employee Approvals ({pendingEmployees.length})
-              </h3>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold text-amber-800">
+                  Pending Employee Approvals ({pendingEmployees.length})
+                </h3>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowPendingApprovals((p) => !p)}
+                className="text-amber-800 hover:text-amber-900 hover:bg-amber-100"
+              >
+                {showPendingApprovals ? (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" /> Hide
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="w-4 h-4 mr-1" /> Show
+                  </>
+                )}
+              </Button>
             </div>
-            <div className="space-y-2">
-              {pendingEmployees.map((emp) => (
-                <div key={emp.id} className="flex items-center justify-between bg-white p-3 rounded-md border border-amber-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 font-medium">{getInitials(emp.name)}</span>
+            {showPendingApprovals && (
+              <div className="space-y-2">
+                {pendingEmployees.map((emp) => (
+                  <div key={emp.id} className="flex items-center justify-between bg-white p-3 rounded-md border border-amber-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 font-medium">{getInitials(emp.name)}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{emp.name}</p>
+                        <p className="text-sm text-slate-500">{emp.email}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-slate-400 ml-2">
+                        <Clock className="w-3 h-3" />
+                        <span>Joined {new Date(emp.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{emp.name}</p>
-                      <p className="text-sm text-slate-500">{emp.email}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-400 ml-2">
-                      <Clock className="w-3 h-3" />
-                      <span>Joined {new Date(emp.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {emp.whatsappNumber && (
+                    <div className="flex items-center gap-2">
+                      {emp.whatsappNumber && (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white border-none"
+                          title="Contact on WhatsApp"
+                          onClick={() => window.open(`https://wa.me/${emp.whatsappNumber!.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(emp.name)},%20regarding%20your%20application%20to%20HireEase...`, '_blank')}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white border-none"
-                        title="Contact on WhatsApp"
-                        onClick={() => window.open(`https://wa.me/${emp.whatsappNumber!.replace(/[^0-9+]/g, '')}?text=Hi%20${encodeURIComponent(emp.name)},%20regarding%20your%20application%20to%20HireEase...`, '_blank')}
+                        variant="outline"
+                        onClick={() => handleEdit(emp)}
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(emp)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => enableUser.mutate(emp.id)}
-                      disabled={enableUser.isPending}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <UserCheck className="w-4 h-4 mr-1" />
-                      Approve
-                    </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => enableUser.mutate(emp.id)}
+                        disabled={enableUser.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <UserCheck className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}

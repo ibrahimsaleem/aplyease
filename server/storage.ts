@@ -1464,6 +1464,12 @@ export class DatabaseStorage implements IStorage {
         startDate: profileData.startDate && profileData.startDate.trim() !== ''
           ? profileData.startDate
           : null,
+        dateOfBirth: (profileData as any).dateOfBirth && String((profileData as any).dateOfBirth).trim() !== ""
+          ? (profileData as any).dateOfBirth
+          : null,
+        availabilityDate: (profileData as any).availabilityDate && String((profileData as any).availabilityDate).trim() !== ""
+          ? (profileData as any).availabilityDate
+          : null,
       };
 
       const [profile] = await db

@@ -40,6 +40,25 @@ const profileSchema = z.object({
   sponsorshipAnswer: z.string().min(1, "Sponsorship answer is required"),
   additionalNotes: z.string().optional(),
   baseResumeLatex: z.string().optional(),
+  // Optional client details (all optional)
+  dateOfBirth: z.string().optional(),
+  hasValidDrivingLicense: z.boolean().optional(),
+  desiredCompMin: z.number().int().min(0).optional(),
+  desiredCompMax: z.number().int().min(0).optional(),
+  desiredCompUnit: z.enum(["HOUR", "YEAR"]).optional(),
+  availabilityDate: z.string().optional(),
+  gender: z.enum(["M", "F", "DECLINE"]).optional(),
+  isHispanicLatino: z.enum(["YES", "NO", "DECLINE"]).optional(),
+  ethnicity: z.string().optional(),
+  veteranStatus: z.string().optional(),
+  disabilityStatus: z.string().optional(),
+  travelAvailability: z.enum(["0", "0_25", "50", "75_100"]).optional(),
+  knownLanguages: z.string().optional(),
+  workingShift: z.string().optional(),
+  canProveWorkAuthorization: z.boolean().optional(),
+  requiresSponsorship: z.boolean().optional(),
+  relatedToCompany: z.boolean().optional(),
+  referredByEmployee: z.boolean().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -131,6 +150,24 @@ export default function ClientProfile() {
       sponsorshipAnswer: profile.sponsorshipAnswer,
       additionalNotes: profile.additionalNotes || "",
       baseResumeLatex: profile.baseResumeLatex || "",
+      dateOfBirth: profile.dateOfBirth || "",
+      hasValidDrivingLicense: profile.hasValidDrivingLicense ?? false,
+      desiredCompMin: profile.desiredCompMin ?? 0,
+      desiredCompMax: profile.desiredCompMax ?? 0,
+      desiredCompUnit: profile.desiredCompUnit || undefined,
+      availabilityDate: profile.availabilityDate || "",
+      gender: profile.gender || undefined,
+      isHispanicLatino: profile.isHispanicLatino || undefined,
+      ethnicity: profile.ethnicity || "",
+      veteranStatus: profile.veteranStatus || "",
+      disabilityStatus: profile.disabilityStatus || "",
+      travelAvailability: profile.travelAvailability || undefined,
+      knownLanguages: profile.knownLanguages || "",
+      workingShift: profile.workingShift || "",
+      canProveWorkAuthorization: profile.canProveWorkAuthorization ?? false,
+      requiresSponsorship: profile.requiresSponsorship ?? false,
+      relatedToCompany: profile.relatedToCompany ?? false,
+      referredByEmployee: profile.referredByEmployee ?? false,
     } : {
       fullName: user?.name || "",
       contactEmail: "",
@@ -152,6 +189,24 @@ export default function ClientProfile() {
       sponsorshipAnswer: "",
       additionalNotes: "",
       baseResumeLatex: "",
+      dateOfBirth: "",
+      hasValidDrivingLicense: false,
+      desiredCompMin: 0,
+      desiredCompMax: 0,
+      desiredCompUnit: undefined,
+      availabilityDate: "",
+      gender: undefined,
+      isHispanicLatino: undefined,
+      ethnicity: "",
+      veteranStatus: "",
+      disabilityStatus: "",
+      travelAvailability: undefined,
+      knownLanguages: "",
+      workingShift: "",
+      canProveWorkAuthorization: false,
+      requiresSponsorship: false,
+      relatedToCompany: false,
+      referredByEmployee: false,
     },
   });
 
@@ -331,6 +386,346 @@ export default function ClientProfile() {
                                 <Textarea {...field} placeholder="Street, City, State, ZIP – needed for job applications" />
                               </FormControl>
                               <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="clientDetails">
+                    <AccordionTrigger className="text-base sm:text-lg">Client Details</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="dateOfBirth"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date of Birth</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="hasValidDrivingLicense"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between space-y-0">
+                              <div>
+                                <FormLabel>Valid Driving License</FormLabel>
+                                <FormDescription>Indicate if you currently hold a valid driving license.</FormDescription>
+                              </div>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="desiredCompMin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Desired Compensation (Min)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    placeholder="e.g. 50"
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                                  />
+                                </FormControl>
+                                <FormDescription>Enter numeric amount only.</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="desiredCompMax"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Desired Compensation (Max)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    placeholder="e.g. 70"
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="desiredCompUnit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Unit</FormLabel>
+                                <FormControl>
+                                  <select
+                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
+                                    value={field.value || ""}
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  >
+                                    <option value="">Select</option>
+                                    <option value="HOUR">Per Hour</option>
+                                    <option value="YEAR">Per Year</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="availabilityDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date of Availability / Joining</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="gender"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Gender</FormLabel>
+                                <FormControl>
+                                  <select
+                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
+                                    value={field.value || ""}
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  >
+                                    <option value="">Select</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="DECLINE">Decline to Answer</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="isHispanicLatino"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Are you Hispanic/Latino?</FormLabel>
+                                <FormControl>
+                                  <select
+                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
+                                    value={field.value || ""}
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  >
+                                    <option value="">Select</option>
+                                    <option value="YES">Yes</option>
+                                    <option value="NO">No</option>
+                                    <option value="DECLINE">Decline to Answer</option>
+                                  </select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="ethnicity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ethnicity</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="Asian, American, Black, European, Southeast Asian, etc. or prefer not to self identify"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="veteranStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Veteran Status</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder='e.g. "I am not a protected veteran", "I identify as one or more of the classifications of a protected veteran", or "I don\'t wish to answer"'
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="disabilityStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Disability Status</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder='e.g. "Yes, I have a disability, or have had one in the past", "No, I do not have a disability and have not had one in the past", or "I do not want to answer"'
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="travelAvailability"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Travel Availability</FormLabel>
+                              <FormControl>
+                                <select
+                                  className="border border-input bg-background px-3 py-2 rounded-md text-sm"
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(e.target.value || undefined)}
+                                >
+                                  <option value="">Select</option>
+                                  <option value="0">0%</option>
+                                  <option value="0_25">0–25%</option>
+                                  <option value="50">50%</option>
+                                  <option value="75_100">75–100%</option>
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="knownLanguages"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Known Languages</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="English, Spanish, etc." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="workingShift"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preferred Working Shift</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Day, Evening, Night, etc." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="canProveWorkAuthorization"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between space-y-0">
+                              <div>
+                                <FormLabel>If hired, can you provide proof of U.S. work authorization?</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="requiresSponsorship"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between space-y-0">
+                              <div>
+                                <FormLabel>Will you require sponsorship to work legally in the U.S. in the future?</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="relatedToCompany"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between space-y-0">
+                              <div>
+                                <FormLabel>Are you related to anyone at the company or its subsidiaries?</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="referredByEmployee"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between space-y-0">
+                              <div>
+                                <FormLabel>Were you referred to this position by a current employee?</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => field.onChange(!!checked)}
+                                />
+                              </FormControl>
                             </FormItem>
                           )}
                         />

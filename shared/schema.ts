@@ -98,6 +98,25 @@ export const clientProfiles = pgTable(
     phoneNumber: text("phone_number").notNull(),
     mailingAddress: text("mailing_address").notNull(),
     situation: text("situation").notNull(),
+    // Client details (optional)
+    dateOfBirth: date("date_of_birth"),
+    hasValidDrivingLicense: boolean("has_valid_driving_license"),
+    desiredCompMin: integer("desired_comp_min"), // cents
+    desiredCompMax: integer("desired_comp_max"), // cents
+    desiredCompUnit: text("desired_comp_unit"), // HOUR | YEAR
+    availabilityDate: date("availability_date"),
+    gender: text("gender"), // M | F | DECLINE
+    isHispanicLatino: text("is_hispanic_latino"), // YES | NO | DECLINE
+    ethnicity: text("ethnicity"),
+    veteranStatus: text("veteran_status"),
+    disabilityStatus: text("disability_status"),
+    travelAvailability: text("travel_availability"), // 0 | 0_25 | 50 | 75_100
+    knownLanguages: text("known_languages"), // comma-separated or freeform
+    workingShift: text("working_shift"),
+    canProveWorkAuthorization: boolean("can_prove_work_authorization"),
+    requiresSponsorship: boolean("requires_sponsorship"),
+    relatedToCompany: boolean("related_to_company"),
+    referredByEmployee: boolean("referred_by_employee"),
     servicesRequested: text("services_requested").notNull().default(sql`'[]'`), // JSON array as text
     applicationQuota: integer("application_quota").notNull().default(0),
     startDate: date("start_date"),
@@ -302,6 +321,12 @@ export const insertClientProfileSchema = createInsertSchema(clientProfiles)
     cities: z.array(z.string()).optional(),
     startDate: z.string().optional().nullable().transform((val) =>
       val && val.trim() !== '' ? val : undefined
+    ),
+    dateOfBirth: z.string().optional().nullable().transform((val) =>
+      val && val.trim() !== "" ? val : undefined
+    ),
+    availabilityDate: z.string().optional().nullable().transform((val) =>
+      val && val.trim() !== "" ? val : undefined
     ),
   });
 

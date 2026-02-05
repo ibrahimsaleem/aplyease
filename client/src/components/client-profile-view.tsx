@@ -24,6 +24,25 @@ const formatCurrency = (cents: number) => {
   }).format(cents / 100);
 };
 
+const formatDesiredCompensation = (
+  min?: number,
+  max?: number,
+  unit?: string
+) => {
+  if (!min && !max) return null;
+  const unitLabel = unit === "HOUR" ? "/ Hour" : unit === "YEAR" ? "/ Year" : "";
+  if (min && max) {
+    return `${formatCurrency(min)} - ${formatCurrency(max)} ${unitLabel}`.trim();
+  }
+  if (min) {
+    return `${formatCurrency(min)} ${unitLabel}`.trim();
+  }
+  if (max) {
+    return `${formatCurrency(max)} ${unitLabel}`.trim();
+  }
+  return null;
+};
+
 interface ClientProfileViewProps {
   profile: ClientProfile;
   stats?: ClientStats;
@@ -288,6 +307,180 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </CardContent>
         </Card>
 
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="clientDetails">
+          <AccordionTrigger className="text-base sm:text-lg">Client Details</AccordionTrigger>
+          <AccordionContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>Client Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {profile.dateOfBirth && (
+                  <div>
+                    <p className="text-sm text-slate-600">Date of Birth</p>
+                    <p className="font-medium">
+                      {new Date(profile.dateOfBirth).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+
+                {typeof profile.hasValidDrivingLicense === "boolean" && (
+                  <div>
+                    <p className="text-sm text-slate-600">Valid Driving License</p>
+                    <p className="font-medium">{profile.hasValidDrivingLicense ? "Yes" : "No"}</p>
+                  </div>
+                )}
+
+                {formatDesiredCompensation(
+                  profile.desiredCompMin,
+                  profile.desiredCompMax,
+                  profile.desiredCompUnit
+                ) && (
+                  <div>
+                    <p className="text-sm text-slate-600">Desired Compensation</p>
+                    <p className="font-medium">
+                      {formatDesiredCompensation(
+                        profile.desiredCompMin,
+                        profile.desiredCompMax,
+                        profile.desiredCompUnit
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {profile.availabilityDate && (
+                  <div>
+                    <p className="text-sm text-slate-600">Availability / Joining Date</p>
+                    <p className="font-medium">
+                      {new Date(profile.availabilityDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+
+                {profile.gender && (
+                  <div>
+                    <p className="text-sm text-slate-600">Gender</p>
+                    <p className="font-medium">
+                      {profile.gender === "M"
+                        ? "Male"
+                        : profile.gender === "F"
+                        ? "Female"
+                        : "Decline to Answer"}
+                    </p>
+                  </div>
+                )}
+
+                {profile.isHispanicLatino && (
+                  <div>
+                    <p className="text-sm text-slate-600">Hispanic/Latino</p>
+                    <p className="font-medium">
+                      {profile.isHispanicLatino === "YES"
+                        ? "Yes"
+                        : profile.isHispanicLatino === "NO"
+                        ? "No"
+                        : "Decline to Answer"}
+                    </p>
+                  </div>
+                )}
+
+                {profile.ethnicity && (
+                  <div>
+                    <p className="text-sm text-slate-600">Ethnicity</p>
+                    <p className="font-medium whitespace-pre-wrap">{profile.ethnicity}</p>
+                  </div>
+                )}
+
+                {profile.veteranStatus && (
+                  <div>
+                    <p className="text-sm text-slate-600">Veteran Status</p>
+                    <p className="font-medium whitespace-pre-wrap">{profile.veteranStatus}</p>
+                  </div>
+                )}
+
+                {profile.disabilityStatus && (
+                  <div>
+                    <p className="text-sm text-slate-600">Disability Status</p>
+                    <p className="font-medium whitespace-pre-wrap">{profile.disabilityStatus}</p>
+                  </div>
+                )}
+
+                {profile.travelAvailability && (
+                  <div>
+                    <p className="text-sm text-slate-600">Travel Availability</p>
+                    <p className="font-medium">
+                      {profile.travelAvailability === "0"
+                        ? "0%"
+                        : profile.travelAvailability === "0_25"
+                        ? "0–25%"
+                        : profile.travelAvailability === "50"
+                        ? "50%"
+                        : "75–100%"}
+                    </p>
+                  </div>
+                )}
+
+                {profile.knownLanguages && (
+                  <div>
+                    <p className="text-sm text-slate-600">Known Languages</p>
+                    <p className="font-medium">{profile.knownLanguages}</p>
+                  </div>
+                )}
+
+                {profile.workingShift && (
+                  <div>
+                    <p className="text-sm text-slate-600">Preferred Working Shift</p>
+                    <p className="font-medium">{profile.workingShift}</p>
+                  </div>
+                )}
+
+                {typeof profile.canProveWorkAuthorization === "boolean" && (
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Can Provide Proof of U.S. Work Authorization
+                    </p>
+                    <p className="font-medium">
+                      {profile.canProveWorkAuthorization ? "Yes" : "No"}
+                    </p>
+                  </div>
+                )}
+
+                {typeof profile.requiresSponsorship === "boolean" && (
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Requires Sponsorship Now or in the Future
+                    </p>
+                    <p className="font-medium">
+                      {profile.requiresSponsorship ? "Yes" : "No"}
+                    </p>
+                  </div>
+                )}
+
+                {typeof profile.relatedToCompany === "boolean" && (
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Related to Someone at the Company or Subsidiaries
+                    </p>
+                    <p className="font-medium">
+                      {profile.relatedToCompany ? "Yes" : "No"}
+                    </p>
+                  </div>
+                )}
+
+                {typeof profile.referredByEmployee === "boolean" && (
+                  <div>
+                    <p className="text-sm text-slate-600">
+                      Referred by a Current Employee
+                    </p>
+                    <p className="font-medium">
+                      {profile.referredByEmployee ? "Yes" : "No"}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </AccordionContent>
         </AccordionItem>
 

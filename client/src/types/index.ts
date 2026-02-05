@@ -160,6 +160,25 @@ export type ClientProfile = {
   phoneNumber: string;
   mailingAddress: string;
   situation: string;
+  // Optional client details
+  dateOfBirth?: string;
+  hasValidDrivingLicense?: boolean;
+  desiredCompMin?: number;
+  desiredCompMax?: number;
+  desiredCompUnit?: string; // "HOUR" | "YEAR"
+  availabilityDate?: string;
+  gender?: string; // "M" | "F" | "DECLINE"
+  isHispanicLatino?: string; // "YES" | "NO" | "DECLINE"
+  ethnicity?: string;
+  veteranStatus?: string;
+  disabilityStatus?: string;
+  travelAvailability?: string;
+  knownLanguages?: string;
+  workingShift?: string;
+  canProveWorkAuthorization?: boolean;
+  requiresSponsorship?: boolean;
+  relatedToCompany?: boolean;
+  referredByEmployee?: boolean;
   servicesRequested: string[];
   applicationQuota: number;
   startDate?: string;
