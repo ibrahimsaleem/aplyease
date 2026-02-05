@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NavigationHeader } from "@/components/navigation-header";
@@ -12,10 +12,33 @@ const FinancialOverview = lazy(() => import("@/components/financial-overview").t
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("applications");
+  const [isUnlockOpen, setIsUnlockOpen] = useState(false);
+  const [unlockCode, setUnlockCode] = useState("");
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    try {
+      return sessionStorage.getItem("aplyease:secureTabUnlocked") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  // If someone lands on the restricted tab without unlock, bounce them to the code prompt.
+  useEffect(() => {
+    if (activeTab === "financial" && !isUnlocked) {
+      setActiveTab("secure");
+      setIsUnlockOpen(true);
+    }
+  }, [activeTab, isUnlocked]);
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/stats/dashboard"],
@@ -24,6 +47,40 @@ export default function AdminDashboard() {
       return res.json();
     },
   });
+
+  const submitUnlock = async () => {
+    setUnlockError(null);
+    const trimmed = unlockCode.trim();
+    if (!trimmed) {
+      setUnlockError("Code is required.");
+      return;
+    }
+
+    setUnlocking(true);
+    try {
+      const res = await apiRequest("POST", "/api/admin/unlock-financial", { code: trimmed });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        setUnlockError(data?.message || "Invalid code.");
+        return;
+      }
+
+      try {
+        sessionStorage.setItem("aplyease:secureTabUnlocked", "true");
+      } catch {
+        // If storage is unavailable, still allow navigation for this session.
+      }
+      setIsUnlocked(true);
+
+      setIsUnlockOpen(false);
+      setUnlockCode("");
+      setActiveTab("financial");
+    } catch (e: any) {
+      setUnlockError(e?.message || "Failed to verify code.");
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   if (!user) {
     return <div>Loading...</div>;
@@ -46,9 +103,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="users" data-testid="tab-users">
               User Management
             </TabsTrigger>
-            <TabsTrigger value="financial" data-testid="tab-financial">
-              Financial
-            </TabsTrigger>
             <TabsTrigger value="employee-analytics" data-testid="tab-employee-analytics">
               Employee Analytics
             </TabsTrigger>
@@ -57,6 +111,13 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="monthly-payout" data-testid="tab-monthly-payout">
               Monthly Payout
+            </TabsTrigger>
+            <TabsTrigger
+              value="secure"
+              data-testid="tab-secure"
+              onClick={() => setIsUnlockOpen(true)}
+            >
+              Enter Code
             </TabsTrigger>
           </TabsList>
 
@@ -74,10 +135,34 @@ export default function AdminDashboard() {
             <UserManagement />
           </TabsContent>
 
+          <TabsContent value="secure" className="space-y-6">
+            <div className="rounded-lg border border-slate-200 bg-white p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-900">Restricted section</div>
+                  <div className="text-sm text-slate-600">Enter the secret code to continue.</div>
+                </div>
+                <Button onClick={() => setIsUnlockOpen(true)} variant="default">
+                  Enter Code
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="financial" className="space-y-6">
-            <Suspense fallback={<div>Loading financial overview...</div>}>
-              <FinancialOverview />
-            </Suspense>
+            {isUnlocked ? (
+              <Suspense fallback={<div>Loading...</div>}>
+                <FinancialOverview />
+              </Suspense>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-white p-6">
+                <div className="text-sm font-medium text-slate-900">Restricted section</div>
+                <div className="text-sm text-slate-600">Enter the secret code to continue.</div>
+                <div className="mt-4">
+                  <Button onClick={() => setIsUnlockOpen(true)}>Enter Code</Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="employee-analytics" className="space-y-6">
@@ -99,6 +184,35 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isUnlockOpen} onOpenChange={setIsUnlockOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter code</DialogTitle>
+            <DialogDescription>Enter the secret code to view the restricted section.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={unlockCode}
+              onChange={(e) => setUnlockCode(e.target.value)}
+              placeholder="Secret code"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitUnlock();
+              }}
+            />
+            {unlockError && <div className="text-sm text-red-600">{unlockError}</div>}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setIsUnlockOpen(false)} disabled={unlocking}>
+                Cancel
+              </Button>
+              <Button onClick={submitUnlock} disabled={unlocking}>
+                {unlocking ? "Verifying..." : "Continue"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

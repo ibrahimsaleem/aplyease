@@ -293,6 +293,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Restricted section unlock (Admin only) - verifies secret code server-side
+  app.post("/api/admin/unlock-financial", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+    try {
+      const code = typeof (req.body as any)?.code === "string" ? (req.body as any).code.trim() : "";
+      if (!code) {
+        return res.status(400).json({ ok: false, message: "Code is required" });
+      }
+
+      const expected = (process.env.FINANCIAL_ACCESS_CODE || "").trim();
+      if (!expected) {
+        console.warn("[unlock-financial] FINANCIAL_ACCESS_CODE is not set on server process");
+        return res.status(500).json({ ok: false, message: "Unlock code is not configured" });
+      }
+
+      if (code !== expected) {
+        console.warn("[unlock-financial] Invalid code attempt (code length:", code.length, ", expected length:", expected.length, ")");
+        return res.status(401).json({ ok: false, message: "Invalid code" });
+      }
+
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("Error verifying unlock code:", error);
+      return res.status(500).json({ ok: false, message: "Failed to verify code" });
+    }
+  });
+
   app.post("/api/users", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);

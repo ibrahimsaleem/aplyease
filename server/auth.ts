@@ -147,8 +147,14 @@ export function generateJWT(user: AuthenticatedUser) {
 export function verifyJWT(token: string): AuthenticatedUser | null {
   try {
     return jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
-  } catch (error) {
-    console.error("JWT verification failed:", error);
+  } catch (error: unknown) {
+    const isExpired = error && typeof error === "object" && "name" in error && (error as { name?: string }).name === "TokenExpiredError";
+    if (isExpired) {
+      // Expected when session expires; avoid full stack trace
+      console.warn("JWT expired; re-login required.");
+    } else {
+      console.error("JWT verification failed:", error);
+    }
     return null;
   }
 }

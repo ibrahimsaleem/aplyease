@@ -13,6 +13,7 @@ console.log('Environment check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
 console.log('- DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('- SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
+console.log('- FINANCIAL_ACCESS_CODE exists:', !!process.env.FINANCIAL_ACCESS_CODE);
 console.log('- PORT:', process.env.PORT);
 
 const app = express();
