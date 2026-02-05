@@ -581,7 +581,7 @@ export default function ClientProfile() {
                               <FormControl>
                                 <Textarea
                                   {...field}
-                                  placeholder='e.g. "I am not a protected veteran", "I identify as one or more of the classifications of a protected veteran", or "I don\'t wish to answer"'
+                                  placeholder="e.g. 'I am not a protected veteran', 'I identify as one or more of the classifications of a protected veteran', or 'I don't wish to answer'"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -598,7 +598,7 @@ export default function ClientProfile() {
                               <FormControl>
                                 <Textarea
                                   {...field}
-                                  placeholder='e.g. "Yes, I have a disability, or have had one in the past", "No, I do not have a disability and have not had one in the past", or "I do not want to answer"'
+                                  placeholder="e.g. 'Yes, I have a disability, or have had one in the past', 'No, I do not have a disability and have not had one in the past', or 'I do not want to answer'"
                                 />
                               </FormControl>
                               <FormMessage />
