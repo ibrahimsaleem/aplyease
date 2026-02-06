@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine applications quota based on package (only for clients)
       let applicationsRemaining = 0;
-      let amountDue = 0; // in cents (pending amount)
+      let amountDue = 0; // in cents (pending amount, before coupon)
       if (userRole === "CLIENT") {
         switch (userData.packageTier) {
           case "basic":
@@ -174,9 +174,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             applicationsRemaining = 0;
             amountDue = 0;
         }
+
+        // Optional add-on services (Portfolio Website / LinkedIn Optimization)
+        const includePortfolioWebsite = Boolean((req.body as any)?.includePortfolioWebsite);
+        const includeLinkedInOptimization = Boolean((req.body as any)?.includeLinkedInOptimization);
+        if (includePortfolioWebsite) {
+          amountDue += 14900; // $149 in cents
+        }
+        if (includeLinkedInOptimization) {
+          amountDue += 14900; // $149 in cents
+        }
       }
 
-      // Optional coupon discounts (CLIENT only)
+      // Optional coupon discounts (CLIENT only) – applied to full amount (package + add-ons)
       const rawCouponCode = (req.body as any)?.couponCode;
       const couponCode = typeof rawCouponCode === "string" ? rawCouponCode.trim().toUpperCase() : "";
       if (userRole === "CLIENT" && couponCode) {
@@ -234,6 +244,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
+    }
+  });
+
+  // Public preview endpoint to calculate total signup price with add-ons & coupon
+  app.post("/api/register/preview-total", async (req, res) => {
+    try {
+      const {
+        packageTier,
+        couponCode: rawCouponCode,
+        includePortfolioWebsite: rawIncludePortfolioWebsite,
+        includeLinkedInOptimization: rawIncludeLinkedInOptimization,
+      } = req.body as {
+        packageTier?: string;
+        couponCode?: string;
+        includePortfolioWebsite?: boolean;
+        includeLinkedInOptimization?: boolean;
+      };
+
+      const includePortfolioWebsite = Boolean(rawIncludePortfolioWebsite);
+      const includeLinkedInOptimization = Boolean(rawIncludeLinkedInOptimization);
+
+      let baseCents = 0;
+      switch (packageTier) {
+        case "basic":
+          baseCents = 12500;
+          break;
+        case "standard":
+          baseCents = 29900;
+          break;
+        case "premium":
+          baseCents = 35000;
+          break;
+        case "ultimate":
+          baseCents = 59900;
+          break;
+        default:
+          baseCents = 0;
+      }
+
+      const addonsCents =
+        (includePortfolioWebsite ? 14900 : 0) +
+        (includeLinkedInOptimization ? 14900 : 0);
+
+      let totalCents = baseCents + addonsCents;
+      let discountPct = 0;
+
+      const couponCode = typeof rawCouponCode === "string" ? rawCouponCode.trim().toUpperCase() : "";
+      if (couponCode && totalCents > 0) {
+        const coupons = parseSignupCouponsEnv(process.env.SIGNUP_COUPONS);
+        const pct = coupons[couponCode];
+        if (!pct) {
+          return res.status(400).json({ message: "Invalid coupon code" });
+        }
+        discountPct = pct;
+        totalCents = Math.max(0, Math.round(totalCents * (1 - pct / 100)));
+      }
+
+      res.json({
+        baseCents,
+        addonsCents,
+        totalCents,
+        discountPct,
+      });
+    } catch (error) {
+      console.error("Preview total error:", error);
+      res.status(500).json({ message: "Failed to calculate total" });
     }
   });
 

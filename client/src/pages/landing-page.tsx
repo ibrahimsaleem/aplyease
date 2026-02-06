@@ -348,6 +348,90 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* LinkedIn & Portfolio Optimization Package */}
+        <section className="py-16 md:py-24 bg-white">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="max-w-3xl mx-auto text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                Professional Profile Optimization Package
+              </h2>
+              <p className="text-lg text-slate-600">
+                Get a polished portfolio website and a standout LinkedIn profile in one done-for-you package.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              <Card className="border-2 border-slate-100 shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Briefcase className="h-6 w-6 text-primary" />
+                    <h3 className="text-xl font-bold text-slate-900">1. Portfolio Website — $149</h3>
+                  </div>
+                  <ul className="space-y-3 text-slate-700 text-sm md:text-base">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>Custom, responsive portfolio profile.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>Free .com domain &amp; SSL for 1 year.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>Up to five project showcases (live demo, GitHub, docs).</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>Hosting &amp; deployment included.</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-slate-100 shadow-md">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Users className="h-6 w-6 text-primary" />
+                    <h3 className="text-xl font-bold text-slate-900">2. LinkedIn Optimization — $149</h3>
+                  </div>
+                  <ul className="space-y-3 text-slate-700 text-sm md:text-base">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>Complete profile makeover (headline, About, roles, banner, projects).</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>10 project highlight posts crafted for your niche.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <span>10 industry insight posts to build authority.</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="mt-12 text-center">
+              <p className="text-xl md:text-2xl font-semibold text-slate-900 mb-2">
+                Total Investment: <span className="text-primary font-bold">$298</span>
+              </p>
+              <p className="text-slate-600 mb-6 text-sm md:text-base">
+                Timeline ≈ 4 weeks • Kick-off, build, LinkedIn overhaul, and final polish included.
+              </p>
+              <Button
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 text-white border-none px-8 h-12"
+                asChild
+              >
+                <a href="https://wa.me/+17138537974?text=I%20want%20the%20LinkedIn%20%26%20portfolio%20optimization%20package">
+                  Chat on WhatsApp about LinkedIn Package
+                </a>
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section id="pricing" className="py-16 md:py-24 bg-white">
           <div className="container mx-auto px-4 md:px-6">
