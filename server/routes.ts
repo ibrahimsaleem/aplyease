@@ -7,6 +7,12 @@ import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { writeFile, unlink } from "fs/promises";
+import { exec } from "child_process";
+import { promisify } from "util";
+import path from "path";
+import os from "os";
+import { randomUUID } from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -2196,6 +2202,325 @@ OUTPUT:
     } catch (error) {
       console.error("Error recording payment:", error);
       res.status(500).json({ message: "Failed to record payment" });
+    }
+  });
+
+  // LaTeX auto-fix: patch common AI-generated errors before compilation
+  function autoFixLatex(src: string): string {
+    let tex = src;
+
+    // ── 0. Split preamble from body ──
+    const docBeginIdx = tex.indexOf('\\begin{document}');
+    let preamble = '';
+    let body = tex;
+    if (docBeginIdx !== -1) {
+      preamble = tex.slice(0, docBeginIdx);
+      body = tex.slice(docBeginIdx);
+    }
+
+    // ── 1. Inject missing custom resume command definitions ──
+    // The AI often uses these macros in the body but forgets to define them.
+    // Map: command name → default definition (matching common resume templates)
+    const missingDefs: Record<string, string> = {};
+
+    const customCmds: Array<{ name: string; usage: RegExp; def: string }> = [
+      {
+        name: 'resumeSubHeadingListStart',
+        usage: /\\resumeSubHeadingListStart/,
+        def: '\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.1in, label={}]}',
+      },
+      {
+        name: 'resumeSubHeadingListEnd',
+        usage: /\\resumeSubHeadingListEnd/,
+        def: '\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}',
+      },
+      {
+        name: 'resumeItemListStart',
+        usage: /\\resumeItemListStart/,
+        def: '\\newcommand{\\resumeItemListStart}{\\begin{itemize}[leftmargin=0.15in, topsep=0pt, parsep=0pt, itemsep=0pt]}',
+      },
+      {
+        name: 'resumeItemListEnd',
+        usage: /\\resumeItemListEnd/,
+        def: '\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-4pt}}',
+      },
+      {
+        name: 'resumeItem',
+        usage: /\\resumeItem\b/,
+        def: '\\newcommand{\\resumeItem}[1]{\\item\\small{{#1 \\vspace{-2pt}}}}',
+      },
+      {
+        name: 'resumeSubheading',
+        usage: /\\resumeSubheading\b/,
+        def: [
+          '\\newcommand{\\resumeSubheading}[4]{',
+          '  \\vspace{-2pt}\\item',
+          '    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}',
+          '      \\textbf{#1} & #2 \\\\',
+          '      \\textit{\\small#3} & \\textit{\\small #4} \\\\',
+          '    \\end{tabular*}\\vspace{-5pt}',
+          '}',
+        ].join('\n'),
+      },
+      {
+        name: 'resumeSubheadingOneLine',
+        usage: /\\resumeSubheadingOneLine\b/,
+        def: [
+          '\\newcommand{\\resumeSubheadingOneLine}[2]{',
+          '  \\vspace{-2pt}\\item',
+          '    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}',
+          '      \\textbf{#1} & #2 \\\\',
+          '    \\end{tabular*}\\vspace{-5pt}',
+          '}',
+        ].join('\n'),
+      },
+      {
+        name: 'resumeProjectHeading',
+        usage: /\\resumeProjectHeading\b/,
+        def: [
+          '\\newcommand{\\resumeProjectHeading}[2]{',
+          '    \\item',
+          '    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}',
+          '      \\small#1 & #2 \\\\',
+          '    \\end{tabular*}\\vspace{-5pt}',
+          '}',
+        ].join('\n'),
+      },
+    ];
+
+    for (const cmd of customCmds) {
+      // Check if the command is used in the full document
+      const isUsed = cmd.usage.test(body);
+      // Check if it's already defined in the preamble
+      const isDefined = preamble.includes(`\\newcommand{\\${cmd.name}}`)
+        || preamble.includes(`\\renewcommand{\\${cmd.name}}`)
+        || preamble.includes(`\\providecommand{\\${cmd.name}}`);
+      if (isUsed && !isDefined) {
+        missingDefs[cmd.name] = cmd.def;
+        console.log(`[AutoFix] Injecting missing definition: \\${cmd.name}`);
+      }
+    }
+
+    // Insert missing definitions right before \begin{document}
+    if (Object.keys(missingDefs).length > 0) {
+      const defsBlock = '\n% --- Auto-injected missing command definitions ---\n'
+        + Object.values(missingDefs).join('\n')
+        + '\n% --- End auto-injected definitions ---\n';
+      preamble = preamble.trimEnd() + '\n' + defsBlock + '\n';
+    }
+
+    // ── 2. Fix lonely \item outside list environments (body only) ──
+    const lines = body.split('\n');
+    const fixed: string[] = [];
+    let insideList = 0;
+    let insideNewcommand = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Track \newcommand brace depth (skip entirely)
+      if (/\\newcommand/.test(trimmed)) {
+        insideNewcommand++;
+      }
+      if (insideNewcommand > 0) {
+        fixed.push(line);
+        const opens = (line.match(/\{/g) || []).length;
+        const closes = (line.match(/\}/g) || []).length;
+        insideNewcommand += opens - closes;
+        if (insideNewcommand <= 0) insideNewcommand = 0;
+        continue;
+      }
+
+      // Track list environment depth (standard + custom macros)
+      if (/\\begin\{(itemize|enumerate|description)\}/.test(trimmed)) {
+        insideList++;
+      }
+      if (/\\resumeSubHeadingListStart|\\resumeItemListStart/.test(trimmed)) {
+        insideList++;
+      }
+      if (/\\end\{(itemize|enumerate|description)\}/.test(trimmed)) {
+        insideList = Math.max(0, insideList - 1);
+      }
+      if (/\\resumeSubHeadingListEnd|\\resumeItemListEnd/.test(trimmed)) {
+        insideList = Math.max(0, insideList - 1);
+      }
+
+      // Check for lonely \item OR commands that expand to \item (e.g. \resumeSubheading)
+      // outside any list environment
+      const isLonelyItem = /^\\item\b/.test(trimmed);
+      const isCommandWithItem = /^\\resumeSubheading\b|^\\resumeSubheadingOneLine\b|^\\resumeProjectHeading\b/.test(trimmed);
+
+      if (insideList === 0 && (isLonelyItem || isCommandWithItem)) {
+        // Wrap the orphan block in a list (use label={} so no bullets for subheadings)
+        fixed.push('\\begin{itemize}[leftmargin=0.1in, label={}]');
+        fixed.push(line);
+        insideList++;
+        let j = i + 1;
+        while (j < lines.length) {
+          const next = lines[j].trim();
+          // Stop at section boundaries or document end
+          if (/^\\section\b|^\\end\{document\}/.test(next)) {
+            break;
+          }
+          // Stop at another \resumeSubHeadingListStart (already a proper list)
+          if (/^\\resumeSubHeadingListStart/.test(next)) {
+            break;
+          }
+          if (/\\end\{(itemize|enumerate|description)\}/.test(next) && !/\\resumeItemListEnd/.test(next)) {
+            fixed.push(lines[j]);
+            insideList = Math.max(0, insideList - 1);
+            j++;
+            break;
+          }
+          // Track nested lists from resumeItemListStart/End within the block
+          if (/\\resumeItemListStart/.test(next)) insideList++;
+          if (/\\resumeItemListEnd/.test(next)) insideList = Math.max(1, insideList - 1); // keep at least 1 for our wrapper
+
+          fixed.push(lines[j]);
+          j++;
+        }
+        // Close our wrapper if still open
+        if (insideList > 0) {
+          fixed.push('\\end{itemize}');
+          insideList = Math.max(0, insideList - 1);
+        }
+        i = j - 1;
+        continue;
+      }
+
+      fixed.push(line);
+    }
+    body = fixed.join('\n');
+
+    // Rejoin preamble + body
+    tex = preamble + body;
+
+    // ── 3. Fix unmatched \begin{itemize} / \end{itemize} ──
+    const beginCount = (tex.match(/\\begin\{itemize\}/g) || []).length;
+    const endCount = (tex.match(/\\end\{itemize\}/g) || []).length;
+    if (beginCount > endCount) {
+      for (let k = 0; k < beginCount - endCount; k++) {
+        tex = tex.replace(/\\end\{document\}/, '\\end{itemize}\n\\end{document}');
+      }
+    } else if (endCount > beginCount) {
+      let surplus = endCount - beginCount;
+      tex = tex.replace(/\\end\{itemize\}/g, (match) => {
+        if (surplus > 0) { surplus--; return ''; }
+        return match;
+      });
+    }
+
+    // ── 4. Fix unclosed braces on common commands ──
+    tex = tex.replace(/\\(textbf|textit|underline|emph)\{([^{}]*?)(?=\\(?:textbf|textit|underline|emph|section|item|begin|end)\{|\n\n)/g,
+      '\\$1{$2}');
+
+    // ── 5. Escape bare & outside tabular environments ──
+    // The & character is a column separator in tabular/tabularx/tabular*/array.
+    // Outside those environments, bare & crashes LaTeX. The AI often writes
+    // "Security & Architecture" instead of "Security \& Architecture".
+    {
+      const bodyLines = tex.split('\n');
+      let inTabular = 0;
+      for (let li = 0; li < bodyLines.length; li++) {
+        const ln = bodyLines[li];
+        // Track tabular-like environment depth
+        if (/\\begin\{(tabular\*?|tabularx|array|align|matrix)\}/.test(ln)) inTabular++;
+        if (/\\end\{(tabular\*?|tabularx|array|align|matrix)\}/.test(ln)) inTabular = Math.max(0, inTabular - 1);
+
+        // Only fix lines outside tabular environments and not in the preamble
+        if (inTabular === 0 && !ln.trimStart().startsWith('%')) {
+          // Replace bare & (not already escaped as \&) with \&
+          // Also skip lines that contain \begin{tabular or \end{tabular (inline tabular)
+          if (!/\\begin\{tabular|\\end\{tabular|\\begin\{tabularx|\\end\{tabularx/.test(ln)) {
+            bodyLines[li] = ln.replace(/(?<!\\)&/g, '\\&');
+          }
+        }
+      }
+      tex = bodyLines.join('\n');
+    }
+
+    // ── 6. Remove duplicate \documentclass declarations ──
+    const dcMatches = tex.match(/\\documentclass/g);
+    if (dcMatches && dcMatches.length > 1) {
+      let found = false;
+      tex = tex.replace(/\\documentclass[^\n]*\n/g, (match) => {
+        if (!found) { found = true; return match; }
+        return '';
+      });
+    }
+
+    // ── 6. Ensure \begin{document} and \end{document} exist ──
+    if (!tex.includes('\\begin{document}')) {
+      const lastPreamble = tex.lastIndexOf('\\usepackage');
+      if (lastPreamble !== -1) {
+        const insertPos = tex.indexOf('\n', lastPreamble);
+        if (insertPos !== -1) {
+          tex = tex.slice(0, insertPos + 1) + '\n\\begin{document}\n' + tex.slice(insertPos + 1);
+        }
+      }
+    }
+    if (!tex.includes('\\end{document}')) {
+      tex = tex.trimEnd() + '\n\\end{document}\n';
+    }
+
+    return tex;
+  }
+
+  // PDF Generation Route: Convert LaTeX to PDF using Tectonic
+  const execAsync = promisify(exec);
+  app.post("/api/generate-pdf", async (req, res) => {
+    try {
+      const { latex } = req.body;
+      if (!latex) {
+        return res.status(400).json({ message: "LaTeX code is required" });
+      }
+
+      // Auto-fix common LaTeX errors before compilation
+      const fixedLatex = autoFixLatex(latex);
+
+      const fileId = randomUUID();
+      const tempDir = os.tmpdir();
+      const inputPath = path.join(tempDir, `${fileId}.tex`);
+      const outputPdfPath = path.join(tempDir, `${fileId}.pdf`);
+
+      // Write fixed LaTeX to temp file
+      await writeFile(inputPath, fixedLatex);
+
+      try {
+        // Windows vs Linux check for Tectonic executable
+        const tectonicPath = process.platform === 'win32' 
+          ? path.resolve(process.cwd(), 'tectonic.exe')
+          : 'tectonic';
+        
+        await execAsync(`${tectonicPath} -X compile "${inputPath}" --outdir "${tempDir}"`);
+      } catch (e: any) {
+        console.error("Tectonic Error:", e.stderr || e.message);
+        // Clean up temp file on error
+        await unlink(inputPath).catch(() => {});
+        return res.status(400).json({ 
+          message: "Compilation Failed", 
+          details: e.stderr || e.message 
+        });
+      }
+
+      // Set content type and send PDF
+      res.contentType("application/pdf");
+      res.sendFile(outputPdfPath, async (err) => {
+        // Clean up temp files after sending
+        await unlink(inputPath).catch(() => {});
+        await unlink(outputPdfPath).catch(() => {});
+        if (err) {
+          console.error("Error sending PDF file:", err);
+        }
+      });
+
+    } catch (error: any) {
+      console.error("PDF Route Error:", error);
+      res.status(500).json({ 
+        message: "Internal Server Error",
+        error: error.message 
+      });
     }
   });
 
