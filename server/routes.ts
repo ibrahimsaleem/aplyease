@@ -2493,7 +2493,7 @@ OUTPUT:
           ? path.resolve(process.cwd(), 'tectonic.exe')
           : 'tectonic';
         
-        await execAsync(`${tectonicPath} -X compile "${inputPath}" --outdir "${tempDir}"`);
+        await execAsync(`"${tectonicPath}" "${inputPath}" --outdir "${tempDir}"`);
       } catch (e: any) {
         console.error("Tectonic Error:", e.stderr || e.message);
         // Clean up temp file on error
