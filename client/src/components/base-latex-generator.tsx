@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, FileCode, Copy, AlertCircle, Eye, Save, Sparkles, MessageSquare, RefreshCw, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { Loader2, FileCode, Copy, AlertCircle, Eye, Save, Sparkles, MessageSquare, RefreshCw, ChevronDown, ChevronUp, Edit, Download, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface BaseLatexGeneratorProps {
   clientId: string;
@@ -26,6 +27,10 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showGenerateSection, setShowGenerateSection] = useState(!existingLatex);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isCompilingPdf, setIsCompilingPdf] = useState(false);
+  const [editedLatex, setEditedLatex] = useState("");
+  const [latexDirty, setLatexDirty] = useState(false);
 
   // Pre-load existing LaTeX if provided
   useEffect(() => {
@@ -33,6 +38,24 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
       setGeneratedLatex(existingLatex);
     }
   }, [existingLatex]);
+
+  // Sync editor and reset PDF preview when source LaTeX changes
+  useEffect(() => {
+    setEditedLatex(generatedLatex);
+    setLatexDirty(false);
+    setPdfUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, [generatedLatex]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Step 1: Generate base LaTeX from plain text (no instructions)
   const generateLatex = useMutation({
@@ -142,7 +165,8 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
 
   // Copy to clipboard
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLatex);
+    const textToCopy = editedLatex || generatedLatex;
+    navigator.clipboard.writeText(textToCopy);
     toast({
       title: "Copied!",
       description: "LaTeX code copied to clipboard",
@@ -158,6 +182,55 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
         description: "LaTeX code saved to client profile",
       });
     }
+  };
+
+  // Compile LaTeX to PDF via backend (uses editedLatex so manual edits are included)
+  const handleCompilePdf = async (autoOpenDialog = true) => {
+    const latexToCompile = editedLatex || generatedLatex;
+    if (!latexToCompile) return;
+    setIsCompilingPdf(true);
+    setLatexDirty(false);
+    if (autoOpenDialog) setShowLatexDialog(true);
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex: latexToCompile }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.message || 'PDF compilation failed');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      toast({
+        title: "PDF Compiled!",
+        description: "Your resume PDF is ready for preview and download.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "PDF Compilation Failed",
+        description: error.message || "Failed to compile LaTeX to PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCompilingPdf(false);
+    }
+  };
+
+  // Download compiled PDF
+  const handleDownloadPdf = () => {
+    if (!pdfUrl) return;
+    const a = document.createElement('a');
+    a.href = pdfUrl;
+    a.download = 'base-resume.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const isAnyProcessing = isProcessing || isUpdating;
@@ -181,6 +254,14 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* ATS-Friendly Value Messaging */}
+          <Alert className="bg-blue-50 border-blue-200">
+            <Sparkles className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              We generate highly <strong>ATS-friendly</strong> resumes in professional LaTeX format — optimized for applicant tracking systems with clean, modern typography.
+            </AlertDescription>
+          </Alert>
+
           {!userHasApiKey && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -341,13 +422,31 @@ Tools: Git, Docker, Kubernetes, AWS`}
           {hasExistingOrGenerated && (
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
-                variant="outline"
-                onClick={() => setShowLatexDialog(true)}
-                disabled={isAnyProcessing}
+                onClick={() => handleCompilePdf(true)}
+                disabled={isAnyProcessing || isCompilingPdf}
+                className="bg-purple-600 hover:bg-purple-700"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                View LaTeX
+                {isCompilingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Compiling PDF...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview Resume
+                  </>
+                )}
               </Button>
+              {pdfUrl && (
+                <Button
+                  onClick={handleDownloadPdf}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={copyToClipboard}
@@ -385,46 +484,144 @@ Tools: Git, Docker, Kubernetes, AWS`}
         </CardContent>
       </Card>
 
-      {/* LaTeX Preview Dialog */}
+      {/* Side-by-Side Resume Preview Dialog */}
       <Dialog open={showLatexDialog} onOpenChange={setShowLatexDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileCode className="w-5 h-5" />
-              {existingLatex ? "Current LaTeX Code" : "Generated LaTeX Code"}
-            </DialogTitle>
-            <DialogDescription>
-              Copy this code and paste it into the client's Base Resume LaTeX field, or use the "Save to Profile" button.
-            </DialogDescription>
+        <DialogContent className="max-w-[95vw] w-full h-[92vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <DialogTitle>{existingLatex ? "Current LaTeX Code" : "Generated LaTeX Code"}</DialogTitle>
+                <DialogDescription>
+                  ATS-optimized LaTeX resume — edit the code if needed, compile to PDF, and download.
+                </DialogDescription>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {isCompilingPdf ? (
+                  <Button disabled size="sm">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Compiling...
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleCompilePdf(false)}
+                    size="sm"
+                    className={latexDirty ? "bg-orange-600 hover:bg-orange-700" : "bg-purple-600 hover:bg-purple-700"}
+                  >
+                    {pdfUrl || latexDirty ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        {latexDirty ? "Recompile (edited)" : "Recompile"}
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Compile PDF
+                      </>
+                    )}
+                  </Button>
+                )}
+                {pdfUrl && !isCompilingPdf && (
+                  <Button onClick={handleDownloadPdf} size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </Button>
+                )}
+                <Button onClick={() => copyToClipboard()} size="sm" variant="outline">
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy LaTeX
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              className="absolute top-2 right-2 z-10"
-              onClick={copyToClipboard}
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy
-            </Button>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm font-mono">
-              {generatedLatex}
-            </pre>
+
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+            {/* Left: Editable LaTeX Code */}
+            <div className="flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between mb-1 flex-shrink-0">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  LaTeX Editor
+                  {latexDirty && (
+                    <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 ml-1">
+                      edited
+                    </Badge>
+                  )}
+                </h3>
+                <Button
+                  onClick={() => copyToClipboard()}
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              <textarea
+                value={editedLatex}
+                onChange={(e) => {
+                  setEditedLatex(e.target.value);
+                  setLatexDirty(true);
+                }}
+                className="flex-1 min-h-0 w-full bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-slate-700"
+                spellCheck={false}
+              />
+              {latexDirty && (
+                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1 flex-shrink-0">
+                  <AlertCircle className="w-3 h-3" />
+                  Click "Recompile" to update the PDF preview.
+                </p>
+              )}
+            </div>
+
+            {/* Right: PDF Preview */}
+            <div className="flex flex-col overflow-hidden">
+              <h3 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2 flex-shrink-0">
+                <Eye className="w-4 h-4" />
+                PDF Preview
+              </h3>
+              {pdfUrl ? (
+                <iframe
+                  src={pdfUrl}
+                  className="flex-1 min-h-0 w-full rounded-lg border border-slate-200"
+                  title="Resume PDF Preview"
+                />
+              ) : isCompilingPdf ? (
+                <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                  <div className="text-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-purple-600 mx-auto mb-3" />
+                    <p className="text-slate-700 font-medium">Compiling your resume...</p>
+                    <p className="text-sm text-slate-500 mt-1">This may take a moment on first compile</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                  <div className="text-center p-6">
+                    <FileText className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-700 font-medium mb-1">No PDF compiled yet</p>
+                    <p className="text-sm text-slate-500 mb-4">Click the button below to compile your LaTeX into a PDF</p>
+                    <Button onClick={() => handleCompilePdf(false)} size="sm" className="bg-purple-600 hover:bg-purple-700">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Compile PDF
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            {onSaveToProfile && (
+
+          {onSaveToProfile && (
+            <div className="flex justify-end gap-2 pt-3 flex-shrink-0 border-t">
               <Button
                 onClick={handleSaveToProfile}
                 className="bg-green-600 hover:bg-green-700"
+                size="sm"
               >
                 <Save className="w-4 h-4 mr-2" />
                 Save to Profile
               </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowLatexDialog(false)}>
-              Close
-            </Button>
-          </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
