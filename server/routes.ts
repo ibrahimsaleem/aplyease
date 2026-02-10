@@ -2218,6 +2218,23 @@ OUTPUT:
       body = tex.slice(docBeginIdx);
     }
 
+    // ── 0a. Replace \usepackage[...dvipsnames...]{color} → {xcolor} ──
+    // The 'dvipsnames' and 'usenames' options belong to xcolor, not color.
+    // Tectonic (and strict LaTeX) rejects them on the color package.
+    preamble = preamble.replace(
+      /\\usepackage\s*\[([^\]]*)\]\s*\{color\}/g,
+      (match, opts: string) => {
+        if (/dvipsnames|usenames|svgnames|x11names/i.test(opts)) {
+          return `\\usepackage[${opts}]{xcolor}`;
+        }
+        return match;
+      }
+    );
+
+    // Also handle bare \usepackage{color} → \usepackage{xcolor} for consistency
+    // (xcolor is a superset and avoids conflicts if both are loaded)
+    preamble = preamble.replace(/\\usepackage\s*\{color\}/g, '\\usepackage{xcolor}');
+
     // ── 1. Inject missing custom resume command definitions ──
     // The AI often uses these macros in the body but forgets to define them.
     // Map: command name → default definition (matching common resume templates)
