@@ -1,18 +1,19 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer, AreaChart, Area, Legend
 } from "recharts";
 import {
   DollarSign, TrendingUp, TrendingDown, Wallet,
   CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight,
-  Calendar
+  Calendar, Receipt, BarChart3
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics, MonthlyPaymentStats } from "@/types";
+import type { ClientPerformanceAnalytics, EmployeePerformanceAnalytics, MonthlyPaymentStats, PaymentTransaction } from "@/types";
 
 // USD to INR conversion
 const USD_TO_INR = 87;
@@ -68,6 +69,15 @@ export function FinancialOverview() {
     },
   });
 
+  // Fetch recent payment transactions
+  const { data: recentTransactions } = useQuery<PaymentTransaction[]>({
+    queryKey: ["/api/payments"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/payments");
+      return res.json();
+    },
+  });
+
   // Generate year options
   const years = Array.from({ length: 3 }, (_, i) => ({
     value: (currentDate.getFullYear() - i).toString(),
@@ -114,6 +124,29 @@ export function FinancialOverview() {
     });
   }, [monthlyPayments]);
 
+  // Prepare revenue vs expenses comparison data
+  const revenueVsExpensesData = useMemo(() => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    if (!monthlyPayments) {
+      return monthNames.map(name => ({ month: name, revenue: 0, expenses: 0 }));
+    }
+
+    // For expenses, distribute total salary evenly across months (simplified)
+    const monthlyExpense = employeeData?.totalPayout 
+      ? Math.round((employeeData.totalPayout * 100) / 12 / 100) 
+      : 0;
+
+    return monthNames.map((name, i) => {
+      const monthData = monthlyPayments.find(m => m.month === i + 1);
+      return {
+        month: name,
+        revenue: monthData ? Math.round(monthData.totalAmount / 100) : 0,
+        expenses: monthlyExpense,
+      };
+    });
+  }, [monthlyPayments, employeeData]);
+
   const isLoading = clientLoading || employeeLoading;
 
   if (isLoading) {
@@ -134,6 +167,15 @@ export function FinancialOverview() {
       </div>
     );
   }
+
+  // Get last 10 transactions
+  const displayTransactions = recentTransactions?.slice(0, 10) || [];
+
+  // Get client names for transactions
+  const clientsMap = useMemo(() => {
+    if (!clientData) return new Map();
+    return new Map(clientData.clients.map(c => [c.id, c.name]));
+  }, [clientData]);
 
   return (
     <div className="space-y-6">
@@ -242,13 +284,117 @@ export function FinancialOverview() {
         </Card>
       </div>
 
+      {/* Revenue vs Expenses Chart */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            Revenue vs Expenses - {selectedYear}
+          </CardTitle>
+          <p className="text-sm text-slate-500 mt-1">
+            Monthly comparison of income and expenses
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={revenueVsExpensesData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+              <Tooltip
+                formatter={(value: number) => [`$${value}`, '']}
+                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
+              <Legend />
+              <Area 
+                type="monotone" 
+                dataKey="revenue" 
+                name="Revenue" 
+                stroke="#10b981" 
+                fill="url(#colorRevenue)" 
+                strokeWidth={2}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="expenses" 
+                name="Expenses" 
+                stroke="#f59e0b" 
+                fill="none" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-purple-600" />
+            Recent Transactions
+          </CardTitle>
+          <p className="text-sm text-slate-500 mt-1">
+            Last 10 payment transactions
+          </p>
+        </CardHeader>
+        <CardContent>
+          {displayTransactions.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Receipt className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+              <p>No transactions recorded yet</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell className="font-medium">
+                        {new Date(transaction.paymentDate).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </TableCell>
+                      <TableCell>{clientsMap.get(transaction.clientId) || 'Unknown'}</TableCell>
+                      <TableCell className="text-right font-semibold text-emerald-700">
+                        {formatUSD(transaction.amount)}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {transaction.notes || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Monthly Income Chart */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <Calendar className="w-5 h-5 text-emerald-500" />
-              Monthly Income - {selectedYear}
+              Monthly Income Breakdown - {selectedYear}
             </CardTitle>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-32">
