@@ -132,20 +132,15 @@ export function FinancialOverview() {
       return monthNames.map(name => ({ month: name, revenue: 0, expenses: 0 }));
     }
 
-    // For expenses, distribute total salary evenly across months (simplified)
-    const monthlyExpense = employeeData?.totalPayout 
-      ? Math.round((employeeData.totalPayout * 100) / 12 / 100) 
-      : 0;
-
     return monthNames.map((name, i) => {
       const monthData = monthlyPayments.find(m => m.month === i + 1);
       return {
         month: name,
         revenue: monthData ? Math.round(monthData.totalAmount / 100) : 0,
-        expenses: monthlyExpense,
+        expenses: 0, // Will show only revenue for now - expenses tracking per month not yet implemented
       };
     });
-  }, [monthlyPayments, employeeData]);
+  }, [monthlyPayments]);
 
   const isLoading = clientLoading || employeeLoading;
 
@@ -168,8 +163,8 @@ export function FinancialOverview() {
     );
   }
 
-  // Get last 10 transactions
-  const displayTransactions = recentTransactions?.slice(0, 10) || [];
+  // Show all transactions
+  const displayTransactions = recentTransactions || [];
 
   // Get client names for transactions
   const clientsMap = useMemo(() => {
@@ -289,10 +284,10 @@ export function FinancialOverview() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-blue-600" />
-            Revenue vs Expenses - {selectedYear}
+            Monthly Revenue - {selectedYear}
           </CardTitle>
           <p className="text-sm text-slate-500 mt-1">
-            Monthly comparison of income and expenses
+            Revenue received each month (Expenses shown as total salary paid to date)
           </p>
         </CardHeader>
         <CardContent>
@@ -320,15 +315,6 @@ export function FinancialOverview() {
                 fill="url(#colorRevenue)" 
                 strokeWidth={2}
               />
-              <Area 
-                type="monotone" 
-                dataKey="expenses" 
-                name="Expenses" 
-                stroke="#f59e0b" 
-                fill="none" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -339,10 +325,10 @@ export function FinancialOverview() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Receipt className="w-5 h-5 text-purple-600" />
-            Recent Transactions
+            All Transactions
           </CardTitle>
           <p className="text-sm text-slate-500 mt-1">
-            Last 10 payment transactions
+            Complete payment history
           </p>
         </CardHeader>
         <CardContent>
