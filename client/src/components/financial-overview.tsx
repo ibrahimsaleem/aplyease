@@ -86,7 +86,7 @@ export function FinancialOverview() {
 
   // Calculate financial metrics
   const financialMetrics = useMemo(() => {
-    if (!clientData) {
+    if (!clientData || !clientData.clients) {
       return {
         totalRevenue: 0,
         totalDue: 0,
@@ -173,7 +173,7 @@ export function FinancialOverview() {
 
   // Get client names for transactions
   const clientsMap = useMemo(() => {
-    if (!clientData) return new Map();
+    if (!clientData || !clientData.clients) return new Map();
     return new Map(clientData.clients.map(c => [c.id, c.name]));
   }, [clientData]);
 
