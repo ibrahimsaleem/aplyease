@@ -11,10 +11,15 @@ const MonthlyPayoutAnalytics = lazy(() => import("@/components/monthly-payout-an
 const FinancialOverview = lazy(() => import("@/components/financial-overview").then(m => ({ default: m.FinancialOverview })));
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import type { DashboardStats } from "@/types";
+import type { DashboardStats, ClientPerformanceAnalytics as ClientPerformanceAnalyticsData } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DollarSign } from "lucide-react";
+
+const formatCurrency = (cents: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -47,6 +52,17 @@ export default function AdminDashboard() {
       return res.json();
     },
   });
+
+  const { data: clientAnalytics } = useQuery<ClientPerformanceAnalyticsData>({
+    queryKey: ["/api/analytics/client-performance"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/analytics/client-performance");
+      return res.json();
+    },
+  });
+
+  const totalAmountPaid = clientAnalytics?.clients?.reduce((sum, c) => sum + (c.amountPaid ?? 0), 0) ?? 0;
+  const totalAmountDue = clientAnalytics?.clients?.reduce((sum, c) => sum + (c.amountDue ?? 0), 0) ?? 0;
 
   const submitUnlock = async () => {
     setUnlockError(null);
@@ -151,9 +167,46 @@ export default function AdminDashboard() {
 
           <TabsContent value="financial" className="space-y-6">
             {isUnlocked ? (
-              <Suspense fallback={<div>Loading...</div>}>
-                <FinancialOverview />
-              </Suspense>
+              <>
+                {/* Payment summary - shown only after code is entered */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-emerald-600">Total Payments Received</p>
+                          <p className="text-3xl font-bold text-emerald-900" data-testid="text-total-paid">
+                            {formatCurrency(totalAmountPaid)}
+                          </p>
+                          <p className="text-sm text-emerald-600 mt-1">From all clients</p>
+                        </div>
+                        <div className="bg-emerald-100 p-3 rounded-lg">
+                          <DollarSign className="w-6 h-6 text-emerald-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-amber-600">Total Amount Due</p>
+                          <p className="text-3xl font-bold text-amber-900" data-testid="text-total-due">
+                            {formatCurrency(totalAmountDue)}
+                          </p>
+                          <p className="text-sm text-amber-600 mt-1">Pending from clients</p>
+                        </div>
+                        <div className="bg-amber-100 p-3 rounded-lg">
+                          <DollarSign className="w-6 h-6 text-amber-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <FinancialOverview />
+                </Suspense>
+              </>
             ) : (
               <div className="rounded-lg border border-slate-200 bg-white p-6">
                 <div className="text-sm font-medium text-slate-900">Restricted section</div>

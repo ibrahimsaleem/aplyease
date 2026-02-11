@@ -142,7 +142,14 @@ export function FinancialOverview() {
     });
   }, [monthlyPayments]);
 
+  // Get client names for transactions (must be before any early return - Rules of Hooks)
+  const clientsMap = useMemo(() => {
+    if (!clientData || !clientData.clients) return new Map();
+    return new Map(clientData.clients.map(c => [c.id, c.name]));
+  }, [clientData]);
+
   const isLoading = clientLoading || employeeLoading;
+  const displayTransactions = recentTransactions || [];
 
   if (isLoading) {
     return (
@@ -162,15 +169,6 @@ export function FinancialOverview() {
       </div>
     );
   }
-
-  // Show all transactions
-  const displayTransactions = recentTransactions || [];
-
-  // Get client names for transactions
-  const clientsMap = useMemo(() => {
-    if (!clientData || !clientData.clients) return new Map();
-    return new Map(clientData.clients.map(c => [c.id, c.name]));
-  }, [clientData]);
 
   return (
     <div className="space-y-6">
