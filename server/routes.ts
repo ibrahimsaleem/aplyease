@@ -671,6 +671,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
     throw new Error("Max retry attempts reached");
   }
 
+  // Shared base-resume LaTeX template + prompt builder (keeps public tool output
+  // consistent with the internal Base LaTeX Generator).
+  const BASE_RESUME_LATEX_TEMPLATE = `\\documentclass[letterpaper,10pt]{article}
+
+\\usepackage{latexsym}
+\\usepackage[empty]{fullpage}
+\\usepackage{titlesec}
+\\usepackage[usenames,dvipsnames]{color}
+\\usepackage{enumitem}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{fancyhdr}
+\\usepackage{tabularx}
+\\usepackage{array}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\renewcommand{\\footrulewidth}{0pt}
+
+% Optimized margins - tight but no overlap
+\\addtolength{\\oddsidemargin}{-0.5in}
+\\addtolength{\\evensidemargin}{-0.5in}
+\\addtolength{\\textwidth}{1in}
+\\addtolength{\\topmargin}{-0.6in}
+\\addtolength{\\textheight}{1.2in}
+
+\\urlstyle{same}
+\\raggedright
+\\flushbottom
+\\setlength{\\tabcolsep}{0in}
+\\setlength{\\emergencystretch}{2em}
+
+% Tabularx helper column for wrapping long headings
+\\newcolumntype{L}{>{\\raggedright\\arraybackslash}X}
+
+% Section formatting - balanced spacing
+\\titleformat{\\section}{
+  \\vspace{-8pt}\\scshape\\raggedright\\large
+}{}{0em}{}[\\color{black}\\titlerule \\vspace{-6pt}]
+
+% Custom commands with proper spacing
+\\newcommand{\\resumeItem}[1]{
+  \\item\\small{
+    {#1 \\vspace{-2pt}}
+  }
+}
+
+\\newcommand{\\resumeSubheading}[4]{
+  \\vspace{-2pt}\\item
+    \\begin{tabularx}{0.97\\textwidth}[t]{@{}Lr@{}}
+      \\textbf{#1} & #2 \\\\
+      \\textit{\\small#3} & \\textit{\\small #4} \\\\
+    \\end{tabularx}\\vspace{-5pt}
+}
+
+\\newcommand{\\resumeProjectHeading}[2]{
+    \\item
+    \\begin{tabularx}{0.97\\textwidth}{@{}Lr@{}}
+      \\small#1 & #2 \\\\
+    \\end{tabularx}\\vspace{-5pt}
+}
+
+\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.1in, label={}]}
+\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
+\\newcommand{\\resumeItemListStart}{\\begin{itemize}[leftmargin=0.15in, topsep=0pt, parsep=0pt, itemsep=0pt]}
+\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-4pt}}
+
+\\begin{document}
+
+% HEADER - Name and Contact Info
+\\begin{center}
+    \\textbf{\\Huge \\scshape [FULL NAME]} \\\\ \\vspace{2pt}
+    \\small [PHONE] $|$ \\href{mailto:[EMAIL]}{\\underline{[EMAIL]}} $|$ [LOCATION] $|$ 
+    \\href{[LINKEDIN_URL]}{\\underline{linkedin.com/in/[USERNAME]}} $|$
+    \\href{[GITHUB_URL]}{\\underline{github.com/[USERNAME]}}
+\\end{center}
+
+% EDUCATION SECTION
+\\section{Education}
+  \\resumeSubHeadingListStart
+    \\resumeSubheading
+      {[UNIVERSITY NAME]}{[LOCATION]}
+      {[DEGREE]}{[DATES]}
+      \\resumeItemListStart
+        \\resumeItem{Relevant Coursework: [COURSES]}
+        \\resumeItem{GPA: [GPA] | [HONORS/AWARDS]}
+      \\resumeItemListEnd
+  \\resumeSubHeadingListEnd
+
+% EXPERIENCE SECTION
+\\section{Work Experience}
+\\resumeSubHeadingListStart
+    \\resumeSubheading
+      {[COMPANY NAME]}{[LOCATION]}
+      {[JOB TITLE]}{[DATES]}
+    \\resumeItemListStart
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
+    \\resumeItemListEnd
+\\resumeSubHeadingListEnd
+
+% PROJECTS SECTION
+\\section{Projects}
+\\resumeSubHeadingListStart
+    \\resumeProjectHeading
+        {\\textbf{[PROJECT NAME]} $|$ \\emph{[TECHNOLOGIES]}}{[DATES]}
+    \\resumeItemListStart
+        \\resumeItem{[PROJECT DESCRIPTION with scope, scale, and impact]}
+        \\resumeItem{[TECHNICAL IMPLEMENTATION details and quantifiable results]}
+    \\resumeItemListEnd
+\\resumeSubHeadingListEnd
+
+% TECHNICAL SKILLS SECTION
+\\section{Technical Skills}
+\\begin{itemize}[leftmargin=0.1in, label={}, itemsep=-2pt]
+    \\small{\\item{
+     \\textbf{Languages:} [LANGUAGES] \\\\
+     \\textbf{Frameworks:} [FRAMEWORKS] \\\\
+     \\textbf{Databases:} [DATABASES] \\\\
+     \\textbf{Developer Tools:} [TOOLS] \\\\
+     \\textbf{Libraries:} [LIBRARIES]
+    }}
+\\end{itemize}
+
+\\end{document}`;
+
+  const ATS_OPTIMIZATION_RULES = `ATS OPTIMIZATION (Critical for high ATS scores):
+
+BUZZWORDS & CLICHÉS - REMOVE:
+- Never use: results-driven, team player, hardworking, highly motivated, extensive experience,
+  strong leadership, out-of-the-box, synergy, go-getter, detail-oriented, self-starter
+- Replace with SPECIFIC accomplishments: "Managed 5-member cross-functional team and coordinated
+  with 6 business partners toward successful launch of e-commerce platform" instead of
+  "Highly motivated with strong leadership and management skills"
+- Every bullet must show WHAT you did, WHO it affected, and measurable impact
+
+DATES:
+- Use consistent format: "Jan 2020 – Dec 2022" or "2020 – 2022"
+- Never use vague dates like "Present" without a start year; use "Jun 2022 – Present"
+
+UNNECESSARY SECTIONS - NEVER INCLUDE:
+- No References section (employers will ask directly)
+- No Objective section (outdated; hiring managers know you want a job)
+- Optional: short professional summary only if space allows
+
+REPETITION:
+- Use each action verb at most twice on the entire resume
+- Vary language when describing similar skills across sections
+- Use unique action verbs: Led, Spearheaded, Architected, Implemented, Delivered, etc.
+
+CONTACT & PERSONAL:
+- Include: name, email, city/location, optionally phone, LinkedIn, GitHub
+- Never include: date of birth, gender, nationality, full street address`;
+
+  function buildBaseResumeLatexPrompt(plainTextResume: string) {
+    return `You are an expert LaTeX resume formatter. Convert the following plain text resume into a professionally formatted LaTeX resume using EXACTLY the template structure provided below.
+
+CRITICAL REQUIREMENTS:
+1. **ONE PAGE MAXIMUM - THIS IS MANDATORY**: The resume MUST fit on exactly ONE page. This is non-negotiable.
+2. Use the EXACT LaTeX template structure provided - do not modify the preamble, custom commands, or formatting
+3. Extract ALL information from the plain text resume and organize it into the correct sections
+4. Maintain perfect LaTeX syntax with proper escaping of special characters (%, &, $, #, _, {, }, ~, ^)
+5. Use action verbs and quantify achievements where possible
+6. Organize sections in this order: Header (name/contact), Education, Experience, Projects, Technical Skills. Do NOT add Objective or References sections.
+7. If certain sections are missing from the input, include them with placeholder comments or omit if truly not applicable
+8. Ensure ATS (Applicant Tracking System) compatibility by using simple formatting
+9. Format all dates as "Mon YYYY – Mon YYYY" or "YYYY – YYYY"
+
+${ATS_OPTIMIZATION_RULES}
+
+ONE-PAGE OPTIMIZATION & CONTENT QUALITY:
+- Limit each job/experience to 3-4 bullet points maximum
+- Each bullet point should be 1.5-2 lines long - detailed but not overflowing
+- Include SPECIFIC METRICS and NUMBERS in every bullet point (e.g., "improved efficiency by 40%", "processed 10K+ records", "reduced time from 2s to 0.5s")
+- Use the compact spacing already built into the template - DO NOT add extra \\vspace commands
+- Include only the most relevant and recent experiences
+- For projects section, include 2-3 most impressive projects with technical depth
+- Technical Skills section should be comprehensive - list ALL relevant skills from the input
+- Fill available space with valuable content - add context, scale, and impact to achievements
+- AVOID lines that are too short or too long - aim for balanced line lengths
+- Remove filler words but ADD meaningful details (team size, user count, performance gains)
+
+LATEX TEMPLATE TO FOLLOW EXACTLY:
+${BASE_RESUME_LATEX_TEMPLATE}
+
+PLAIN TEXT RESUME TO CONVERT:
+${plainTextResume}
+
+EXAMPLE - Buzzword to accomplishment:
+Before: "Highly motivated individual with strong leadership skills managing cross-functional teams"
+After: "Managed 5-member cross-functional team and coordinated with 6 business partners toward the successful launch of an e-commerce platform"
+
+OUTPUT INSTRUCTIONS:
+- Return ONLY the complete LaTeX code
+- Do NOT include any explanations, comments outside the LaTeX, or markdown code blocks
+- Ensure all special characters are properly escaped
+- The output should compile without errors in any standard LaTeX environment
+- VERIFY the content will fit on ONE PAGE before outputting`;
+  }
+
   // Resume generation with Gemini AI
   app.post("/api/generate-resume/:clientId", requireAuth, async (req, res) => {
     try {
@@ -783,6 +984,14 @@ LANGUAGE ENHANCEMENT:
 Use action verbs and impactful language that mirrors job description terminology.
 Replace passive voice with active, accomplishment-focused statements.
 Eliminate filler words and redundancies for maximum impact.
+
+ATS COMPLIANCE:
+- Remove buzzwords and clichés (e.g., results-driven, team player, hardworking, highly motivated, extensive experience)
+  and replace them with specific, job-relevant accomplishments and metrics.
+- Do NOT add Objective or References sections; keep the document focused on experience, projects and skills.
+- Ensure each action verb is used at most twice across the resume; vary verbs and phrasing for similar skills.
+- Format all dates consistently (e.g., \"Jan 2020 – Dec 2022\" or \"2020 – 2022\").
+- Only include professional contact details: name, email, city/location, optional phone/LinkedIn/GitHub; avoid DOB, gender, nationality.
 
 PERFECT LATEX FORMATTING:
 Maintain proper LaTeX syntax and correct escaping of special characters.
@@ -1159,9 +1368,13 @@ OPTIMIZATION STRATEGY:
 CRITICAL REQUIREMENTS:
 - Integrate missing keywords: ${missingElements?.join(', ') || 'None'}
 - Focus on improvements: ${improvements?.join('; ') || 'None'}
-- Maintain perfect LaTeX syntax
-- Keep one-page format
-- DO NOT fabricate experiences - only reframe and optimize existing content
+- Remove buzzwords and clichés; replace them with clear, quantifiable accomplishments.
+- Ensure no single action verb is used more than twice across the resume; vary verbs and phrasing.
+- Do NOT add Objective or References sections.
+- Format all dates consistently (e.g., "Jan 2020 – Dec 2022" or "2020 – 2022").
+- Maintain perfect LaTeX syntax.
+- Keep one-page format.
+- DO NOT fabricate experiences - only reframe and optimize existing content.
 
 Job Description:
 ${jobDescription}
@@ -1211,6 +1424,197 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
     }
   });
 
+  // Public Base Resume Formatter - Convert plain text resume to LaTeX (no auth)
+  // Supports user-provided Gemini API key, or server env key fallback (GEMINI_API_KEY).
+  app.post("/api/public/generate-resume", async (req, res) => {
+    try {
+      const { plainTextResume, geminiApiKey, selectedModel } = req.body ?? {};
+
+      if (!plainTextResume || typeof plainTextResume !== "string") {
+        return res.status(400).json({ message: "Plain text resume is required" });
+      }
+
+      const providedKey = typeof geminiApiKey === "string" ? geminiApiKey.trim() : "";
+      const envKey = (process.env.GEMINI_API_KEY || "").trim();
+      const apiKeyToUse = providedKey || envKey;
+
+      if (!apiKeyToUse) {
+        return res.status(400).json({
+          message:
+            "Please provide your Gemini API key below, or contact us if you'd like to use this tool without a key."
+        });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const prompt = buildBaseResumeLatexPrompt(plainTextResume);
+
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+
+          // Same models as employee dropdown (navigation-header, client-profile-view)
+          const dropdownModels = [
+            "gemini-3-pro-preview",
+            "gemini-3-flash-preview",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.0-pro",
+          ];
+
+          const candidateModels = [
+            typeof selectedModel === "string" ? selectedModel.trim() : "",
+            (process.env.GEMINI_PUBLIC_MODEL || "").trim(),
+            ...dropdownModels,
+          ].filter(Boolean);
+
+          let lastError: any = null;
+
+          for (const model of candidateModels) {
+            try {
+              return await genAI.models.generateContent({
+                model,
+                contents: prompt,
+              });
+            } catch (err: any) {
+              lastError = err;
+              const message = err?.message || "";
+              const isNotFound =
+                err?.status === 404 ||
+                message.includes("is not found") ||
+                message.includes("not found for API version");
+
+              if (isNotFound) {
+                console.warn(`Gemini model "${model}" not available, trying next candidate...`);
+                continue;
+              }
+
+              // For non-404 errors, let retryGemini handle quota/overload logic.
+              throw err;
+            }
+          }
+
+          throw lastError || new Error("No Gemini models succeeded for public resume generation");
+        },
+        apiKeyToUse
+      );
+
+      let generatedLatex = (response as any).text;
+      generatedLatex = String(generatedLatex || "")
+        .replace(/```latex\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+
+      res.json({ latex: generatedLatex });
+    } catch (error: any) {
+      console.error("Error generating public base LaTeX:", error);
+
+      if (error.message?.includes("API key")) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes("quota")) {
+        return res.status(429).json({ message: "Gemini API quota exceeded, check your API key" });
+      }
+      if (error.message?.includes("overloaded") || error.message?.includes("UNAVAILABLE")) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
+      }
+
+      res.status(500).json({
+        message: "Failed to generate base LaTeX",
+        details: error.message || "Unknown error",
+      });
+    }
+  });
+
+  // Public Fix Resume - AI fixes LaTeX that failed to compile (no auth)
+  app.post("/api/public/fix-resume", async (req, res) => {
+    try {
+      const { latex, compilationError, geminiApiKey, selectedModel } = req.body ?? {};
+
+      if (!latex || typeof latex !== "string") {
+        return res.status(400).json({ message: "LaTeX code is required to fix" });
+      }
+      if (!compilationError || typeof compilationError !== "string") {
+        return res.status(400).json({ message: "Compilation error message is required" });
+      }
+
+      const providedKey = typeof geminiApiKey === "string" ? geminiApiKey.trim() : "";
+      const envKey = (process.env.GEMINI_API_KEY || "").trim();
+      const apiKeyToUse = providedKey || envKey;
+
+      if (!apiKeyToUse) {
+        return res.status(400).json({
+          message: "Please provide your Gemini API key to fix the resume.",
+        });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const fixPrompt = `You are an expert LaTeX resume formatter. The following LaTeX resume FAILED to compile. Your job is to fix it so it compiles successfully.
+
+COMPILATION ERROR:
+${compilationError}
+
+BROKEN LATEX:
+${latex}
+
+INSTRUCTIONS:
+1. Fix ALL errors that caused the compilation to fail
+2. Ensure the output is valid LaTeX that compiles without errors
+3. Keep the same content and structure - only fix syntax/formatting issues
+4. Common fixes: escape special characters (%, &, $, #, _, {, }), remove unsupported packages (multicol, etc.), fix missing \\end{document}, fix malformed commands
+5. When fixing, preserve ATS best practices: no buzzwords, no Objective/References sections, varied action verbs and clear, quantifiable accomplishments.
+6. Return ONLY the complete fixed LaTeX code - no explanations or markdown`;
+
+      const dropdownModels = [
+        "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash",
+        "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro",
+      ];
+      const candidateModels = [
+        typeof selectedModel === "string" ? selectedModel.trim() : "",
+        (process.env.GEMINI_PUBLIC_MODEL || "").trim(),
+        ...dropdownModels,
+      ].filter(Boolean);
+
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          let lastErr: any = null;
+          for (const model of candidateModels) {
+            try {
+              return await genAI.models.generateContent({ model, contents: fixPrompt });
+            } catch (err: any) {
+              lastErr = err;
+              const msg = err?.message || "";
+              if (err?.status === 404 || msg.includes("not found") || msg.includes("not found for API version")) {
+                continue;
+              }
+              throw err;
+            }
+          }
+          throw lastErr;
+        },
+        apiKeyToUse
+      );
+
+      let fixedLatex = (response as any).text;
+      fixedLatex = String(fixedLatex || "").replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
+
+      res.json({ latex: fixedLatex });
+    } catch (error: any) {
+      console.error("Error fixing public LaTeX:", error);
+      if (error.message?.includes("API key")) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes("quota")) {
+        return res.status(429).json({ message: "Gemini API quota exceeded" });
+      }
+      res.status(500).json({ message: "Failed to fix resume", details: error.message });
+    }
+  });
+
   // Base LaTeX Generator - Convert plain text resume to LaTeX (EMPLOYEE/ADMIN only)
   // Step 1: Only generates LaTeX from plain text, no custom instructions
   app.post("/api/generate-base-latex/:clientId", requireAuth, async (req, res) => {
@@ -1241,174 +1645,9 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       // Initialize Gemini AI
       const { GoogleGenAI } = await import("@google/genai");
 
-      // LaTeX template structure - OPTIMIZED VERSION with balanced spacing (no overlaps)
-      // Key improvements:
-      // - Use tabularx (X column) so long left-side headings wrap instead of colliding with right-side dates/locations
-      // - Use \\flushbottom to reduce large unused bottom space on a one-page resume
-      const latexTemplate = `\\documentclass[letterpaper,10pt]{article}
-
-\\usepackage{latexsym}
-\\usepackage[empty]{fullpage}
-\\usepackage{titlesec}
-\\usepackage[usenames,dvipsnames]{color}
-\\usepackage{enumitem}
-\\usepackage[hidelinks]{hyperref}
-\\usepackage{fancyhdr}
-\\usepackage{tabularx, multicol}
-\\usepackage{array}
-
-\\pagestyle{fancy}
-\\fancyhf{}
-\\renewcommand{\\headrulewidth}{0pt}
-\\renewcommand{\\footrulewidth}{0pt}
-
-% Optimized margins - tight but no overlap
-\\addtolength{\\oddsidemargin}{-0.5in}
-\\addtolength{\\evensidemargin}{-0.5in}
-\\addtolength{\\textwidth}{1in}
-\\addtolength{\\topmargin}{-0.6in}
-\\addtolength{\\textheight}{1.2in}
-
-\\urlstyle{same}
-\\raggedright
-\\flushbottom
-\\setlength{\\tabcolsep}{0in}
-\\setlength{\\emergencystretch}{2em}
-
-% Tabularx helper column for wrapping long headings
-\\newcolumntype{L}{>{\\raggedright\\arraybackslash}X}
-
-% Section formatting - balanced spacing
-\\titleformat{\\section}{
-  \\vspace{-8pt}\\scshape\\raggedright\\large
-}{}{0em}{}[\\color{black}\\titlerule \\vspace{-6pt}]
-
-% Custom commands with proper spacing
-\\newcommand{\\resumeItem}[1]{
-  \\item\\small{
-    {#1 \\vspace{-2pt}}
-  }
-}
-
-\\newcommand{\\resumeSubheading}[4]{
-  \\vspace{-2pt}\\item
-    \\begin{tabularx}{0.97\\textwidth}[t]{@{}Lr@{}}
-      \\textbf{#1} & #2 \\\\
-      \\textit{\\small#3} & \\textit{\\small #4} \\\\
-    \\end{tabularx}\\vspace{-5pt}
-}
-
-\\newcommand{\\resumeProjectHeading}[2]{
-    \\item
-    \\begin{tabularx}{0.97\\textwidth}{@{}Lr@{}}
-      \\small#1 & #2 \\\\
-    \\end{tabularx}\\vspace{-5pt}
-}
-
-\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.1in, label={}]}
-\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
-\\newcommand{\\resumeItemListStart}{\\begin{itemize}[leftmargin=0.15in, topsep=0pt, parsep=0pt, itemsep=0pt]}
-\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-4pt}}
-
-\\begin{document}
-
-% HEADER - Name and Contact Info
-\\begin{center}
-    \\textbf{\\Huge \\scshape [FULL NAME]} \\\\ \\vspace{2pt}
-    \\small [PHONE] $|$ \\href{mailto:[EMAIL]}{\\underline{[EMAIL]}} $|$ [LOCATION] $|$ 
-    \\href{[LINKEDIN_URL]}{\\underline{linkedin.com/in/[USERNAME]}} $|$
-    \\href{[GITHUB_URL]}{\\underline{github.com/[USERNAME]}}
-\\end{center}
-
-% EDUCATION SECTION
-\\section{Education}
-  \\resumeSubHeadingListStart
-    \\resumeSubheading
-      {[UNIVERSITY NAME]}{[LOCATION]}
-      {[DEGREE]}{[DATES]}
-      \\resumeItemListStart
-        \\resumeItem{Relevant Coursework: [COURSES]}
-        \\resumeItem{GPA: [GPA] | [HONORS/AWARDS]}
-      \\resumeItemListEnd
-  \\resumeSubHeadingListEnd
-
-% EXPERIENCE SECTION
-\\section{Work Experience}
-\\resumeSubHeadingListStart
-    \\resumeSubheading
-      {[COMPANY NAME]}{[LOCATION]}
-      {[JOB TITLE]}{[DATES]}
-    \\resumeItemListStart
-        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
-        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
-        \\resumeItem{[ACHIEVEMENT with specific metrics, numbers, and measurable impact]}
-    \\resumeItemListEnd
-\\resumeSubHeadingListEnd
-
-% PROJECTS SECTION
-\\section{Projects}
-\\resumeSubHeadingListStart
-    \\resumeProjectHeading
-        {\\textbf{[PROJECT NAME]} $|$ \\emph{[TECHNOLOGIES]}}{[DATES]}
-    \\resumeItemListStart
-        \\resumeItem{[PROJECT DESCRIPTION with scope, scale, and impact]}
-        \\resumeItem{[TECHNICAL IMPLEMENTATION details and quantifiable results]}
-    \\resumeItemListEnd
-\\resumeSubHeadingListEnd
-
-% TECHNICAL SKILLS SECTION
-\\section{Technical Skills}
-\\begin{itemize}[leftmargin=0.1in, label={}, itemsep=-2pt]
-    \\small{\\item{
-     \\textbf{Languages:} [LANGUAGES] \\\\
-     \\textbf{Frameworks:} [FRAMEWORKS] \\\\
-     \\textbf{Databases:} [DATABASES] \\\\
-     \\textbf{Developer Tools:} [TOOLS] \\\\
-     \\textbf{Libraries:} [LIBRARIES]
-    }}
-\\end{itemize}
-
-\\end{document}`;
-
       console.log("[Base LaTeX Generator] Building prompt for initial LaTeX generation...");
 
-      // Construct the prompt (no custom instructions - those come in Step 2)
-      const prompt = `You are an expert LaTeX resume formatter. Convert the following plain text resume into a professionally formatted LaTeX resume using EXACTLY the template structure provided below.
-
-CRITICAL REQUIREMENTS:
-1. **ONE PAGE MAXIMUM - THIS IS MANDATORY**: The resume MUST fit on exactly ONE page. This is non-negotiable.
-2. Use the EXACT LaTeX template structure provided - do not modify the preamble, custom commands, or formatting
-3. Extract ALL information from the plain text resume and organize it into the correct sections
-4. Maintain perfect LaTeX syntax with proper escaping of special characters (%, &, $, #, _, {, }, ~, ^)
-5. Use action verbs and quantify achievements where possible
-6. Organize sections in this order: Header (name/contact), Education, Experience, Projects, Technical Skills
-7. If certain sections are missing from the input, include them with placeholder comments or omit if truly not applicable
-8. Ensure ATS (Applicant Tracking System) compatibility by using simple formatting
-
-ONE-PAGE OPTIMIZATION & CONTENT QUALITY:
-- Limit each job/experience to 3-4 bullet points maximum
-- Each bullet point should be 1.5-2 lines long - detailed but not overflowing
-- Include SPECIFIC METRICS and NUMBERS in every bullet point (e.g., "improved efficiency by 40%", "processed 10K+ records", "reduced time from 2s to 0.5s")
-- Use the compact spacing already built into the template - DO NOT add extra \\vspace commands
-- Include only the most relevant and recent experiences
-- For projects section, include 2-3 most impressive projects with technical depth
-- Technical Skills section should be comprehensive - list ALL relevant skills from the input
-- Fill available space with valuable content - add context, scale, and impact to achievements
-- AVOID lines that are too short or too long - aim for balanced line lengths
-- Remove filler words but ADD meaningful details (team size, user count, performance gains)
-
-LATEX TEMPLATE TO FOLLOW EXACTLY:
-${latexTemplate}
-
-PLAIN TEXT RESUME TO CONVERT:
-${plainTextResume}
-
-OUTPUT INSTRUCTIONS:
-- Return ONLY the complete LaTeX code
-- Do NOT include any explanations, comments outside the LaTeX, or markdown code blocks
-- Ensure all special characters are properly escaped
-- The output should compile without errors in any standard LaTeX environment
-- VERIFY the content will fit on ONE PAGE before outputting`;
+      const prompt = buildBaseResumeLatexPrompt(plainTextResume);
 
       // Generate LaTeX
       const response = await retryGemini(
@@ -2330,6 +2569,11 @@ OUTPUT:
     // Also handle bare \usepackage{color} → \usepackage{xcolor} for consistency
     // (xcolor is a superset and avoids conflicts if both are loaded)
     preamble = preamble.replace(/\\usepackage\s*\{color\}/g, '\\usepackage{xcolor}');
+
+    // Remove multicol: Tectonic bundle lacks it; template doesn't use it
+    preamble = preamble.replace(/\\usepackage\s*\{tabularx\s*,\s*multicol\}/g, '\\usepackage{tabularx}');
+    preamble = preamble.replace(/\\usepackage\s*\{multicol\s*,\s*tabularx\}/g, '\\usepackage{tabularx}');
+    preamble = preamble.replace(/\\usepackage\s*\{multicol\}/g, '');
 
     // ── 1. Inject missing custom resume command definitions ──
     // The AI often uses these macros in the body but forgets to define them.

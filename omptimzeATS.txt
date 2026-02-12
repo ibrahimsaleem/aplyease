@@ -1,0 +1,102 @@
+now lets imrpve the ATS score of the reusme this one issue i found in one the resume genarted overall the ATS score was good some points to make ATS score betetr 1. Buzzwords & Clichés
+Remove vague buzzwords which add little value 2. Dates
+Make sure your dates are formatted correctly. 3. Unnecessary sections
+These sections are outdated and should be removed from your resume
+  Great, no unnecessary sections found.
+Resume standards have changed over the last decade. Some sections have become less useful to hiring managers and including them wastes space, and may tell hiring managers that you're out of touch with modern standards.
+
+Passed checks
+ 
+No references section
+Great - you shouldn't include a references section in your resume. Employers will ask you directly if they ever need to contact your references.
+
+ 
+No objective
+While you can include a short summary on your resume, do not include an objective in your resume. It is clear to hiring managers that you are looking for a job - there's no need to restate it at the top of your resume. In 2026, an objective is considered by hiring managers to be an outdated section.4. Repetition
+Avoid repeating action verbs and phrases on your resume
+
+Checks passed
+ 
+No repetitive phrases
+Your language looks well-varied.
+
+Even when describing similar skills, try to always use unique language in terms of verbs and phrases. This makes your resume less monotonous and helps you stand out.
+
+ 
+No repetitive bullet points
+Your bullet points look unique - that's great. This means each point in your resume is differentiated enough and is showcasing different skills and projects you worked on. The space on your resume is limited so you don't want to be repeating the same kind of achievements over and over again.
+
+ 
+Unique action verbs
+Strong, unique action verbs show hiring managers that you have held different roles and skill sets. They also help your accomplishments stand out and make them more impactful.
+
+Recruiter Insights
+Let's go over some specific questions you might have if you're stuck, answered by real recruiters and hiring managers.
+
+   Why is repetition bad?
+   Collapse Answer
+
+Repetition often reduces your resume's impact, making it less compelling and harder for your achievements to stand out.
+
+If you've used the exact same action verbs or phrases several times over in your resume, it's usually a sign that you're showing the same skill set too often.
+
+Repetition of action verbs
+You shouldn't use the same action verb more than two times on your resume. For alternative action verbs, see the image on the right of the question, the alternatives below, or go to the Action Verbs section.
+
+Repetition of phrases
+Similarly, try to avoid reusing specific phrases multiple times on your resume.
+
+We see this mistake pretty often, where job seekers want to emphasize a certain skill and describe it in the exact same way in multiple parts of their resume (e.g. their work experience and their summary). Instead, try to vary up the language even when describing similar skills - this helps your resume's bullet points stand out.5. Contact and Personal Details
+Avoid including unnecessary personal details. Just include what's required.
+In terms of personal details, your resume should contain your name, location, and key contact details (e.g. your email). You should avoid adding in other personal details, like date of birth, gender or nationality. Let's look at a few personal detail checks.
+
+Passed checks
+ 
+Email found
+We found the email is, gulvishsaleem123@gmail.com. Make sure it's a professional email address (e.g. first.lastname@gmail.com), and that it's not something informal or casual like biker69@gmail.com. Do not use your current work email address.
+
+ 
+LinkedIn profile found
+Great, we found the profile, linkedin.com/in/gulvish-saleem. Recruiters often want an easy way to see your online profile. Make sure it matches your resume (in terms of job titles, dates, roles), and it's overall impressive.
+
+ 
+No unnecessary personal details found
+Personal details like your date of birth, gender or nationality shouldn't be on a resume. They aren't factors that hiring managers consider when reviewing your resume - including them shows a lack of professional judgment.
+
+Recruiter Insights
+Let's go over some specific questions you might have if you're stuck, answered by real recruiters and hiring managers.
+
+   Why should personal details be removed from your resume?
+   Collapse Answer
+This section is locked and is available only for Pro users.
+
+  Upgrade
+   What contact details should I include?
+   Collapse Answer
+
+It's important that potential employers and recruiters can easily reach you, so ensure you've included your email address at the bare minimum. You can optionally include mobile number too. While you should not include your full physical address, recruiters find it easier to determine your eligibility if you include your current city on your resume. This is particularly useful if your previous job locations were in a different city to the job you're now applying for. Examples
+Let's look at before and after examples of how to turn vague buzzwords into tangible accomplishments. The rewritten 'after' lines remove the underlined buzzwords and show evidence of specific accomplishments.
+
+Example 1: How to show your leadership and management experience
+Before: With buzzwords
+• Highly motivated individual with strong leadership and management skills, with extensive experience managing cross-functional teams
+
+⤸
+After: No buzzwords• Managed a 5-member cross-functional (product, engineering, sales, support) team and coordinated with six business partners toward the successful launch of an e-commerce platform.
+
+Want our AI to write perfect lines for you?   
+Recruiter Insights
+Let's go over some specific questions you might have if you're stuck, answered by real recruiters and hiring managers.
+
+   How do you remove buzzwords and clichés from your resume?
+   Collapse Answer
+
+In this section, we scanned your resume for common buzzwords and clichés that are considered to be overused, vague and ineffective. Examples of these words include 'results-driven', 'team player' or 'hardworking'.
+
+These words don't convey your impact or achievements, and just take up space on your resume. To recruiters and hiring managers, they are considered to be nothing more than marketing fluff.
+
+The problem with phrases like these is that they are usually pretty biased and aren't backed up, and thus aren't effective in conveying your strengths or impact. Recruiters aren't going to just believe you're a "hard worker" if you say you are — they are going to want to see evidence that you are one!
+
+Instead of these generic buzzwords, you need to clearly describe what you did and how you did it.
+
+For example, don't just say you are a 'team player'. Instead, give a specific example of of professional achievements you've made in a team. "Delivered XYZ project as project manager in a cross-functional team of 10 people..." gives me a much better indication of the size of teams you've worked in as well as the role you had.

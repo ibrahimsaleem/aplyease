@@ -8,6 +8,7 @@ import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import LandingPage from "@/pages/landing-page";
 import WorkWithUsPage from "@/pages/work-with-us";
+import PublicResumeFormatterPage from "@/pages/public-resume-formatter";
 import PendingVerificationPage from "@/pages/pending-verification";
 import AdminDashboard from "@/pages/admin-dashboard";
 import EmployeeDashboard from "@/pages/employee-dashboard";
@@ -89,6 +90,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/work-with-us" component={WorkWithUsPage} />
+      <Route path="/resume-formatter" component={PublicResumeFormatterPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={RegisterPage} />
 

@@ -92,6 +92,9 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Pricing
               </button>
+              <Link href="/resume-formatter" className="text-slate-600 hover:text-primary transition-colors font-medium">
+                Free Resume Tool
+              </Link>
               <Link href="/work-with-us" className="text-slate-600 hover:text-primary transition-colors font-medium">
                 Work With Us
               </Link>
@@ -137,6 +140,9 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection("pricing")} className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Pricing
               </button>
+              <Link href="/resume-formatter" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
+                Free Resume Tool
+              </Link>
               <Link href="/work-with-us" className="block w-full text-left py-3 text-slate-600 hover:text-primary font-medium">
                 Work With Us
               </Link>
@@ -208,6 +214,29 @@ export default function LandingPage() {
             </div>
           </div>
         </FuturisticBackground>
+
+        {/* Free Resume Tool CTA */}
+        <section className="py-12 md:py-16 bg-slate-50">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="max-w-3xl mx-auto text-center">
+              <Badge className="bg-green-100 text-green-800 mb-4 border-none">
+                Free Tool
+              </Badge>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">
+                Make the Best Resume Ever — Trusted by 1,000,000+ People
+              </h2>
+              <p className="text-slate-600 mb-6 text-sm md:text-base">
+                Paste your existing resume text and instantly get a one-page, ATS-optimized resume in our most trusted default format —
+                the same layout our internal team uses for HireEase clients.
+              </p>
+              <Link href="/resume-formatter">
+                <Button size="lg" className="text-lg px-8 h-12">
+                  Use Free Resume Tool <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-24 bg-white">
