@@ -3,6 +3,7 @@ import { ExternalLink, FileText, ChevronDown, ChevronUp, Calendar, Building2, Ma
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { getStatusColor, getInitials } from "@/lib/auth-utils"
 import type { JobApplication } from "@/types"
 import { useTouchGestures } from "@/hooks/use-touch-gestures"
@@ -13,6 +14,9 @@ interface ApplicationCardProps {
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
   readonly?: boolean
+  selected?: boolean
+  onSelect?: (id: string, selected: boolean) => void
+  showCheckbox?: boolean
 }
 
 export function ApplicationCard({ 
@@ -20,7 +24,10 @@ export function ApplicationCard({
   onStatusUpdate,
   onSwipeLeft,
   onSwipeRight,
-  readonly = true
+  readonly = true,
+  selected = false,
+  onSelect,
+  showCheckbox = false
 }: ApplicationCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
@@ -50,12 +57,24 @@ export function ApplicationCard({
 
   return (
     <Card 
-      className={`mb-4 transition-all duration-200 ${isSwiping ? 'scale-95' : 'scale-100'}`}
+      className={`mb-4 transition-all duration-200 ${isSwiping ? 'scale-95' : 'scale-100'} ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
       {...touchHandlers}
     >
       <CardContent className="p-4">
         {/* Header Section - Always Visible */}
         <div className="space-y-3">
+          {/* Selection Checkbox */}
+          {showCheckbox && onSelect && (
+            <div className="flex items-center mb-2">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={(checked) => onSelect(application.id, checked as boolean)}
+                className="h-5 w-5"
+              />
+              <span className="ml-2 text-sm text-slate-600">Select this application</span>
+            </div>
+          )}
+          
           {/* Job Title & Company */}
           <div>
             <h3 className="text-lg font-semibold text-slate-900 mb-1">
@@ -77,14 +96,17 @@ export function ApplicationCard({
             </div>
             
             {!readonly && onStatusUpdate ? (
-              <button
-                onClick={() => setShowStatusMenu(!showStatusMenu)}
-                className="min-h-[44px] px-3 py-2"
-              >
-                <Badge className={getStatusColor(application.status)}>
-                  {application.status}
-                </Badge>
-              </button>
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  className="min-h-[44px] px-3 py-2"
+                >
+                  <Badge className={getStatusColor(application.status)}>
+                    {application.status}
+                  </Badge>
+                </button>
+                <span className="text-xs text-blue-600 mt-0.5">Tap to update</span>
+              </div>
             ) : (
               <Badge className={getStatusColor(application.status)}>
                 {application.status}

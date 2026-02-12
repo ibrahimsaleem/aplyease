@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Users, Target, FileText, BarChart3 } from "lucide-react";
+import { AlertTriangle, Users, Target, FileText, BarChart3, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import type { ClientPerformanceAnalytics } from "@/types";
@@ -59,6 +59,10 @@ export function ClientPerformanceAnalytics() {
   const totalApplicationsRemaining = analytics.clients.reduce((sum, client) => sum + client.applicationsRemaining, 0);
   const averageSuccessRate = analytics.clients.length > 0
     ? analytics.clients.reduce((sum, client) => sum + client.successRate, 0) / analytics.clients.length
+    : 0;
+  const totalRejections = analytics.clients.reduce((sum, client) => sum + (client.rejected ?? 0), 0);
+  const averageRejectionRate = analytics.clients.length > 0
+    ? analytics.clients.reduce((sum, client) => sum + (client.rejectionRate ?? 0), 0) / analytics.clients.length
     : 0;
 
   // Prepare chart data: Sort by applications remaining (descending)
@@ -121,6 +125,25 @@ export function ClientPerformanceAnalytics() {
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <Target className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-600">Rejections</p>
+                <p className="text-3xl font-bold text-amber-900" data-testid="text-total-rejections">
+                  {totalRejections}
+                </p>
+                <p className="text-sm text-amber-600 mt-1">
+                  Avg rate: {averageRejectionRate.toFixed(1)}%
+                </p>
+              </div>
+              <div className="bg-amber-100 p-3 rounded-lg">
+                <XCircle className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </CardContent>
@@ -215,6 +238,8 @@ export function ClientPerformanceAnalytics() {
                 <TableHead className="text-center">In Progress</TableHead>
                 <TableHead className="text-center">Interviews</TableHead>
                 <TableHead className="text-center">Hired</TableHead>
+                <TableHead className="text-center">Rejections</TableHead>
+                <TableHead className="text-center">Rejection Rate</TableHead>
                 <TableHead className="text-center">Success Rate</TableHead>
                 <TableHead className="text-center">Priority</TableHead>
               </TableRow>
@@ -279,6 +304,12 @@ export function ClientPerformanceAnalytics() {
                     <TableCell className="text-center">{client.interviews}</TableCell>
                     <TableCell className="text-center">
                       <span className="font-semibold text-green-600">{client.hired}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-semibold text-amber-600">{client.rejected ?? 0}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-semibold">{(client.rejectionRate ?? 0)}%</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="font-semibold">{client.successRate}%</span>

@@ -3,7 +3,7 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Calendar, Clock, BarChart3, Users } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Clock, BarChart3, Users, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { EmployeePerformanceAnalytics, DailyEmployeeAnalytics } from "@/types";
 
@@ -56,7 +56,7 @@ export function EmployeePerformanceAnalytics() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Total Payout Card */}
         <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
           <CardContent className="p-6">
@@ -131,7 +131,9 @@ export function EmployeePerformanceAnalytics() {
               <div>
                 <p className="text-sm font-medium text-orange-600">Daily Average</p>
                 <p className="text-3xl font-bold text-orange-900" data-testid="text-daily-avg">
-                  {Math.round(analytics.dailyPerformance.reduce((sum, day) => sum + day.applications, 0) / analytics.dailyPerformance.length)}
+                  {analytics.dailyPerformance.length > 0
+                    ? Math.round(analytics.dailyPerformance.reduce((sum, day) => sum + day.applications, 0) / analytics.dailyPerformance.length)
+                    : 0}
                 </p>
                 <p className="text-sm text-orange-600 mt-1">
                   applications per day
@@ -139,6 +141,32 @@ export function EmployeePerformanceAnalytics() {
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Rejection Rate Summary */}
+        <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600">Avg Rejection Rate</p>
+                <p className="text-3xl font-bold text-red-900" data-testid="text-avg-rejection-rate">
+                  {analytics.employees.length > 0
+                    ? (
+                        analytics.employees.reduce((sum, e) => sum + (e.rejectionRate ?? 0), 0) /
+                        analytics.employees.length
+                      ).toFixed(1)
+                    : "0"}
+                  %
+                </p>
+                <p className="text-sm text-red-600 mt-1">
+                  {analytics.employees.reduce((sum, e) => sum + (e.rejectedCount ?? 0), 0)} total rejected
+                </p>
+              </div>
+              <div className="bg-red-100 p-3 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -311,6 +339,8 @@ export function EmployeePerformanceAnalytics() {
                 <TableHead>Employee</TableHead>
                 <TableHead className="text-center">Apps (Today)</TableHead>
                 <TableHead className="text-center">Apps (Month)</TableHead>
+                <TableHead className="text-center">Rejected</TableHead>
+                <TableHead className="text-center">Rejection Rate</TableHead>
                 <TableHead className="text-center">Interviews (Month)</TableHead>
                 <TableHead className="text-center">Earnings (Month)</TableHead>
                 <TableHead className="text-center">Performance</TableHead>
@@ -334,6 +364,12 @@ export function EmployeePerformanceAnalytics() {
                     </TableCell>
                     <TableCell className="text-center font-semibold text-slate-700">
                       {employee.applicationsThisMonth}
+                    </TableCell>
+                    <TableCell className="text-center text-red-600 font-medium">
+                      {employee.rejectedCount ?? 0}
+                    </TableCell>
+                    <TableCell className="text-center text-red-600 font-medium">
+                      {(employee.rejectionRate ?? 0)}%
                     </TableCell>
                     <TableCell className="text-center">
                       {employee.interviewsThisMonth}

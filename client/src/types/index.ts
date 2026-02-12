@@ -93,6 +93,8 @@ export type EmployeePerformanceData = {
   activeClientsCount: number;
   totalApplicationsRemaining: number;
   effectiveWorkload: number;
+  rejectedCount: number;
+  rejectionRate: number;
 };
 
 export type EmployeePerformanceAnalytics = {
@@ -142,7 +144,9 @@ export type ClientPerformanceData = {
   inProgress: number;
   interviews: number;
   hired: number;
+  rejected: number;
   successRate: number;
+  rejectionRate: number;
   priority: "High" | "Medium" | "Low";
   assignedEmployees: { id: string; name: string }[];
 };
@@ -238,4 +242,17 @@ export type MonthlyPaymentStats = {
   month: number;
   totalAmount: number;
   transactionCount: number;
+};
+
+export type RejectionRateStats = {
+  totalApplications: number;
+  rejectedCount: number;
+  rejectionRate: number;
+  rejectedApplications: (JobApplication & { client?: User; employee?: User })[];
+};
+
+export type ApplicationStatusStats = {
+  countsByStatus: Record<string, number>;
+  applications: (JobApplication & { client?: User; employee?: User })[];
+  pendingReviewCount: number;
 };

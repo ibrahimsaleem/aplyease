@@ -5,6 +5,7 @@ import { NavigationHeader } from "@/components/navigation-header";
 import { StatsCards } from "@/components/stats-cards";
 import { ApplicationTable } from "@/components/application-table";
 import { MobileApplicationsList } from "@/components/mobile/mobile-applications-list";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BottomNavigation } from "@/components/mobile/bottom-navigation";
 import { MobileSearch } from "@/components/mobile/mobile-search";
 import { MobileFilter } from "@/components/mobile/mobile-filter";
@@ -16,7 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
-import { DollarSign, Eye, EyeOff, Copy, Sparkles, Phone } from "lucide-react";
+import { DollarSign, Eye, EyeOff, Copy, Sparkles, Phone, AlertCircle, Search, Filter } from "lucide-react";
 import type { ClientStats, ApplicationFilters } from "@/types";
 
 // Helper function to format cents to dollars
@@ -240,57 +241,96 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {/* Mobile View */}
-        {isMobile ? (
-          <>
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">Applications for Me</h2>
-              <p className="text-sm text-slate-600">
-                Read-only view of job applications submitted on your behalf
-              </p>
-            </div>
+        {/* Applications - Client can update status */}
+        <div className="space-y-6">
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <div className="space-y-2">
+                <p className="font-semibold">How to Update Application Status:</p>
+                {isMobile ? (
+                  <div className="text-sm space-y-2">
+                    <p><strong>Single:</strong> Tap the status badge → select new status</p>
+                    <p><strong>Multiple:</strong> Tap "Select All" or checkboxes → tap "Update Status" → choose status</p>
+                  </div>
+                ) : (
+                  <div className="text-sm space-y-2">
+                    <p><strong>Single:</strong> Click status dropdown → select new status</p>
+                    <p><strong>Multiple:</strong> Select checkboxes → click "Update status" → choose status</p>
+                  </div>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
 
-            <MobileApplicationsList
-              filters={filters}
-              readonly={true}
-            />
+          {isMobile ? (
+            <>
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Applications for Me</h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Update status as you receive responses from employers
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-11"
+                    onClick={() => setShowSearch(true)}
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-11"
+                    onClick={() => setShowFilter(true)}
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filter
+                  </Button>
+                </div>
+              </div>
 
-            <BottomNavigation
-              onSearchClick={() => setShowSearch(true)}
-              onFilterClick={() => setShowFilter(true)}
-              onRefreshClick={handleRefresh}
-              onProfileClick={() => setLocation("/profile")}
-              showProfile={true}
-            />
+              <MobileApplicationsList
+                filters={filters}
+                readonly={false}
+              />
 
-            <MobileSearch
-              isOpen={showSearch}
-              onClose={() => setShowSearch(false)}
-              onSearch={handleSearch}
-              initialValue={searchQuery}
-            />
+              <BottomNavigation
+                onSearchClick={() => setShowSearch(true)}
+                onFilterClick={() => setShowFilter(true)}
+                onRefreshClick={handleRefresh}
+                onProfileClick={() => setLocation("/profile")}
+                showProfile={true}
+              />
 
-            <MobileFilter
-              isOpen={showFilter}
-              onClose={() => setShowFilter(false)}
-              onApplyFilters={handleApplyFilters}
-              currentFilters={filters}
-              showEmployeeFilter={false}
+              <MobileSearch
+                isOpen={showSearch}
+                onClose={() => setShowSearch(false)}
+                onSearch={handleSearch}
+                initialValue={searchQuery}
+              />
+
+              <MobileFilter
+                isOpen={showFilter}
+                onClose={() => setShowFilter(false)}
+                onApplyFilters={handleApplyFilters}
+                currentFilters={filters}
+                showEmployeeFilter={false}
+              />
+            </>
+          ) : (
+            <ApplicationTable
+              title="Applications for Me"
+              description="Update status as you receive responses from employers"
+              showEmployeeColumn={true}
+              showClientColumn={false}
+              showActions={true}
+              readonly={false}
+              filters={{ clientId: user.id }}
+              useLoadMore={true}
             />
-          </>
-        ) : (
-          /* Desktop View */
-          <ApplicationTable
-            title="Applications for Me"
-            description="Read-only view of job applications submitted on your behalf"
-            showEmployeeColumn={true}
-            showClientColumn={false}
-            showActions={false}
-            readonly={true}
-            filters={{ clientId: user.id }}
-            useLoadMore={true}
-          />
-        )}
+          )}
+        </div>
       </div>
 
       {/* Welcome Modal for Resume Tool */}

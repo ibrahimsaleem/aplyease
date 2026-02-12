@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
+import { Search, Download, ExternalLink, Edit, Trash2, FileText, ArrowUpDown, ChevronLeft, ChevronRight, CheckSquare, Square, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { exportApplicationsCSV } from "@/lib/csv-export";
 import { getInitials, getStatusColor } from "@/lib/auth-utils";
@@ -54,6 +55,7 @@ export function ApplicationTable({
   });
   const [searchInput, setSearchInput] = useState<string>(initialFilters.search || "");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
+  const [bulkStatusConfirm, setBulkStatusConfirm] = useState<JobApplication["status"] | null>(null);
   
   // Ref to store scroll position before loading more
   const scrollPositionRef = useRef<number>(0);
@@ -144,6 +146,24 @@ export function ApplicationTable({
     }
   });
 
+  const updateBulkStatus = useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: JobApplication["status"] }) => {
+      const res = await apiRequest("PATCH", "/api/applications/bulk", { ids, status });
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: "Updated", description: `${variables.ids.length} application${variables.ids.length > 1 ? "s" : ""} updated to ${variables.status}` });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats/client"] });
+      setSelectedApplications(new Set());
+      setBulkStatusConfirm(null);
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message || "Failed to update status", variant: "destructive" });
+      setBulkStatusConfirm(null);
+    }
+  });
+
   const updateFilter = (key: keyof ApplicationFilters, value: any) => {
     setFilters(prev => ({
       ...prev,
@@ -191,8 +211,11 @@ export function ApplicationTable({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = new Set(data?.applications.map(app => app.id) || []);
-      setSelectedApplications(allIds);
+      // Only select applications the user can update
+      const selectableIds = data?.applications
+        .filter(app => canUpdate(app))
+        .map(app => app.id) || [];
+      setSelectedApplications(new Set(selectableIds));
     } else {
       setSelectedApplications(new Set());
     }
@@ -225,8 +248,9 @@ export function ApplicationTable({
   };
 
   const totalPages = Math.ceil((data?.total || 0) / (filters.limit || 10));
-  const allSelected = (data?.applications?.length || 0) > 0 && selectedApplications.size === (data?.applications?.length || 0);
-  const someSelected = selectedApplications.size > 0 && selectedApplications.size < (data?.applications?.length || 0);
+  const selectableApplications = data?.applications.filter(app => canUpdate(app)) || [];
+  const allSelected = selectableApplications.length > 0 && selectedApplications.size === selectableApplications.length;
+  const someSelected = selectedApplications.size > 0 && selectedApplications.size < selectableApplications.length;
 
   if (isLoading) {
     return (
@@ -253,34 +277,78 @@ export function ApplicationTable({
                 <span className="text-sm text-slate-600">
                   {selectedApplications.size} selected
                 </span>
-                {(currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Selected
-                      </Button>
-                    </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Applications</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete {selectedApplications.size} application{selectedApplications.size > 1 ? 's' : ''}? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteMultipleApplications.mutate(Array.from(selectedApplications))}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {(currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT" || currentUser?.role === "EMPLOYEE") && (
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Update status
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {(["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected", "On Hold"] as const).map((status) => (
+                          <DropdownMenuItem
+                            key={status}
+                            onClick={() => setBulkStatusConfirm(status)}
+                          >
+                            Set to {status}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {(currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Selected
+                          </Button>
+                        </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Applications</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {selectedApplications.size} application{selectedApplications.size > 1 ? 's' : ''}? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteMultipleApplications.mutate(Array.from(selectedApplications))}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    )}
+                  </>
                 )}
               </div>
+            )}
+
+            {/* Bulk status update confirmation dialog */}
+            {bulkStatusConfirm !== null && (
+              <AlertDialog open={bulkStatusConfirm !== null} onOpenChange={(open) => !open && setBulkStatusConfirm(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Update status</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Update {selectedApplications.size} application{selectedApplications.size > 1 ? "s" : ""} to &quot;{bulkStatusConfirm}&quot;?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setBulkStatusConfirm(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => updateBulkStatus.mutate({ ids: Array.from(selectedApplications), status: bulkStatusConfirm! })}
+                    >
+                      Update
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
 
             <div className="relative">
@@ -365,7 +433,7 @@ export function ApplicationTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
+                {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT" || currentUser?.role === "EMPLOYEE") && (
                   <TableHead className="w-12">
                     <Checkbox
                       checked={allSelected}
@@ -402,12 +470,17 @@ export function ApplicationTable({
                   data-testid={`row-application-${application.id}`}
                   className={isMyApplication ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
                 >
-                  {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT") && (
+                  {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT" || currentUser?.role === "EMPLOYEE") && canUpdate(application) && (
                     <TableCell>
                       <Checkbox
                         checked={selectedApplications.has(application.id)}
                         onCheckedChange={(checked) => handleSelectApplication(application.id, checked as boolean)}
                       />
+                    </TableCell>
+                  )}
+                  {showActions && !readonly && (currentUser?.role === "ADMIN" || currentUser?.role === "CLIENT" || currentUser?.role === "EMPLOYEE") && !canUpdate(application) && (
+                    <TableCell>
+                      {/* Empty cell for alignment when checkbox is not shown */}
                     </TableCell>
                   )}
                   <TableCell className="font-medium" data-testid="text-date-applied">

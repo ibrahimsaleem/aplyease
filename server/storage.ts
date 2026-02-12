@@ -113,6 +113,26 @@ export interface IStorage {
       earnings: number;
       interviews: number;
       totalApplications: number;
+      assignedClients: string[];
+      applicationsToday: number;
+      applicationsThisMonth: number;
+      interviewsThisMonth: number;
+      earningsThisMonth: number;
+      activeClientsCount: number;
+      totalApplicationsRemaining: number;
+      effectiveWorkload: number;
+      rejectedCount: number;
+      rejectionRate: number;
+    }>;
+    weeklyPerformance: Array<{
+      week: string;
+      applications: number;
+      employees: number;
+    }>;
+    dailyPerformance: Array<{
+      date: string;
+      applications: number;
+      employees: number;
     }>;
   }>;
 
@@ -154,6 +174,19 @@ export interface IStorage {
   unassignEmployee(clientId: string, employeeId: string): Promise<void>;
   getEmployeeAssignments(employeeId: string): Promise<User[]>;
   getClientAssignments(clientId: string): Promise<User[]>;
+
+  getRejectionRateStats(ownerId: string, role: "client" | "employee"): Promise<{
+    totalApplications: number;
+    rejectedCount: number;
+    rejectionRate: number;
+    rejectedApplications: JobApplicationWithUsers[];
+  }>;
+
+  getApplicationStatusByClient(clientId: string, opts?: { limit?: number; status?: string }): Promise<{
+    countsByStatus: Record<string, number>;
+    applications: JobApplicationWithUsers[];
+    pendingReviewCount: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -676,6 +709,11 @@ export class DatabaseStorage implements IStorage {
       applicationsThisMonth: number;
       interviewsThisMonth: number;
       earningsThisMonth: number;
+      activeClientsCount: number;
+      totalApplicationsRemaining: number;
+      effectiveWorkload: number;
+      rejectedCount: number;
+      rejectionRate: number;
     }>;
     weeklyPerformance: Array<{
       week: string;
@@ -756,7 +794,9 @@ export class DatabaseStorage implements IStorage {
 
         const totalAppsCount = empApps.length;
         const interviewsCount = empApps.filter(app => app.status === "Interview").length;
+        const rejectedCount = empApps.filter(app => app.status === "Rejected").length;
         const successRate = totalAppsCount > 0 ? (interviewsCount / totalAppsCount) * 100 : 0;
+        const rejectionRate = totalAppsCount > 0 ? (rejectedCount / totalAppsCount) * 100 : 0;
         const earnings = totalAppsCount * 0.2;
 
         const todayAppsCount = empApps.filter(app => app.dateApplied >= todayStr).length;
@@ -791,6 +831,8 @@ export class DatabaseStorage implements IStorage {
           activeClientsCount,
           totalApplicationsRemaining,
           effectiveWorkload: Math.round(effectiveWorkload),
+          rejectedCount,
+          rejectionRate: Math.round(rejectionRate * 100) / 100,
         };
       });
 
@@ -828,7 +870,9 @@ export class DatabaseStorage implements IStorage {
       inProgress: number;
       interviews: number;
       hired: number;
+      rejected: number;
       successRate: number;
+      rejectionRate: number;
       priority: "High" | "Medium" | "Low";
       assignedEmployees: { id: string; name: string }[];
     }>;
@@ -896,8 +940,13 @@ export class DatabaseStorage implements IStorage {
           app.status === "Hired"
         ).length;
 
+        const rejected = clientApps.filter(app =>
+          app.status === "Rejected"
+        ).length;
+
         // Calculate success rate (hired/total)
         const successRate = totalApplications > 0 ? (hired / totalApplications) * 100 : 0;
+        const rejectionRate = totalApplications > 0 ? (rejected / totalApplications) * 100 : 0;
 
         // Get assigned employees for this client
         const assignedEmployees = allAssignments
@@ -927,7 +976,9 @@ export class DatabaseStorage implements IStorage {
           inProgress,
           interviews,
           hired,
+          rejected,
           successRate: Math.round(successRate * 100) / 100,
+          rejectionRate: Math.round(rejectionRate * 100) / 100,
           priority,
           assignedEmployees,
         };
@@ -1694,6 +1745,133 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
 
       return !!result;
+    });
+  }
+
+  async getRejectionRateStats(ownerId: string, role: "client" | "employee"): Promise<{
+    totalApplications: number;
+    rejectedCount: number;
+    rejectionRate: number;
+    rejectedApplications: JobApplicationWithUsers[];
+  }> {
+    return retryOperation(async () => {
+      const clientUsers = alias(users, "client_users");
+      const employeeUsers = alias(users, "employee_users");
+
+      const idColumn = role === "employee" ? jobApplications.employeeId : jobApplications.clientId;
+      const baseCondition = eq(idColumn, ownerId);
+
+      const [totalRow] = await db
+        .select({ count: count() })
+        .from(jobApplications)
+        .where(baseCondition);
+
+      const [rejectedRow] = await db
+        .select({ count: count() })
+        .from(jobApplications)
+        .where(and(baseCondition, eq(jobApplications.status, "Rejected")));
+
+      const totalApplications = Number(totalRow?.count ?? 0);
+      const rejectedCount = Number(rejectedRow?.count ?? 0);
+      const rejectionRate = totalApplications > 0 ? (rejectedCount / totalApplications) * 100 : 0;
+
+      const rejectedResults = await db
+        .select({
+          application: jobApplications,
+          client: clientUsers,
+          employee: employeeUsers,
+        })
+        .from(jobApplications)
+        .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
+        .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
+        .where(and(baseCondition, eq(jobApplications.status, "Rejected")))
+        .orderBy(desc(jobApplications.dateApplied))
+        .limit(500);
+
+      const rejectedApplications: JobApplicationWithUsers[] = rejectedResults
+        .filter((r): r is typeof r & { client: User; employee: User } => r.client !== null && r.employee !== null)
+        .map((r) => ({
+          ...r.application,
+          client: r.client,
+          employee: r.employee,
+        }));
+
+      return {
+        totalApplications,
+        rejectedCount,
+        rejectionRate: Math.round(rejectionRate * 100) / 100,
+        rejectedApplications,
+      };
+    });
+  }
+
+  async getApplicationStatusByClient(clientId: string, opts?: { limit?: number; status?: string }): Promise<{
+    countsByStatus: Record<string, number>;
+    applications: JobApplicationWithUsers[];
+    pendingReviewCount: number;
+  }> {
+    return retryOperation(async () => {
+      const clientUsers = alias(users, "client_users");
+      const employeeUsers = alias(users, "employee_users");
+      const limit = Math.min(opts?.limit ?? 25, 50);
+
+      // Get counts grouped by status (always full counts for summary cards)
+      const statusCounts = await db
+        .select({
+          status: jobApplications.status,
+          count: count(),
+        })
+        .from(jobApplications)
+        .where(eq(jobApplications.clientId, clientId))
+        .groupBy(jobApplications.status);
+
+      const countsByStatus: Record<string, number> = {
+        Applied: 0,
+        Screening: 0,
+        Interview: 0,
+        Offer: 0,
+        Hired: 0,
+        Rejected: 0,
+        "On Hold": 0,
+      };
+
+      statusCounts.forEach((row) => {
+        if (row.status) {
+          countsByStatus[row.status] = Number(row.count);
+        }
+      });
+
+      const pendingReviewCount = (countsByStatus["Applied"] || 0) + (countsByStatus["Screening"] || 0);
+
+      // Build conditions: filter by status if provided, otherwise default to pending (Applied/Screening)
+      const statusFilter = opts?.status;
+      const conditions = statusFilter
+        ? and(eq(jobApplications.clientId, clientId), eq(jobApplications.status, statusFilter as any))
+        : and(eq(jobApplications.clientId, clientId), inArray(jobApplications.status, ["Applied", "Screening"]));
+
+      // Get limited applications only (for performance)
+      const results = await db
+        .select({
+          application: jobApplications,
+          client: clientUsers,
+          employee: employeeUsers,
+        })
+        .from(jobApplications)
+        .leftJoin(clientUsers, eq(jobApplications.clientId, clientUsers.id))
+        .leftJoin(employeeUsers, eq(jobApplications.employeeId, employeeUsers.id))
+        .where(conditions)
+        .orderBy(desc(jobApplications.dateApplied))
+        .limit(limit);
+
+      const applications: JobApplicationWithUsers[] = results
+        .filter((r): r is typeof r & { client: User; employee: User } => r.client !== null && r.employee !== null)
+        .map((r) => ({
+          ...r.application,
+          client: r.client,
+          employee: r.employee,
+        }));
+
+      return { countsByStatus, applications, pendingReviewCount };
     });
   }
 

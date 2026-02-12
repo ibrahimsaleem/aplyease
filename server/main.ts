@@ -55,7 +55,7 @@ app.use(express.urlencoded({ extended: false }));
 // Rate limiting middleware to prevent abuse and protect database
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 400 : 100, // Higher limit in dev (many dashboard/analytics requests)
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers

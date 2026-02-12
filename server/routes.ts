@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, authenticateUser, generateJWT, hashPassword } from "./auth";
-import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema, clientProfiles, type UpdateClientProfile } from "../shared/schema";
+import { insertUserSchema, registerUserSchema, updateUserSchema, insertJobApplicationSchema, updateJobApplicationSchema, insertClientProfileSchema, updateClientProfileSchema, clientProfiles, type UpdateClientProfile, type UpdateJobApplication } from "../shared/schema";
 import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
@@ -1776,6 +1776,52 @@ OUTPUT:
     }
   });
 
+  const validStatuses = ["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected", "On Hold"] as const;
+
+  // Bulk update application status
+  app.patch("/api/applications/bulk", requireAuth, async (req, res) => {
+    try {
+      const { ids, status } = req.body;
+      const user = (req.user ?? req.session.user)!;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty ids array" });
+      }
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Valid status is required" });
+      }
+
+      const applications = [];
+      for (const id of ids) {
+        const application = await storage.getJobApplication(id);
+        if (!application) {
+          return res.status(404).json({ message: `Application ${id} not found` });
+        }
+        applications.push(application);
+      }
+
+      const canUpdateAll = applications.every((application) => {
+        if (user.role === "ADMIN") return true;
+        if (user.role === "CLIENT") return application.clientId === user.id;
+        if (user.role === "EMPLOYEE") return application.employeeId === user.id;
+        return false;
+      });
+
+      if (!canUpdateAll) {
+        return res.status(403).json({ message: "Access denied for one or more applications" });
+      }
+
+      for (const id of ids) {
+        await storage.updateJobApplication(id, { status } as UpdateJobApplication);
+      }
+
+      res.json({ message: `${ids.length} application${ids.length > 1 ? "s" : ""} updated to ${status}` });
+    } catch (error) {
+      console.error("Error bulk updating application status:", error);
+      res.status(500).json({ message: "Failed to update application status" });
+    }
+  });
+
   // Dashboard stats routes
   app.get("/api/stats/dashboard", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
     try {
@@ -1975,6 +2021,56 @@ OUTPUT:
     } catch (error) {
       console.error("Error fetching client performance analytics:", error);
       res.status(500).json({ message: "Failed to fetch client performance analytics" });
+    }
+  });
+
+  // Rejection rate analytics (Employee or Client - own data only; Admin can view any)
+  app.get("/api/analytics/rejection-rate/employee/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+      if (currentUser.id !== userId && currentUser.role !== "ADMIN") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const stats = await storage.getRejectionRateStats(userId, "employee");
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching employee rejection rate analytics:", error);
+      res.status(500).json({ message: "Failed to fetch rejection rate analytics" });
+    }
+  });
+
+  app.get("/api/analytics/rejection-rate/client/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = (req.user ?? req.session.user)!;
+      if (currentUser.id !== userId && currentUser.role !== "ADMIN") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const stats = await storage.getRejectionRateStats(userId, "client");
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching client rejection rate analytics:", error);
+      res.status(500).json({ message: "Failed to fetch rejection rate analytics" });
+    }
+  });
+
+  // Application status analytics (Client only) - limit + status filter for performance
+  app.get("/api/analytics/application-status/client/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 25;
+      const status = req.query.status as string | undefined;
+      const currentUser = (req.user ?? req.session.user)!;
+      // Clients can see their own data, admins can see any
+      if (currentUser.id !== userId && currentUser.role !== "ADMIN") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const stats = await storage.getApplicationStatusByClient(userId, { limit, status });
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching application status analytics:", error);
+      res.status(500).json({ message: "Failed to fetch application status analytics" });
     }
   });
 

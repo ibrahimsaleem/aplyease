@@ -7,6 +7,7 @@ import { ApplicationForm } from "@/components/application-form";
 import { ApplicationTable } from "@/components/application-table";
 import { ClientPerformanceAnalytics } from "@/components/client-performance-analytics";
 import { MyMonthlyPayout } from "@/components/my-monthly-payout";
+import { RejectionRateAnalytics } from "@/components/rejection-rate-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { EmployeeTraining } from "@/components/employee-training";
 import { apiRequest } from "@/lib/queryClient";
@@ -73,6 +74,9 @@ export default function EmployeeDashboard() {
             <TabsTrigger value="my-payout" data-testid="tab-my-payout">
               My Payout
             </TabsTrigger>
+            <TabsTrigger value="rejection-rate" data-testid="tab-rejection-rate">
+              Rejection Rate
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="applications" className="space-y-6">
@@ -100,6 +104,10 @@ export default function EmployeeDashboard() {
 
           <TabsContent value="my-payout" className="space-y-6">
             <MyMonthlyPayout />
+          </TabsContent>
+
+          <TabsContent value="rejection-rate" className="space-y-6">
+            <RejectionRateAnalytics role="employee" />
           </TabsContent>
         </Tabs>
       </div>
