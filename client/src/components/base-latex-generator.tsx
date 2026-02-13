@@ -29,6 +29,8 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
   const [showGenerateSection, setShowGenerateSection] = useState(!existingLatex);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isCompilingPdf, setIsCompilingPdf] = useState(false);
+  const [pdfCompilationError, setPdfCompilationError] = useState<string | null>(null);
+  const [isFixing, setIsFixing] = useState(false);
   const [editedLatex, setEditedLatex] = useState("");
   const [latexDirty, setLatexDirty] = useState(false);
 
@@ -43,6 +45,7 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
   useEffect(() => {
     setEditedLatex(generatedLatex);
     setLatexDirty(false);
+    setPdfCompilationError(null);
     setPdfUrl(prev => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -190,6 +193,7 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
     if (!latexToCompile) return;
     setIsCompilingPdf(true);
     setLatexDirty(false);
+    setPdfCompilationError(null);
     if (autoOpenDialog) setShowLatexDialog(true);
     try {
       const response = await fetch('/api/generate-pdf', {
@@ -198,8 +202,15 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
         body: JSON.stringify({ latex: latexToCompile }),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.message || 'PDF compilation failed');
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg = errorData.details || errorData.message || "PDF compilation failed";
+        setPdfCompilationError(errMsg);
+        toast({
+          title: "PDF Compilation Failed",
+          description: errMsg,
+          variant: "destructive",
+        });
+        return;
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -207,18 +218,67 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      setPdfCompilationError(null);
       toast({
         title: "PDF Compiled!",
         description: "Your resume PDF is ready for preview and download.",
       });
     } catch (error: any) {
+      const errMsg = error?.message || "Failed to compile LaTeX to PDF";
+      setPdfCompilationError(errMsg);
       toast({
         title: "PDF Compilation Failed",
-        description: error.message || "Failed to compile LaTeX to PDF",
+        description: errMsg,
         variant: "destructive",
       });
     } finally {
       setIsCompilingPdf(false);
+    }
+  };
+
+  // Fix LaTeX via AI when compilation failed, then recompile
+  const handleFixAndRetry = async () => {
+    const latexToCompile = editedLatex || generatedLatex;
+    if (!latexToCompile || !pdfCompilationError) return;
+    if (!userHasApiKey) {
+      toast({
+        title: "API key required",
+        description: "Please configure your Gemini API key in settings to fix the resume.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsFixing(true);
+    try {
+      const res = await apiRequest("POST", "/api/fix-resume", {
+        latex: latexToCompile,
+        compilationError: pdfCompilationError,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast({
+          title: "Fix failed",
+          description: data?.message || "Could not fix resume. Try again or edit the LaTeX manually.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const data = await res.json();
+      if (data.latex) {
+        setGeneratedLatex(data.latex);
+        setEditedLatex(data.latex);
+        setLatexDirty(false);
+        setPdfCompilationError(null);
+        await handleCompilePdf(false);
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: e?.message || "Something went wrong.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFixing(false);
     }
   };
 
@@ -233,7 +293,7 @@ export function BaseLatexGenerator({ clientId, userHasApiKey, existingLatex, onS
     document.body.removeChild(a);
   };
 
-  const isAnyProcessing = isProcessing || isUpdating;
+  const isAnyProcessing = isProcessing || isUpdating || isFixing;
   const hasExistingOrGenerated = !!generatedLatex;
 
   return (
@@ -586,13 +646,37 @@ Tools: Git, Docker, Kubernetes, AWS`}
                   className="flex-1 min-h-0 w-full rounded-lg border border-slate-200"
                   title="Resume PDF Preview"
                 />
-              ) : isCompilingPdf ? (
+              ) : isCompilingPdf || isFixing ? (
                 <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
                   <div className="text-center">
                     <Loader2 className="w-10 h-10 animate-spin text-purple-600 mx-auto mb-3" />
-                    <p className="text-slate-700 font-medium">Compiling your resume...</p>
-                    <p className="text-sm text-slate-500 mt-1">This may take a moment on first compile</p>
+                    <p className="text-slate-700 font-medium">{isFixing ? "Fixing LaTeX..." : "Compiling your resume..."}</p>
+                    <p className="text-sm text-slate-500 mt-1">This may take a moment</p>
                   </div>
+                </div>
+              ) : pdfCompilationError ? (
+                <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-amber-50 rounded-lg border border-amber-200 p-6">
+                  <AlertCircle className="w-10 h-10 text-amber-600 mx-auto mb-3" />
+                  <p className="text-slate-800 font-medium mb-1">Compilation failed</p>
+                  <p className="text-sm text-slate-600 mb-4 text-center max-h-24 overflow-y-auto">{pdfCompilationError}</p>
+                  <Button
+                    onClick={handleFixAndRetry}
+                    disabled={!userHasApiKey || isFixing}
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    {isFixing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Fixing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Fix & Retry
+                      </>
+                    )}
+                  </Button>
                 </div>
               ) : (
                 <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-50 rounded-lg border border-dashed border-slate-300">

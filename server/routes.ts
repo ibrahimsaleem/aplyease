@@ -1561,9 +1561,9 @@ BROKEN LATEX:
 ${latex}
 
 INSTRUCTIONS:
-1. Fix ALL errors that caused the compilation to fail
-2. Ensure the output is valid LaTeX that compiles without errors
-3. Keep the same content and structure - only fix syntax/formatting issues
+1. Fix ONLY syntax and compilation errors. Do NOT change the resume content, wording, or structure.
+2. Fix ALL errors that caused the compilation to fail
+3. Ensure the output is valid LaTeX that compiles without errors
 4. Common fixes: escape special characters (%, &, $, #, _, {, }), remove unsupported packages (multicol, etc.), fix missing \\end{document}, fix malformed commands
 5. When fixing, preserve ATS best practices: no buzzwords, no Objective/References sections, varied action verbs and clear, quantifiable accomplishments.
 6. Return ONLY the complete fixed LaTeX code - no explanations or markdown`;
@@ -1605,6 +1605,67 @@ INSTRUCTIONS:
       res.json({ latex: fixedLatex });
     } catch (error: any) {
       console.error("Error fixing public LaTeX:", error);
+      if (error.message?.includes("API key")) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes("quota")) {
+        return res.status(429).json({ message: "Gemini API quota exceeded" });
+      }
+      res.status(500).json({ message: "Failed to fix resume", details: error.message });
+    }
+  });
+
+  // Authenticated Fix Resume - AI fixes LaTeX that failed to compile (uses user's Gemini API key)
+  app.post("/api/fix-resume", requireAuth, async (req, res) => {
+    try {
+      const { latex, compilationError } = req.body ?? {};
+      const currentUser = (req.user ?? req.session.user)!;
+
+      if (!latex || typeof latex !== "string") {
+        return res.status(400).json({ message: "LaTeX code is required to fix" });
+      }
+      if (!compilationError || typeof compilationError !== "string") {
+        return res.status(400).json({ message: "Compilation error message is required" });
+      }
+
+      const user = await storage.getUser(currentUser.id);
+      const apiKeyToUse = (user?.geminiApiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
+      if (!apiKeyToUse) {
+        return res.status(400).json({ message: "Please configure your Gemini API key in settings" });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const fixPrompt = `You are an expert LaTeX resume formatter. The following LaTeX resume FAILED to compile. Your job is to fix it so it compiles successfully.
+
+COMPILATION ERROR:
+${compilationError}
+
+BROKEN LATEX:
+${latex}
+
+INSTRUCTIONS:
+1. Fix ONLY syntax and compilation errors. Do NOT change the resume content, wording, or structure.
+2. Fix ALL errors that caused the compilation to fail
+3. Ensure the output is valid LaTeX that compiles without errors
+4. Common fixes: escape special characters (%, &, $, #, _, {, }), remove unsupported packages (multicol, etc.), fix missing \\end{document}, fix malformed commands
+5. Return ONLY the complete fixed LaTeX code - no explanations or markdown`;
+
+      const model = user?.preferredGeminiModel || process.env.GEMINI_PUBLIC_MODEL || "gemini-1.5-flash";
+      const response = await retryGemini(
+        async (apiKey) => {
+          const genAI = new GoogleGenAI({ apiKey });
+          return await genAI.models.generateContent({ model, contents: fixPrompt });
+        },
+        apiKeyToUse,
+        (user?.fallbackGeminiApiKey || "").trim() || undefined
+      );
+
+      let fixedLatex = (response as any).text;
+      fixedLatex = String(fixedLatex || "").replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
+
+      res.json({ latex: fixedLatex });
+    } catch (error: any) {
+      console.error("Error fixing LaTeX:", error);
       if (error.message?.includes("API key")) {
         return res.status(400).json({ message: "Invalid Gemini API key" });
       }
