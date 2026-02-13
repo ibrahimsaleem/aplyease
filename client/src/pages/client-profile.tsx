@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NavigationHeader } from "@/components/navigation-header";
 import { ClientProfileView } from "@/components/client-profile-view";
 import { apiRequest } from "@/lib/queryClient";
@@ -76,6 +77,77 @@ const searchScopeOptions = [
   "Specific states",
   "Specific cities",
 ];
+
+const situationOptions = [
+  "Student",
+  "Employed (Full-time)",
+  "Employed (Part-time)",
+  "Employed (Contract)",
+  "Unemployed",
+  "Career Change",
+  "Recent Graduate",
+  "Other",
+];
+
+const workAuthorizationOptions = [
+  "U.S. Citizen",
+  "Green Card / LPR",
+  "F-1 OPT",
+  "H-1B",
+  "L-1",
+  "E-3",
+  "TN",
+  "Other",
+];
+
+const sponsorshipOptions = ["Yes", "No"];
+
+const ethnicityOptions = [
+  "Asian",
+  "Black or African American",
+  "White",
+  "Hispanic or Latino",
+  "American Indian or Alaska Native",
+  "Two or More Races",
+  "Prefer not to say",
+  "Other",
+];
+
+const veteranStatusOptions = [
+  "I am not a protected veteran",
+  "I identify as one or more of the classifications of a protected veteran",
+  "I don't wish to answer",
+];
+
+const disabilityStatusOptions = [
+  "Yes, I have a disability or have had one in the past",
+  "No, I do not have a disability and have not had one in the past",
+  "I do not want to answer",
+];
+
+const knownLanguageOptions = [
+  "English",
+  "Spanish",
+  "Mandarin",
+  "Hindi",
+  "French",
+  "German",
+  "Arabic",
+  "Portuguese",
+  "Bengali",
+  "Russian",
+];
+
+const workingShiftOptions = [
+  "Day",
+  "Evening",
+  "Night",
+  "Flexible",
+  "Rotating",
+  "Other",
+];
+
+const applicationQuotaPresets = [100, 250, 500, 750, 1000, 1500, 2000, 3000];
 
 export default function ClientProfile() {
   const { user } = useAuth();
@@ -310,7 +382,7 @@ export default function ClientProfile() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <Accordion
                   type="multiple"
-                  defaultValue={["basic", "job", "location"]}
+                  defaultValue={["basic", "clientDetails", "currentSituation", "services", "location", "job", "documents", "workAuth", "additional"]}
                   className="w-full rounded-lg border border-slate-200 bg-white px-4"
                 >
                   <AccordionItem value="basic">
@@ -470,27 +542,31 @@ export default function ClientProfile() {
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={form.control}
-                            name="desiredCompUnit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit</FormLabel>
+<FormField
+                          control={form.control}
+                          name="desiredCompUnit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unit</FormLabel>
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
                                 <FormControl>
-                                  <select
-                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
-                                    value={field.value || ""}
-                                    onChange={(e) => field.onChange(e.target.value || undefined)}
-                                  >
-                                    <option value="">Select</option>
-                                    <option value="HOUR">Per Hour</option>
-                                    <option value="YEAR">Per Year</option>
-                                  </select>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  <SelectItem value="HOUR">Per Hour</SelectItem>
+                                  <SelectItem value="YEAR">Per Year</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         </div>
 
                         <FormField
@@ -508,51 +584,59 @@ export default function ClientProfile() {
                         />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="gender"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Gender</FormLabel>
+<FormField
+                          control={form.control}
+                          name="gender"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Gender</FormLabel>
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
                                 <FormControl>
-                                  <select
-                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
-                                    value={field.value || ""}
-                                    onChange={(e) => field.onChange(e.target.value || undefined)}
-                                  >
-                                    <option value="">Select</option>
-                                    <option value="M">Male</option>
-                                    <option value="F">Female</option>
-                                    <option value="DECLINE">Decline to Answer</option>
-                                  </select>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  <SelectItem value="M">Male</SelectItem>
+                                  <SelectItem value="F">Female</SelectItem>
+                                  <SelectItem value="DECLINE">Decline to Answer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                          <FormField
-                            control={form.control}
-                            name="isHispanicLatino"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Are you Hispanic/Latino?</FormLabel>
+<FormField
+                          control={form.control}
+                          name="isHispanicLatino"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Are you Hispanic/Latino?</FormLabel>
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
                                 <FormControl>
-                                  <select
-                                    className="border border-input bg-background px-3 py-2 rounded-md text-sm"
-                                    value={field.value || ""}
-                                    onChange={(e) => field.onChange(e.target.value || undefined)}
-                                  >
-                                    <option value="">Select</option>
-                                    <option value="YES">Yes</option>
-                                    <option value="NO">No</option>
-                                    <option value="DECLINE">Decline to Answer</option>
-                                  </select>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  <SelectItem value="YES">Yes</SelectItem>
+                                  <SelectItem value="NO">No</SelectItem>
+                                  <SelectItem value="DECLINE">Decline to Answer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         </div>
 
                         <FormField
@@ -561,12 +645,24 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Ethnicity</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="Asian, American, Black, European, Southeast Asian, etc. or prefer not to self identify"
-                                />
-                              </FormControl>
+                              <Select
+                                value={ethnicityOptions.includes(field.value || "") ? (field.value || "") : ""}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select ethnicity (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {ethnicityOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -578,12 +674,24 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Veteran Status</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="e.g. 'I am not a protected veteran', 'I identify as one or more of the classifications of a protected veteran', or 'I don't wish to answer'"
-                                />
-                              </FormControl>
+                              <Select
+                                value={veteranStatusOptions.includes(field.value || "") ? (field.value || "") : ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {veteranStatusOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -595,12 +703,24 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Disability Status</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="e.g. 'Yes, I have a disability, or have had one in the past', 'No, I do not have a disability and have not had one in the past', or 'I do not want to answer'"
-                                />
-                              </FormControl>
+                              <Select
+                                value={disabilityStatusOptions.includes(field.value || "") ? (field.value || "") : ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {disabilityStatusOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -612,19 +732,23 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Travel Availability</FormLabel>
-                              <FormControl>
-                                <select
-                                  className="border border-input bg-background px-3 py-2 rounded-md text-sm"
-                                  value={field.value || ""}
-                                  onChange={(e) => field.onChange(e.target.value || undefined)}
-                                >
-                                  <option value="">Select</option>
-                                  <option value="0">0%</option>
-                                  <option value="0_25">0–25%</option>
-                                  <option value="50">50%</option>
-                                  <option value="75_100">75–100%</option>
-                                </select>
-                              </FormControl>
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  <SelectItem value="0_25">0–25%</SelectItem>
+                                  <SelectItem value="50">50%</SelectItem>
+                                  <SelectItem value="75_100">75–100%</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -636,8 +760,42 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Known Languages</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="English, Spanish, etc." />
+                              <FormDescription>Select all that apply. Add others in the box below if needed.</FormDescription>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+                                {knownLanguageOptions.map((lang) => {
+                                  const current = (field.value || "").split(",").map((s) => s.trim()).filter(Boolean);
+                                  const checked = current.includes(lang);
+                                  return (
+                                    <FormItem
+                                      key={lang}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={checked}
+                                          onCheckedChange={(checked) => {
+                                            const next = checked
+                                              ? [...current, lang]
+                                              : current.filter((c) => c !== lang);
+                                            field.onChange(next.join(", "));
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-sm">{lang}</FormLabel>
+                                    </FormItem>
+                                  );
+                                })}
+                              </div>
+                              <FormControl className="mt-2">
+                                <Input
+                                  placeholder="Other languages (comma-separated)"
+                                  value={(field.value || "").split(",").map((s) => s.trim()).filter((s) => s && !knownLanguageOptions.includes(s)).join(", ")}
+                                  onChange={(e) => {
+                                    const other = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                                    const fromCheckboxes = (field.value || "").split(",").map((s) => s.trim()).filter((s) => knownLanguageOptions.includes(s));
+                                    field.onChange([...fromCheckboxes, ...other].filter(Boolean).join(", "));
+                                  }}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -650,9 +808,24 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Preferred Working Shift</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="Day, Evening, Night, etc." />
-                              </FormControl>
+                              <Select
+                                value={workingShiftOptions.includes(field.value || "") ? (field.value || "") : ""}
+                                onValueChange={(v) => field.onChange(v || undefined)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {workingShiftOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -743,9 +916,32 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>What best describes your situation? *</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="e.g., Student, Employed, Unemployed" />
-                              </FormControl>
+                              <Select
+                                value={situationOptions.includes(field.value) ? field.value : "Other"}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your situation" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {situationOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {(!situationOptions.includes(field.value) || field.value === "Other") && (
+                                <FormControl className="mt-2">
+                                  <Input
+                                    placeholder="Describe your situation (e.g. Full-time contract at AT&T)"
+                                    value={field.value === "Other" ? "" : (field.value || "")}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
@@ -808,14 +1004,35 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>How many applications? *</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number" 
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  placeholder="500, 1000, etc." 
-                                />
-                              </FormControl>
+                              <Select
+                                value={applicationQuotaPresets.includes(field.value) ? String(field.value) : "custom"}
+                                onValueChange={(v) => (v === "custom" ? field.onChange(field.value || 500) : field.onChange(parseInt(v, 10)))}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select or enter custom" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {applicationQuotaPresets.map((n) => (
+                                    <SelectItem key={n} value={String(n)}>
+                                      {n.toLocaleString()} applications
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="custom">Custom number</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {!applicationQuotaPresets.includes(field.value) && (
+                                <FormControl className="mt-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    placeholder="Enter number"
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                                  />
+                                </FormControl>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1035,9 +1252,32 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Work Authorization / Visa Status *</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder='e.g., "F-1 OPT until Dec 2027," "U.S. Citizen"' />
-                              </FormControl>
+                              <Select
+                                value={workAuthorizationOptions.includes(field.value) ? field.value : "Other"}
+                                onValueChange={(v) => field.onChange(v)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {workAuthorizationOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {!workAuthorizationOptions.includes(field.value) && (
+                                <FormControl className="mt-2">
+                                  <Input
+                                    placeholder="e.g. F-1 OPT until Dec 2027"
+                                    value={field.value === "Other" ? "" : (field.value || "")}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1049,9 +1289,23 @@ export default function ClientProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Sponsorship Required? *</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="Yes / No" />
-                              </FormControl>
+                              <Select
+                                value={sponsorshipOptions.includes(field.value) ? field.value : ""}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select Yes or No" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {sponsorshipOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormDescription>
                                 What to answer when asked if sponsorship is required in job applications
                               </FormDescription>

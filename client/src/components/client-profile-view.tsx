@@ -179,7 +179,7 @@ export function ClientProfileView({ profile, stats, isOwnProfile, onEditClick }:
           </div>
         )}
       </div>
-      <Accordion type="multiple" defaultValue={["basic", "job", "location"]} className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <Accordion type="multiple" defaultValue={["basic", "job", "clientDetails", "location", "services", "documents"]} className="bg-white rounded-lg shadow p-4 sm:p-6">
         <AccordionItem value="basic">
           <AccordionTrigger className="text-base sm:text-lg">Basic Information</AccordionTrigger>
           <AccordionContent>
