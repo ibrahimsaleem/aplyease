@@ -1799,12 +1799,13 @@ INSTRUCTIONS:
       try {
         if (file.mimetype === "application/pdf") {
           // Extract text from PDF using unpdf (serverless-friendly, no canvas needed)
-          const { extractText } = await import("unpdf");
+          const { getDocumentProxy, extractText } = await import("unpdf");
           // Convert Buffer to Uint8Array (unpdf requirement)
           const uint8Array = new Uint8Array(file.buffer);
-          const pages = await extractText(uint8Array);
-          // unpdf returns array of strings (one per page), join them
-          extractedText = Array.isArray(pages) ? pages.join("\n\n") : String(pages);
+          // Load PDF and extract text
+          const pdf = await getDocumentProxy(uint8Array);
+          const result = await extractText(pdf, { mergePages: true });
+          extractedText = result.text;
         } else if (
           file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
           file.mimetype === "application/msword"
