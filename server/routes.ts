@@ -1800,7 +1800,9 @@ INSTRUCTIONS:
         if (file.mimetype === "application/pdf") {
           // Extract text from PDF using unpdf (serverless-friendly, no canvas needed)
           const { extractText } = await import("unpdf");
-          const pages = await extractText(file.buffer);
+          // Convert Buffer to Uint8Array (unpdf requirement)
+          const uint8Array = new Uint8Array(file.buffer);
+          const pages = await extractText(uint8Array);
           // unpdf returns array of strings (one per page), join them
           extractedText = Array.isArray(pages) ? pages.join("\n\n") : String(pages);
         } else if (
