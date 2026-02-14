@@ -318,6 +318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawCouponCode = (req.body as any)?.couponCode;
       const couponCode = typeof rawCouponCode === "string" ? rawCouponCode.trim().toUpperCase() : "";
       if (userRole === "CLIENT" && couponCode) {
+        // Check if coupon is eligible for this package tier (only 500 or 1000 jobs plans)
+        const eligibleTiers = ["standard", "premium", "ultimate"]; // 500 or 1000 jobs
+        if (!eligibleTiers.includes(userData.packageTier)) {
+          return res.status(400).json({ 
+            message: "Coupon is valid but not available for this package. Please change to a 500 or 1000 jobs package." 
+          });
+        }
+        
         const coupons = parseSignupCouponsEnv(process.env.SIGNUP_COUPONS);
         const discountPct = coupons[couponCode];
         if (!discountPct) {
@@ -420,6 +428,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const couponCode = typeof rawCouponCode === "string" ? rawCouponCode.trim().toUpperCase() : "";
       if (couponCode && totalCents > 0) {
+        // Check if coupon is eligible for this package tier (only 500 or 1000 jobs plans)
+        const eligibleTiers = ["standard", "premium", "ultimate"]; // 500 or 1000 jobs
+        if (!eligibleTiers.includes(packageTier || "")) {
+          return res.status(400).json({ 
+            message: "Coupon is valid but not available for this package. Please change to a 500 or 1000 jobs package." 
+          });
+        }
+        
         const coupons = parseSignupCouponsEnv(process.env.SIGNUP_COUPONS);
         const pct = coupons[couponCode];
         if (!pct) {
