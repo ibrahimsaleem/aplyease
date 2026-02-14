@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get default model from env or use recommended default
   function getDefaultModel(): string {
-    return (process.env.GEMINI_PUBLIC_MODEL || "").trim() || "gemini-2.0-flash-exp";
+    return (process.env.GEMINI_PUBLIC_MODEL || "").trim() || "gemini-3-flash-preview";
   }
 
   // Get last working model for an endpoint (cached for 1 hour)
@@ -76,16 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Build prioritized model list with last working model first
   function getPrioritizedModels(endpoint: string, userSelectedModel?: string): string[] {
     const dropdownModels = [
-      "gemini-2.0-flash-exp",
-      "gemini-3-pro-preview",
       "gemini-3-flash-preview",
-      "gemini-2.5-pro",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
-      "gemini-2.0-flash",
-      "gemini-1.5-pro",
-      "gemini-1.5-flash",
-      "gemini-1.0-pro",
     ];
 
     const models: string[] = [];

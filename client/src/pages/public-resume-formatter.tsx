@@ -28,16 +28,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const MODEL_OPTIONS = [
-  { value: "gemini-2.0-flash-exp", label: "Gemini 2.0 Flash Exp (Recommended - Fast & Smart)" },
-  { value: "gemini-3-pro-preview", label: "Gemini 3 Pro (Most Powerful)" },
-  { value: "gemini-3-flash-preview", label: "Gemini 3 Flash (Very Fast)" },
-  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (High Quality)" },
-  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Balanced)" },
-  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-1.0-pro", label: "Gemini 1.0 Pro" },
+  { value: "gemini-3-flash-preview", label: "Gemini 3 Flash (Recommended - Very Fast)" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Balanced & Stable)" },
+  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite (Ultra Fast)" },
 ];
 
 export default function PublicResumeFormatterPage() {
@@ -710,18 +703,21 @@ export default function PublicResumeFormatterPage() {
       </div>
 
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl w-full h-[85vh] sm:h-[92vh] flex flex-col p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl w-full h-[90vh] sm:h-[92vh] flex flex-col p-4 sm:p-6 overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Your Resume</DialogTitle>
             <DialogDescription>Here&apos;s your professional resume. Download it when you&apos;re ready.</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 min-h-0 rounded-lg overflow-hidden border border-slate-200">
+          <div className="flex-1 min-h-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
             {pdfUrl ? (
-              <iframe
-                src={pdfUrl}
-                className="w-full h-full"
-                title="Resume PDF"
-              />
+              <div className="w-full h-full relative">
+                <iframe
+                  src={pdfUrl}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ minHeight: '500px' }}
+                  title="Resume PDF"
+                />
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-slate-50">
                 <p className="text-slate-600">No PDF yet.</p>

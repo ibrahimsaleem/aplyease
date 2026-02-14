@@ -20,6 +20,7 @@
     "test:delete": "node scripts/test-delete.js",
     "test:quota": "node scripts/test-quota.js",
     "test:additional-link": "node scripts/test-additional-link.js",
+    "test:models": "tsx scripts/test-gemini-models.js",
     "diagrams:build": "mmdc -i docs/diagrams/system-flow.mmd -o docs/diagrams/system-flow.png -b transparent && mmdc -i docs/diagrams/usecases-admin.mmd -o docs/diagrams/usecases-admin.png -b transparent && mmdc -i docs/diagrams/usecases-employee.mmd -o docs/diagrams/usecases-employee.png -b transparent && mmdc -i docs/diagrams/usecases-client.mmd -o docs/diagrams/usecases-client.png -b transparent"
   },
   "dependencies": {
