@@ -1798,15 +1798,11 @@ INSTRUCTIONS:
 
       try {
         if (file.mimetype === "application/pdf") {
-          // Extract text from PDF using pdf-parse v2 API
-          const { PDFParse, VerbosityLevel } = require("pdf-parse");
-          const parser = new PDFParse({ 
-            data: file.buffer,
-            verbosity: VerbosityLevel.ERRORS,  // Reduce console warnings
-          });
-          const result = await parser.getText();
-          await parser.destroy();
-          extractedText = result.text;
+          // Extract text from PDF using unpdf (serverless-friendly, no canvas needed)
+          const { extractText } = await import("unpdf");
+          const pages = await extractText(file.buffer);
+          // unpdf returns array of strings (one per page), join them
+          extractedText = Array.isArray(pages) ? pages.join("\n\n") : String(pages);
         } else if (
           file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
           file.mimetype === "application/msword"
