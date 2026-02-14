@@ -13,9 +13,109 @@ import { promisify } from "util";
 import path from "path";
 import os from "os";
 import { randomUUID } from "crypto";
+import multer from "multer";
+import mammoth from "mammoth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+
+  // Cache for tracking last working models per endpoint (in-memory, resets on server restart)
+  const lastWorkingModels: Record<string, { model: string; timestamp: number }> = {};
+
+  // Helper function to get API keys with fallback support
+  function getApiKeysWithFallback(providedKey?: string): string[] {
+    const keys: string[] = [];
+    
+    // User-provided key has highest priority
+    if (providedKey && providedKey.trim()) {
+      keys.push(providedKey.trim());
+    }
+    
+    // Then try environment keys in order
+    const key1 = (process.env.GEMINI_API_KEY || "").trim();
+    const key2 = (process.env.GEMINI_API_KEY_2 || "").trim();
+    const key3 = (process.env.GEMINI_API_KEY_3 || "").trim();
+    
+    if (key1) keys.push(key1);
+    if (key2) keys.push(key2);
+    if (key3) keys.push(key3);
+    
+    return keys;
+  }
+
+  // Get default model from env or use recommended default
+  function getDefaultModel(): string {
+    return (process.env.GEMINI_PUBLIC_MODEL || "").trim() || "gemini-2.0-flash-exp";
+  }
+
+  // Get last working model for an endpoint (cached for 1 hour)
+  function getLastWorkingModel(endpoint: string): string | null {
+    const cached = lastWorkingModels[endpoint];
+    if (!cached) return null;
+    
+    const ONE_HOUR = 60 * 60 * 1000;
+    const isExpired = Date.now() - cached.timestamp > ONE_HOUR;
+    
+    if (isExpired) {
+      delete lastWorkingModels[endpoint];
+      return null;
+    }
+    
+    return cached.model;
+  }
+
+  // Save last working model for an endpoint
+  function saveLastWorkingModel(endpoint: string, model: string): void {
+    lastWorkingModels[endpoint] = {
+      model,
+      timestamp: Date.now(),
+    };
+    console.log(`✓ Cached working model for ${endpoint}: ${model}`);
+  }
+
+  // Build prioritized model list with last working model first
+  function getPrioritizedModels(endpoint: string, userSelectedModel?: string): string[] {
+    const dropdownModels = [
+      "gemini-2.0-flash-exp",
+      "gemini-3-pro-preview",
+      "gemini-3-flash-preview",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
+      "gemini-1.0-pro",
+    ];
+
+    const models: string[] = [];
+    
+    // 1. User-selected model has highest priority
+    if (userSelectedModel && userSelectedModel.trim()) {
+      models.push(userSelectedModel.trim());
+    }
+    
+    // 2. Last working model for this endpoint
+    const lastWorking = getLastWorkingModel(endpoint);
+    if (lastWorking && !models.includes(lastWorking)) {
+      models.push(lastWorking);
+    }
+    
+    // 3. Default model from env
+    const defaultModel = getDefaultModel();
+    if (!models.includes(defaultModel)) {
+      models.push(defaultModel);
+    }
+    
+    // 4. All other models
+    for (const model of dropdownModels) {
+      if (!models.includes(model)) {
+        models.push(model);
+      }
+    }
+    
+    return models;
+  }
 
   function parseSignupCouponsEnv(envValue: string | undefined): Record<string, number> {
     const map: Record<string, number> = {};
@@ -41,6 +141,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     message: "Too many registration attempts, please try again after 15 minutes",
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+
+  // Rate limiter for file uploads
+  const uploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 uploads per 15 minutes
+    message: "Too many file uploads, please try again after 15 minutes",
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Configure multer for file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+        "application/msword", // .doc
+      ];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Unsupported file type. Please upload PDF or Word documents only."));
+      }
+    },
   });
 
   // Health check endpoint - doesn't require authentication
@@ -1425,7 +1554,7 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
   });
 
   // Public Base Resume Formatter - Convert plain text resume to LaTeX (no auth)
-  // Supports user-provided Gemini API key, or server env key fallback (GEMINI_API_KEY).
+  // Supports user-provided Gemini API key with fallback to 3 environment keys
   app.post("/api/public/generate-resume", async (req, res) => {
     try {
       const { plainTextResume, geminiApiKey, selectedModel } = req.body ?? {};
@@ -1434,11 +1563,9 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
         return res.status(400).json({ message: "Plain text resume is required" });
       }
 
-      const providedKey = typeof geminiApiKey === "string" ? geminiApiKey.trim() : "";
-      const envKey = (process.env.GEMINI_API_KEY || "").trim();
-      const apiKeyToUse = providedKey || envKey;
+      const apiKeys = getApiKeysWithFallback(geminiApiKey);
 
-      if (!apiKeyToUse) {
+      if (apiKeys.length === 0) {
         return res.status(400).json({
           message:
             "Please provide your Gemini API key below, or contact us if you'd like to use this tool without a key."
@@ -1448,59 +1575,79 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
       const { GoogleGenAI } = await import("@google/genai");
       const prompt = buildBaseResumeLatexPrompt(plainTextResume);
 
-      const response = await retryGemini(
-        async (apiKey) => {
-          const genAI = new GoogleGenAI({ apiKey });
+      // Get prioritized models with last working model first
+      const candidateModels = getPrioritizedModels("generate-resume", selectedModel);
 
-          // Same models as employee dropdown (navigation-header, client-profile-view)
-          const dropdownModels = [
-            "gemini-3-pro-preview",
-            "gemini-3-flash-preview",
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
-            "gemini-1.0-pro",
-          ];
+      let response: any = null;
+      let allErrors: string[] = [];
+      let successfulModel: string | null = null;
 
-          const candidateModels = [
-            typeof selectedModel === "string" ? selectedModel.trim() : "",
-            (process.env.GEMINI_PUBLIC_MODEL || "").trim(),
-            ...dropdownModels,
-          ].filter(Boolean);
+      // Try each API key in order until one succeeds
+      for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+        const apiKey = apiKeys[keyIndex];
+        try {
+          response = await retryGemini(
+            async (key) => {
+              const genAI = new GoogleGenAI({ apiKey: key });
+              let lastError: any = null;
 
-          let lastError: any = null;
+              for (const model of candidateModels) {
+                try {
+                  const result = await genAI.models.generateContent({
+                    model,
+                    contents: prompt,
+                  });
+                  // Success! Save this model as last working
+                  successfulModel = model;
+                  return result;
+                } catch (err: any) {
+                  lastError = err;
+                  const message = err?.message || "";
+                  const isNotFound =
+                    err?.status === 404 ||
+                    message.includes("is not found") ||
+                    message.includes("not found for API version");
 
-          for (const model of candidateModels) {
-            try {
-              return await genAI.models.generateContent({
-                model,
-                contents: prompt,
-              });
-            } catch (err: any) {
-              lastError = err;
-              const message = err?.message || "";
-              const isNotFound =
-                err?.status === 404 ||
-                message.includes("is not found") ||
-                message.includes("not found for API version");
+                  if (isNotFound) {
+                    console.warn(`Gemini model "${model}" not available, trying next candidate...`);
+                    continue;
+                  }
 
-              if (isNotFound) {
-                console.warn(`Gemini model "${model}" not available, trying next candidate...`);
-                continue;
+                  // For non-404 errors, let retryGemini handle quota/overload logic.
+                  throw err;
+                }
               }
 
-              // For non-404 errors, let retryGemini handle quota/overload logic.
-              throw err;
-            }
+              throw lastError || new Error("No Gemini models succeeded for public resume generation");
+            },
+            apiKey
+          );
+          break; // Success! Exit the API key loop
+        } catch (err: any) {
+          const errorMsg = err?.message || "Unknown error";
+          allErrors.push(`Key ${keyIndex + 1}: ${errorMsg}`);
+          
+          // If quota exceeded or rate limited, try next API key
+          if (errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("rate limit")) {
+            console.log(`API key ${keyIndex + 1} exhausted, trying next...`);
+            continue;
           }
+          
+          // For other errors (invalid key, permission issues), don't try more keys
+          if (keyIndex === apiKeys.length - 1) {
+            throw err; // Last key, throw error
+          }
+        }
+      }
 
-          throw lastError || new Error("No Gemini models succeeded for public resume generation");
-        },
-        apiKeyToUse
-      );
+      if (!response) {
+        throw new Error(`All ${apiKeys.length} API key(s) failed: ${allErrors.join("; ")}`);
+      }
+
+      // Save the successful model for future requests
+      if (successfulModel) {
+        saveLastWorkingModel("generate-resume", successfulModel);
+      }
 
       let generatedLatex = (response as any).text;
       generatedLatex = String(generatedLatex || "")
@@ -1541,11 +1688,9 @@ Return ONLY the optimized LaTeX code without explanations, comments, or markdown
         return res.status(400).json({ message: "Compilation error message is required" });
       }
 
-      const providedKey = typeof geminiApiKey === "string" ? geminiApiKey.trim() : "";
-      const envKey = (process.env.GEMINI_API_KEY || "").trim();
-      const apiKeyToUse = providedKey || envKey;
+      const apiKeys = getApiKeysWithFallback(geminiApiKey);
 
-      if (!apiKeyToUse) {
+      if (apiKeys.length === 0) {
         return res.status(400).json({
           message: "Please provide your Gemini API key to fix the resume.",
         });
@@ -1568,36 +1713,62 @@ INSTRUCTIONS:
 5. When fixing, preserve ATS best practices: no buzzwords, no Objective/References sections, varied action verbs and clear, quantifiable accomplishments.
 6. Return ONLY the complete fixed LaTeX code - no explanations or markdown`;
 
-      const dropdownModels = [
-        "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash",
-        "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro",
-      ];
-      const candidateModels = [
-        typeof selectedModel === "string" ? selectedModel.trim() : "",
-        (process.env.GEMINI_PUBLIC_MODEL || "").trim(),
-        ...dropdownModels,
-      ].filter(Boolean);
+      // Get prioritized models with last working model first
+      const candidateModels = getPrioritizedModels("fix-resume", selectedModel);
 
-      const response = await retryGemini(
-        async (apiKey) => {
-          const genAI = new GoogleGenAI({ apiKey });
-          let lastErr: any = null;
-          for (const model of candidateModels) {
-            try {
-              return await genAI.models.generateContent({ model, contents: fixPrompt });
-            } catch (err: any) {
-              lastErr = err;
-              const msg = err?.message || "";
-              if (err?.status === 404 || msg.includes("not found") || msg.includes("not found for API version")) {
-                continue;
+      let response: any = null;
+      let allErrors: string[] = [];
+      let successfulModel: string | null = null;
+
+      // Try each API key in order
+      for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+        const apiKey = apiKeys[keyIndex];
+        try {
+          response = await retryGemini(
+            async (key) => {
+              const genAI = new GoogleGenAI({ apiKey: key });
+              let lastErr: any = null;
+              for (const model of candidateModels) {
+                try {
+                  const result = await genAI.models.generateContent({ model, contents: fixPrompt });
+                  // Success! Save this model as last working
+                  successfulModel = model;
+                  return result;
+                } catch (err: any) {
+                  lastErr = err;
+                  const msg = err?.message || "";
+                  if (err?.status === 404 || msg.includes("not found") || msg.includes("not found for API version")) {
+                    continue;
+                  }
+                  throw err;
+                }
               }
-              throw err;
-            }
+              throw lastErr;
+            },
+            apiKey
+          );
+          break;
+        } catch (err: any) {
+          const errorMsg = err?.message || "Unknown error";
+          allErrors.push(`Key ${keyIndex + 1}: ${errorMsg}`);
+          if (errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("rate limit")) {
+            console.log(`API key ${keyIndex + 1} exhausted, trying next...`);
+            continue;
           }
-          throw lastErr;
-        },
-        apiKeyToUse
-      );
+          if (keyIndex === apiKeys.length - 1) {
+            throw err;
+          }
+        }
+      }
+
+      if (!response) {
+        throw new Error(`All ${apiKeys.length} API key(s) failed`);
+      }
+
+      // Save the successful model for future requests
+      if (successfulModel) {
+        saveLastWorkingModel("fix-resume", successfulModel);
+      }
 
       let fixedLatex = (response as any).text;
       fixedLatex = String(fixedLatex || "").replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
@@ -1612,6 +1783,189 @@ INSTRUCTIONS:
         return res.status(429).json({ message: "Gemini API quota exceeded" });
       }
       res.status(500).json({ message: "Failed to fix resume", details: error.message });
+    }
+  });
+
+  // Public Extract Resume - Extract text from uploaded PDF/Word documents
+  app.post("/api/extract-resume", uploadLimiter, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.file;
+      let extractedText = "";
+
+      try {
+        if (file.mimetype === "application/pdf") {
+          // Extract text from PDF using pdf-parse v2 API
+          const { PDFParse } = require("pdf-parse");
+          const parser = new PDFParse({ data: file.buffer });
+          const result = await parser.getText();
+          await parser.destroy();
+          extractedText = result.text;
+        } else if (
+          file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+          file.mimetype === "application/msword"
+        ) {
+          // Extract text from Word document
+          const result = await mammoth.extractRawText({ buffer: file.buffer });
+          extractedText = result.value;
+        } else {
+          return res.status(400).json({ message: "Unsupported file type" });
+        }
+
+        // Clean up extracted text
+        extractedText = extractedText
+          .trim()
+          .replace(/\r\n/g, "\n") // Normalize line endings
+          .replace(/\n{3,}/g, "\n\n"); // Remove excessive newlines
+
+        if (!extractedText || extractedText.length < 10) {
+          return res.status(400).json({ 
+            message: "Could not extract text from file. The file may be empty, corrupted, or contain only images." 
+          });
+        }
+
+        res.json({ text: extractedText });
+      } catch (extractError: any) {
+        console.error("Text extraction error:", extractError);
+        return res.status(400).json({ 
+          message: "Failed to extract text from file. The file may be corrupted, password-protected, or contain only images. Try converting it to a Word document or copying the text manually.",
+          details: extractError.message
+        });
+      }
+    } catch (error: any) {
+      console.error("File upload error:", error);
+      
+      // Handle multer errors
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ message: "File too large. Maximum size is 5MB." });
+      }
+      if (error.message?.includes("Unsupported file type")) {
+        return res.status(400).json({ message: error.message });
+      }
+
+      res.status(500).json({ 
+        message: "Failed to process file upload",
+        details: error.message 
+      });
+    }
+  });
+
+  // Public Update Resume - AI updates LaTeX resume based on user instructions
+  app.post("/api/public/update-resume", async (req, res) => {
+    try {
+      const { currentLatex, updateInstructions, geminiApiKey, selectedModel } = req.body ?? {};
+
+      if (!currentLatex || typeof currentLatex !== "string") {
+        return res.status(400).json({ message: "Current LaTeX resume is required" });
+      }
+      if (!updateInstructions || typeof updateInstructions !== "string" || updateInstructions.trim().length === 0) {
+        return res.status(400).json({ message: "Update instructions are required" });
+      }
+
+      const apiKeys = getApiKeysWithFallback(geminiApiKey);
+
+      if (apiKeys.length === 0) {
+        return res.status(400).json({
+          message: "Please provide your Gemini API key below, or contact us if you'd like to use this tool without a key."
+        });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const updatePrompt = `You are a LaTeX resume expert. Update the following resume based on the user's instructions.
+
+USER INSTRUCTIONS: ${updateInstructions.trim()}
+
+CURRENT LATEX RESUME:
+${currentLatex}
+
+REQUIREMENTS:
+1. Apply ONLY the changes requested by the user
+2. Maintain existing formatting and LaTeX structure
+3. Keep it ATS-friendly (no tables, no columns, simple formatting)
+4. Preserve all working LaTeX syntax and commands
+5. If adding new sections, use the same formatting style as existing sections
+6. If removing sections, ensure the document structure remains valid
+7. Return ONLY the complete updated LaTeX code - no explanations or markdown`;
+
+      // Get prioritized models with last working model first
+      const candidateModels = getPrioritizedModels("update-resume", selectedModel);
+
+      let response: any = null;
+      let allErrors: string[] = [];
+      let successfulModel: string | null = null;
+
+      // Try each API key in order
+      for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+        const apiKey = apiKeys[keyIndex];
+        try {
+          response = await retryGemini(
+            async (key) => {
+              const genAI = new GoogleGenAI({ apiKey: key });
+              let lastErr: any = null;
+              for (const model of candidateModels) {
+                try {
+                  const result = await genAI.models.generateContent({ model, contents: updatePrompt });
+                  // Success! Save this model as last working
+                  successfulModel = model;
+                  return result;
+                } catch (err: any) {
+                  lastErr = err;
+                  const msg = err?.message || "";
+                  if (err?.status === 404 || msg.includes("not found") || msg.includes("not found for API version")) {
+                    continue;
+                  }
+                  throw err;
+                }
+              }
+              throw lastErr;
+            },
+            apiKey
+          );
+          break;
+        } catch (err: any) {
+          const errorMsg = err?.message || "Unknown error";
+          allErrors.push(`Key ${keyIndex + 1}: ${errorMsg}`);
+          if (errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("rate limit")) {
+            console.log(`API key ${keyIndex + 1} exhausted, trying next...`);
+            continue;
+          }
+          if (keyIndex === apiKeys.length - 1) {
+            throw err;
+          }
+        }
+      }
+
+      if (!response) {
+        throw new Error(`All ${apiKeys.length} API key(s) failed`);
+      }
+
+      // Save the successful model for future requests
+      if (successfulModel) {
+        saveLastWorkingModel("update-resume", successfulModel);
+      }
+
+      let updatedLatex = (response as any).text;
+      updatedLatex = String(updatedLatex || "").replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
+
+      res.json({ latex: updatedLatex });
+    } catch (error: any) {
+      console.error("Error updating public resume:", error);
+      if (error.message?.includes("API key")) {
+        return res.status(400).json({ message: "Invalid Gemini API key" });
+      }
+      if (error.message?.includes("quota")) {
+        return res.status(429).json({ message: "Gemini API quota exceeded. Please try again later." });
+      }
+      if (error.message?.includes("overloaded") || error.message?.includes("UNAVAILABLE")) {
+        return res.status(503).json({ message: "The AI model is currently overloaded. Please try again in a few seconds." });
+      }
+      res.status(500).json({ 
+        message: "Failed to update resume",
+        details: error.message || "Unknown error"
+      });
     }
   });
 
