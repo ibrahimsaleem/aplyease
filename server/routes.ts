@@ -1799,8 +1799,11 @@ INSTRUCTIONS:
       try {
         if (file.mimetype === "application/pdf") {
           // Extract text from PDF using pdf-parse v2 API
-          const { PDFParse } = require("pdf-parse");
-          const parser = new PDFParse({ data: file.buffer });
+          const { PDFParse, VerbosityLevel } = require("pdf-parse");
+          const parser = new PDFParse({ 
+            data: file.buffer,
+            verbosity: VerbosityLevel.ERRORS,  // Reduce console warnings
+          });
           const result = await parser.getText();
           await parser.destroy();
           extractedText = result.text;
