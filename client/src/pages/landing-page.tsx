@@ -13,7 +13,6 @@ import {
   Star,
   Phone,
   Mail,
-  Linkedin,
   Zap,
   Target,
   TrendingUp,
@@ -683,46 +682,6 @@ export default function LandingPage() {
               <p className="mt-4 text-slate-500 text-sm">
                 Limited spots available. Join 200+ specialists worldwide.
               </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Founder */}
-        <section className="py-16 md:py-24 bg-slate-50">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="max-w-3xl mx-auto">
-              <Card className="border-none shadow-xl">
-                <CardContent className="p-8 md:p-10">
-                  <div className="flex flex-col md:flex-row gap-6 items-center md:items-start text-center md:text-left">
-                    <div className="flex-shrink-0">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-bold">
-                        MS
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-slate-900 mb-1">Mohammad Ibrahim Saleem</h3>
-                      <p className="text-lg text-primary font-semibold mb-4">Founder & CEO</p>
-                      <p className="text-slate-700 mb-4 leading-relaxed">
-                        AI engineer at NOV and researcher at the University of Houston. Focused on building intelligent automation systems that help people win in competitive job markets.
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
-                        <Badge className="bg-blue-100 text-blue-800">AI & GenAI</Badge>
-                        <Badge className="bg-blue-100 text-blue-800">Cybersecurity</Badge>
-                        <Badge className="bg-blue-100 text-blue-800">Python</Badge>
-                      </div>
-                      <a
-                        href="https://www.linkedin.com/in/ibrahimsaleem91"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
-                      >
-                        <Linkedin className="h-5 w-5" />
-                        Connect on LinkedIn
-                      </a>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </section>
